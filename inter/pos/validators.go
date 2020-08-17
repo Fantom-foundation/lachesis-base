@@ -2,10 +2,8 @@ package pos
 
 import (
 	"io"
-	"math/big"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
@@ -28,16 +26,6 @@ type (
 
 	// ValidatorsBuilder is a helper to create Validators object
 	ValidatorsBuilder map[idx.StakerID]Stake
-
-	// GenesisValidator is helper structure to define genesis validators
-	GenesisValidator struct {
-		ID      idx.StakerID
-		Address common.Address
-		Stake   *big.Int
-	}
-
-	// GValidators defines genesis validators
-	GValidators []GenesisValidator
 )
 
 var (
@@ -119,7 +107,7 @@ func (vv *Validators) calcCaches() cache {
 	return cache
 }
 
-// Get returns stake for validator by ID
+// get returns stake for validator by ID
 func (vv *Validators) Get(id idx.StakerID) Stake {
 	return vv.values[id]
 }
@@ -214,40 +202,4 @@ func (vv *Validators) DecodeRLP(s *rlp.Stream) error {
 	*vv = *builder.Build()
 
 	return nil
-}
-
-// Validators converts GValidators to Validators
-func (gv GValidators) Validators() *Validators {
-	builder := NewBuilder()
-	for _, validator := range gv {
-		builder.Set(validator.ID, BalanceToStake(validator.Stake))
-	}
-	return builder.Build()
-}
-
-// TotalStake returns sum of stakes
-func (gv GValidators) TotalStake() *big.Int {
-	totalStake := new(big.Int)
-	for _, validator := range gv {
-		totalStake.Add(totalStake, validator.Stake)
-	}
-	return totalStake
-}
-
-// Map converts GValidators to map
-func (gv GValidators) Map() map[idx.StakerID]GenesisValidator {
-	validators := map[idx.StakerID]GenesisValidator{}
-	for _, validator := range gv {
-		validators[validator.ID] = validator
-	}
-	return validators
-}
-
-// Addresses returns not sorted genesis addresses
-func (gv GValidators) Addresses() []common.Address {
-	res := make([]common.Address, 0, len(gv))
-	for _, v := range gv {
-		res = append(res, v.Address)
-	}
-	return res
 }

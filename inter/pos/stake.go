@@ -1,11 +1,6 @@
 package pos
 
 import (
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
-
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 )
 
@@ -27,26 +22,6 @@ type (
 		sum    Stake
 	}
 )
-
-var (
-	balanceToStakeRatio = big.NewInt(params.Ether / 1e3)
-)
-
-// BalanceToStake balance to validator's stake
-func BalanceToStake(balance *big.Int) Stake {
-	stakeBig := new(big.Int).Div(balance, balanceToStakeRatio)
-	if stakeBig.Sign() < 0 || stakeBig.BitLen() >= 64 {
-		log.Error("Too big stake amount!", "balance", balance.String())
-		return 0
-	}
-	return Stake(stakeBig.Uint64())
-}
-
-// StakeToBalance converts validator's stake to balance
-// Warning: for tests only!
-func StakeToBalance(stake Stake) *big.Int {
-	return new(big.Int).Mul(big.NewInt(int64(stake)), balanceToStakeRatio)
-}
 
 // NewCounter constructor.
 func (vv Validators) NewCounter() *StakeCounter {
