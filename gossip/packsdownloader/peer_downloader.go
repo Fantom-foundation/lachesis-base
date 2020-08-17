@@ -5,18 +5,16 @@ import (
 	"math"
 	"time"
 
-	tree "github.com/emirpasic/gods/maps/treemap"
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/Fantom-foundation/go-lachesis/gossip/fetcher"
 	"github.com/Fantom-foundation/go-lachesis/hash"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
+	tree "github.com/emirpasic/gods/maps/treemap"
 )
 
 const (
 	forceSyncPeriod = 5 * time.Minute        // Even if we synced up, in a case we're stalled, try to download a not pinned pack after the timeout
-	arriveTimeout   = 10 * time.Second       // Time allowance before an announced pack is explicitly requested
-	recheckInterval = 100 * time.Millisecond // Time between checking - was the arrived pack connected or not
+	arriveTimeout   = 10 * time.Second       // RawTime allowance before an announced pack is explicitly requested
+	recheckInterval = 100 * time.Millisecond // RawTime between checking - was the arrived pack connected or not
 
 	// Maximum number of stored packs per peer.
 	// Shouldn't be high, because we do binary search, so stored packs are O(log_2(total packs)) + PeerProgress broadcasts
@@ -33,20 +31,23 @@ const (
 )
 
 var (
-	errTerminated = errors.New("terminated")
+	errTerminated            = errors.New("terminated")
+	ErrAllPacksUnknown       = errors.New("all the peer packs are unknown")
+	ErrAllUnknownBeforeKnown = errors.New("met pack with an unknown head before pack with only known heads")
+	ErrInvalidPackIdx        = errors.New("invalid pack index")
 )
 
-// onlyNotConnectedFn returns only not connected events.
-type onlyNotConnectedFn func(ids hash.Events) hash.Events
+// OnlyNotConnectedFn returns only not connected events.
+type OnlyNotConnectedFn func(ids hash.Events) hash.Events
 
-// dropPeerFn is a callback type for dropping a peer detected as malicious.
-type dropPeerFn func(peer string)
+// PeerMisbehaviourFn is a callback type for dropping a peer detected as malicious.
+type PeerMisbehaviourFn func(peer string, err error) bool
 
-// request pack info from the peer
-type packInfoRequesterFn func(epoch idx.Epoch, indexes []idx.Pack) error
+// RequestPackInfosFn requests pack infos from the peer
+type RequestPackInfosFn func(epoch idx.Epoch, indexes []idx.Pack) error
 
-// request full pack from the peer
-type packRequesterFn func(epoch idx.Epoch, index idx.Pack) error
+// RequestPackFn requests full pack from the peer
+type RequestPackFn func(epoch idx.Epoch, index idx.Pack) error
 
 type packsNumData struct {
 	epoch    idx.Epoch // in the specified epoch
@@ -80,9 +81,9 @@ type PeerPacksDownloader struct {
 	quit chan struct{}
 
 	// Callbacks
-	dropPeer         dropPeerFn
+	peerMisbehaviour PeerMisbehaviourFn
 	fetcher          *fetcher.Fetcher
-	onlyNotConnected onlyNotConnectedFn
+	onlyNotConnected OnlyNotConnectedFn
 
 	// Announce states
 	myEpoch idx.Epoch // the epoch where where we're syncing
@@ -96,7 +97,7 @@ type PeerPacksDownloader struct {
 }
 
 // New creates a packs fetcher to retrieve events based on pack announcements. Works only with 1 peer.
-func newPeer(peer Peer, myEpoch idx.Epoch, fetcher *fetcher.Fetcher, onlyNotConnected onlyNotConnectedFn, dropPeer dropPeerFn) *PeerPacksDownloader {
+func newPeer(peer Peer, myEpoch idx.Epoch, fetcher *fetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn) *PeerPacksDownloader {
 	return &PeerPacksDownloader{
 		notifyInfo:       make(chan *packInfoData, maxQueuedInfos),
 		notifyPacksNum:   make(chan *packsNumData, maxQueuedInfos),
@@ -109,7 +110,7 @@ func newPeer(peer Peer, myEpoch idx.Epoch, fetcher *fetcher.Fetcher, onlyNotConn
 		myEpoch:          myEpoch,
 		fetcher:          fetcher,
 		onlyNotConnected: onlyNotConnected,
-		dropPeer:         dropPeer,
+		peerMisbehaviour: peerMisbehaviour,
 	}
 }
 
@@ -215,12 +216,14 @@ func (d *PeerPacksDownloader) loop() {
 			if d.packInfos.Size() > maxPeerPacks {
 				// if we have too much packs -> d.sweepKnown() doesn't erase them -> we don't connect events from these packs.
 				// Also we do binary search, so we don't need much packs to store, so we shouldn't reach this if peer is ok.
-				log.Warn("All the peer packs are unknown. Faulty peer?", "peer", d.peer.ID)
-				d.dropPeer(d.peer.ID)
+				if d.peerMisbehaviour(d.peer.ID, ErrAllPacksUnknown) {
+					continue
+				}
 			}
 			if packInfo.index <= 0 || packInfo.index >= math.MaxInt32 {
-				log.Error("Invalid pack index", "peer", d.peer.ID)
-				continue
+				if d.peerMisbehaviour(d.peer.ID, ErrInvalidPackIdx) {
+					continue
+				}
 			}
 
 			d.packInfos.Put(int(packInfo.index), packInfo)
@@ -243,10 +246,7 @@ func (d *PeerPacksDownloader) loop() {
 			// Otherwise, we'll rapidly re-request the same pack until we connect events.
 			// DO NOT: delete(d.fetchingFull, pack.index)
 
-			err := d.fetcher.Notify(d.peer.ID, pack.ids, pack.time, pack.fetchEvents)
-			if err != nil {
-				log.Error("Pack inject error", "index", pack.index, "peer", d.peer.ID, "err", err)
-			}
+			_ = d.fetcher.Notify(d.peer.ID, pack.ids, pack.time, pack.fetchEvents)
 
 		case <-syncTicker.C:
 			d.tryToSync()
@@ -292,10 +292,7 @@ func (d *PeerPacksDownloader) tryToSync() {
 func (d *PeerPacksDownloader) timedRequestFullPack(index idx.Pack, pinned bool) {
 	prevRequestTime := d.fetchingFull[index]
 	if prevRequestTime.IsZero() || time.Since(prevRequestTime) >= arriveTimeout {
-		err := d.peer.RequestPack(d.myEpoch, index)
-		if err != nil {
-			log.Warn("Pack request error", "index", index, "peer", d.peer.ID, "err", err)
-		}
+		_ = d.peer.RequestPack(d.myEpoch, index)
 		d.prevRequest = time.Now()
 		if pinned {
 			d.fetchingFull[index] = d.prevRequest
@@ -307,10 +304,7 @@ func (d *PeerPacksDownloader) timedRequestFullPack(index idx.Pack, pinned bool) 
 func (d *PeerPacksDownloader) timedRequestPackInfo(index idx.Pack) {
 	prevRequestTime := d.fetchingInfo[index]
 	if prevRequestTime.IsZero() || time.Since(prevRequestTime) >= arriveTimeout {
-		err := d.peer.RequestPackInfos(d.myEpoch, []idx.Pack{index})
-		if err != nil {
-			log.Warn("Pack info request error", "index", index, "peer", d.peer.ID, "err", err)
-		}
+		_ = d.peer.RequestPackInfos(d.myEpoch, []idx.Pack{index})
 		d.prevRequest = time.Now()
 		d.fetchingInfo[index] = d.prevRequest
 	}
@@ -381,7 +375,7 @@ func (d *PeerPacksDownloader) sweepKnown() {
 			toRemove = append(toRemove, packIdx)
 
 			if !allKnown {
-				log.Error("Peer downloader error: met pack with an unknown head before pack with only known heads. Faulty peer?", "peer", d.peer.ID)
+				d.peerMisbehaviour(d.peer.ID, ErrAllUnknownBeforeKnown)
 			}
 		} else if allKnown {
 			allKnownMet = true

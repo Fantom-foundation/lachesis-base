@@ -2,13 +2,14 @@ package packsdownloader
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/stretchr/testify/assert"
 	"testing"
 
 	tree "github.com/emirpasic/gods/maps/treemap"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Fantom-foundation/go-lachesis/hash"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
+	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 )
 
 type binarySearchExpected struct {
@@ -149,18 +150,22 @@ func testBinarySearch(t *testing.T, test *binarySearchTest) {
 	knownHeads := map[hash.Event]bool{}
 
 	for index, isKnown := range test.infos {
-		e := inter.NewEvent()
-		e.Extra = index.Bytes() // make each event unique
+		e := tdag.TestEvent{}
+		// make each event unique
+		e.Name = fmt.Sprintf("%d", index)
+		var id [24]byte
+		copy(id[:], index.Bytes())
+		e.SetID(id)
 
 		// build info with 1 head
 		info := &packInfoData{
 			index: index,
-			heads: hash.Events{e.Hash()},
+			heads: hash.Events{e.ID()},
 		}
 		d.packInfos.Put(int(index), info)
 		if isKnown {
 			// memorize pack as known
-			knownHeads[e.Hash()] = true
+			knownHeads[e.ID()] = true
 		}
 	}
 

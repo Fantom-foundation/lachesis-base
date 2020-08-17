@@ -1,10 +1,10 @@
 package packsdownloader
 
 import (
+	"sync"
+
 	"github.com/Fantom-foundation/go-lachesis/gossip/fetcher"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/ethereum/go-ethereum/log"
-	"sync"
 )
 
 /*
@@ -14,17 +14,15 @@ import (
  * The full pack contains event hashes, which are re-directed to Fetcher.
  */
 
-const (
-	maxPeers = 6 // max peers to download packs from
-)
-
 // PacksDownloader is responsible for accumulating pack announcements from various peers
 // and scheduling them for retrieval.
 type PacksDownloader struct {
 	// Callbacks
-	dropPeer         dropPeerFn
+	peerMisbehaviour PeerMisbehaviourFn
 	fetcher          *fetcher.Fetcher
-	onlyNotConnected onlyNotConnectedFn
+	onlyNotConnected OnlyNotConnectedFn
+
+	config Config
 
 	// State
 	peers map[string]*PeerPacksDownloader
@@ -33,12 +31,17 @@ type PacksDownloader struct {
 	terminated bool
 }
 
+type Config struct {
+	MaxPeers int
+}
+
 // New creates a packs fetcher to retrieve events based on pack announcements.
-func New(fetcher *fetcher.Fetcher, onlyNotConnected onlyNotConnectedFn, dropPeer dropPeerFn) *PacksDownloader {
+func New(fetcher *fetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn, config Config) *PacksDownloader {
 	return &PacksDownloader{
+		config:           config,
 		fetcher:          fetcher,
 		onlyNotConnected: onlyNotConnected,
-		dropPeer:         dropPeer,
+		peerMisbehaviour: peerMisbehaviour,
 		peers:            make(map[string]*PeerPacksDownloader),
 		peersMu:          new(sync.RWMutex),
 	}
@@ -48,8 +51,8 @@ type Peer struct {
 	ID    string
 	Epoch idx.Epoch
 
-	RequestPackInfos packInfoRequesterFn
-	RequestPack      packRequesterFn
+	RequestPackInfos RequestPackInfosFn
+	RequestPack      RequestPackFn
 }
 
 // RegisterPeer injects a new download peer into the set of block source to be
@@ -67,12 +70,11 @@ func (d *PacksDownloader) RegisterPeer(peer Peer, myEpoch idx.Epoch) error {
 		return nil
 	}
 
-	if d.peers[peer.ID] != nil || len(d.peers) >= maxPeers {
+	if d.peers[peer.ID] != nil || len(d.peers) >= d.config.MaxPeers {
 		return nil
 	}
 
-	log.Trace("Registering sync peer", "peer", peer.ID, "epoch", myEpoch)
-	d.peers[peer.ID] = newPeer(peer, myEpoch, d.fetcher, d.onlyNotConnected, d.dropPeer)
+	d.peers[peer.ID] = newPeer(peer, myEpoch, d.fetcher, d.onlyNotConnected, d.peerMisbehaviour)
 	d.peers[peer.ID].Start()
 
 	return nil
@@ -89,11 +91,9 @@ func (d *PacksDownloader) OnNewEpoch(myEpoch idx.Epoch, peerEpoch func(string) i
 
 		if peerEpoch(peerID) >= myEpoch {
 			// allocate new peer for the new epoch
-			newPeerDwnld := newPeer(peerDwnld.peer, myEpoch, d.fetcher, d.onlyNotConnected, d.dropPeer)
+			newPeerDwnld := newPeer(peerDwnld.peer, myEpoch, d.fetcher, d.onlyNotConnected, d.peerMisbehaviour)
 			newPeerDwnld.Start()
 			newPeers[peerID] = newPeerDwnld
-		} else {
-			log.Trace("UnRegistering sync peer", "peer", peerID)
 		}
 	}
 	// wipe out old downloading state from prev. epoch
@@ -125,7 +125,6 @@ func (d *PacksDownloader) UnregisterPeer(peer string) error {
 		return nil
 	}
 
-	log.Trace("UnRegistering sync peer", "peer", peer)
 	d.peers[peer].Stop()
 	delete(d.peers, peer)
 	return nil
