@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
 	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
-	"github.com/Fantom-foundation/go-lachesis/logger"
 	"github.com/Fantom-foundation/go-lachesis/utils"
 	"github.com/Fantom-foundation/go-lachesis/vector"
 )
@@ -66,7 +66,6 @@ a2.1 ──╣      ║      ║      ║
 // - "." - separator;
 // - stage - makes ;
 func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[string]string) {
-	logger.SetTestMode(t)
 	assertar := assert.New(t)
 
 	// decode is a event name parser
@@ -79,32 +78,37 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		return
 	}
 
-	ordered := make([]*inter.Event, 0)
-	nodes, _, _ := inter.ASCIIschemeForEach(asciiScheme, inter.ForEachEvent{
-		Process: func(e *inter.Event, name string) {
+	ordered := make([]dag.Event, 0)
+	nodes, _, _ := tdag.ASCIIschemeForEach(asciiScheme, tdag.ForEachEvent{
+		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
 	})
 
 	validators := pos.EqualStakeValidators(nodes, 1)
 
-	events := make(map[hash.Event]*inter.EventHeaderData)
-	getEvent := func(id hash.Event) *inter.EventHeaderData {
+	events := make(map[hash.Event]dag.Event)
+	getEvent := func(id hash.Event) dag.Event {
 		return events[id]
 	}
 
-	vecClock := vector.NewIndex(vector.DefaultIndexConfig(), validators, memorydb.New(), getEvent)
+	crit := func(err error) {
+		panic(err)
+	}
+
+	vecClock := vector.NewIndex(vector.LiteConfig(), crit)
+	vecClock.Reset(validators, memorydb.New(), getEvent)
 
 	// build vector index
 	for _, e := range ordered {
-		events[e.Hash()] = &e.EventHeaderData
-		vecClock.Add(&e.EventHeaderData)
+		events[e.ID()] = e
+		_ = vecClock.Add(e)
 	}
 
 	// divide events by stage
-	var stages [][]*inter.Event
+	var stages [][]dag.Event
 	for _, e := range ordered {
-		name := string(e.Extra)
+		name := e.(*tdag.TestEvent).Name
 		stage := decode(name)
 		for i := len(stages); i <= stage; i++ {
 			stages = append(stages, nil)
@@ -120,14 +124,14 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 
 		// build heads/tips
 		for _, e := range ee {
-			for _, p := range e.Parents {
+			for _, p := range e.Parents() {
 				if heads.Contains(p) {
 					heads.Erase(p)
 				}
 			}
-			heads.Add(e.Hash())
-			id := e.Hash()
-			tips[e.Creator] = &id
+			heads.Add(e.ID())
+			id := e.ID()
+			tips[e.Creator()] = &id
 		}
 
 		for _, node := range nodes {
