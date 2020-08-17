@@ -21,13 +21,13 @@ func Test_IntToBytes(t *testing.T) {
 		47528346792,
 	} {
 		{
-			b := bigendian.Int64ToBytes(n1)
-			n2 := bigendian.BytesToInt64(b)
+			b := bigendian.Uint64ToBytes(n1)
+			n2 := bigendian.BytesToUint64(b)
 			assertar.Equal(n1, n2)
 		}
 		{
-			b := littleendian.Int64ToBytes(n1)
-			n2 := littleendian.BytesToInt64(b)
+			b := littleendian.Uint64ToBytes(n1)
+			n2 := littleendian.BytesToUint64(b)
 			assertar.Equal(n1, n2)
 		}
 	}
@@ -38,13 +38,13 @@ func Test_IntToBytes(t *testing.T) {
 		475283467,
 	} {
 		{
-			b := bigendian.Int32ToBytes(n1)
-			n2 := bigendian.BytesToInt32(b)
+			b := bigendian.Uint32ToBytes(n1)
+			n2 := bigendian.BytesToUint32(b)
 			assertar.Equal(n1, n2)
 		}
 		{
-			b := littleendian.Int32ToBytes(n1)
-			n2 := littleendian.BytesToInt32(b)
+			b := littleendian.Uint32ToBytes(n1)
+			n2 := littleendian.BytesToUint32(b)
 			assertar.Equal(n1, n2)
 		}
 	}

@@ -11,12 +11,12 @@ type (
 
 // Bytes gets the byte representation of the index.
 func (v Validator) Bytes() []byte {
-	return bigendian.Int32ToBytes(uint32(v))
+	return bigendian.Uint32ToBytes(uint32(v))
 }
 
 // BytesToValidator converts bytes to validator index.
 func BytesToValidator(b []byte) Validator {
-	return Validator(bigendian.BytesToInt32(b))
+	return Validator(bigendian.BytesToUint32(b))
 }
 
 const (

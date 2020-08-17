@@ -2,13 +2,14 @@ package hash
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"math/rand"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/Fantom-foundation/go-lachesis/common/bigendian"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
@@ -17,7 +18,7 @@ import (
 type (
 	// Event is a unique identifier of event.
 	// It is a hash of Event.
-	Event common.Hash
+	Event Hash
 
 	// OrderedEvents is a sortable slice of event hashes.
 	OrderedEvents []Event
@@ -42,18 +43,18 @@ var (
 
 // Bytes returns value as byte slice.
 func (h Event) Bytes() []byte {
-	return (common.Hash)(h).Bytes()
+	return (Hash)(h).Bytes()
 }
 
 // Big converts a hash to a big integer.
 func (h *Event) Big() *big.Int {
-	return (*common.Hash)(h).Big()
+	return (*Hash)(h).Big()
 }
 
 // SetBytes converts bytes to event hash.
 // If b is larger than len(h), b will be cropped from the left.
 func (h *Event) SetBytes(raw []byte) {
-	(*common.Hash)(h).SetBytes(raw)
+	(*Hash)(h).SetBytes(raw)
 }
 
 // BytesToEvent converts bytes to event hash.
@@ -64,8 +65,8 @@ func BytesToEvent(b []byte) Event {
 
 // FromBytes converts bytes to hash.
 // If b is larger than len(h), b will be cropped from the left.
-func FromBytes(b []byte) common.Hash {
-	var h common.Hash
+func FromBytes(b []byte) Hash {
+	var h Hash
 	h.SetBytes(b)
 	return h
 }
@@ -73,12 +74,12 @@ func FromBytes(b []byte) common.Hash {
 // HexToEventHash sets byte representation of s to hash.
 // If b is larger than len(h), b will be cropped from the left.
 func HexToEventHash(s string) Event {
-	return Event(common.HexToHash(s))
+	return Event(HexToHash(s))
 }
 
 // Hex converts an event hash to a hex string.
 func (h Event) Hex() string {
-	return common.Hash(h).Hex()
+	return Hash(h).Hex()
 }
 
 // Lamport returns [4:8] bytes, which store event's Lamport.
@@ -278,39 +279,20 @@ func (hh OrderedEvents) String() string {
 	return buf.String()
 }
 
-// ToWire converts to simple slice.
-func (hh OrderedEvents) ToWire() [][]byte {
-	res := make([][]byte, len(hh))
-	for i, h := range hh {
-		res[i] = h.Bytes()
-	}
-
-	return res
-}
-
-// WireToOrderedEvents converts from simple slice.
-func WireToOrderedEvents(buf [][]byte) OrderedEvents {
-	if buf == nil {
-		return nil
-	}
-
-	hh := make(OrderedEvents, len(buf))
-	for i, b := range buf {
-		hh[i] = BytesToEvent(b)
-	}
-
-	return hh
-}
-
 func (hh OrderedEvents) Len() int      { return len(hh) }
 func (hh OrderedEvents) Swap(i, j int) { hh[i], hh[j] = hh[j], hh[i] }
 func (hh OrderedEvents) Less(i, j int) bool {
 	return bytes.Compare(hh[i].Bytes(), hh[j].Bytes()) < 0
 }
 
+// ByEpochAndLamport sorts events by epoch first, by lamport second, by ID third
+func (hh OrderedEvents) ByEpochAndLamport() {
+	sort.Sort(hh)
+}
+
 // Of returns hash of data
-func Of(data ...[]byte) (hash common.Hash) {
-	d := sha3.NewLegacyKeccak256()
+func Of(data ...[]byte) (hash Hash) {
+	d := sha256.New()
 	for _, b := range data {
 		_, err := d.Write(b)
 		if err != nil {
@@ -341,7 +323,7 @@ func FakeEvent() (h Event) {
 	if err != nil {
 		panic(err)
 	}
-	copy(h[0:4], bigendian.Int32ToBytes(uint32(FakeEpoch())))
+	copy(h[0:4], bigendian.Uint32ToBytes(uint32(FakeEpoch())))
 	return
 }
 
