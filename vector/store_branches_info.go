@@ -6,21 +6,21 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
-func (vi *Index) setRlp(table kvdb.KeyValueStore, key []byte, val interface{}) {
+func (vi *Index) setRlp(table kvdb.Store, key []byte, val interface{}) {
 	buf, err := rlp.EncodeToBytes(val)
 	if err != nil {
-		vi.Log.Crit("Failed to encode rlp", "err", err)
+		vi.crit(err)
 	}
 
 	if err := table.Put(key, buf); err != nil {
-		vi.Log.Crit("Failed to put key-value", "err", err)
+		vi.crit(err)
 	}
 }
 
-func (vi *Index) getRlp(table kvdb.KeyValueStore, key []byte, to interface{}) interface{} {
+func (vi *Index) getRlp(table kvdb.Store, key []byte, to interface{}) interface{} {
 	buf, err := table.Get(key)
 	if err != nil {
-		vi.Log.Crit("Failed to get key-value", "err", err)
+		vi.crit(err)
 	}
 	if buf == nil {
 		return nil
@@ -28,7 +28,7 @@ func (vi *Index) getRlp(table kvdb.KeyValueStore, key []byte, to interface{}) in
 
 	err = rlp.DecodeBytes(buf, to)
 	if err != nil {
-		vi.Log.Crit("Failed to decode rlp", "err", err, "size", len(buf))
+		vi.crit(err)
 	}
 	return to
 }

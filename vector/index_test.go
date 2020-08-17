@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
 	"github.com/Fantom-foundation/go-lachesis/inter/pos"
-
 	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
 )
 
@@ -32,9 +32,9 @@ a2.1 ──╣      ║      ║      ║
 
 func BenchmarkIndex_Add(b *testing.B) {
 	b.StopTimer()
-	ordered := make([]*inter.Event, 0)
-	nodes, _, _ := inter.ASCIIschemeForEach(testASCIIScheme, inter.ForEachEvent{
-		Process: func(e *inter.Event, name string) {
+	ordered := make([]dag.Event, 0)
+	nodes, _, _ := tdag.ASCIIschemeForEach(testASCIIScheme, tdag.ForEachEvent{
+		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
 	})
@@ -43,22 +43,26 @@ func BenchmarkIndex_Add(b *testing.B) {
 		validatorsBuilder.Set(peer, 1)
 	}
 	validators := validatorsBuilder.Build()
-	events := make(map[hash.Event]*inter.EventHeaderData)
-	getEvent := func(id hash.Event) *inter.EventHeaderData {
+	events := make(map[hash.Event]dag.Event)
+	getEvent := func(id hash.Event) dag.Event {
 		return events[id]
 	}
 	for _, e := range ordered {
-		events[e.Hash()] = &e.EventHeaderData
+		events[e.ID()] = e
 	}
 
-	vecClock := NewIndex(DefaultIndexConfig(), validators, memorydb.New(), getEvent)
+	vecClock := NewIndex(LiteConfig(), func(err error) { panic(err) })
+	vecClock.Reset(validators, memorydb.New(), getEvent)
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		vecClock.Reset(validators, memorydb.New(), getEvent)
 		b.StartTimer()
 		for _, e := range ordered {
-			vecClock.Add(&e.EventHeaderData)
+			err := vecClock.Add(e)
+			if err != nil {
+				panic(err)
+			}
 			i++
 			if i >= b.N {
 				break

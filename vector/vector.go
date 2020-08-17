@@ -4,7 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 
-	"github.com/Fantom-foundation/go-lachesis/inter"
+	"github.com/Fantom-foundation/go-lachesis/abft/dagidx"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag"
 	"github.com/Fantom-foundation/go-lachesis/inter/idx"
 )
 
@@ -22,8 +23,8 @@ type (
 
 	// BranchSeq encodes Seq and MinSeq into 8 bytes
 	BranchSeq struct {
-		Seq    idx.Event // maximum observed e.Seq in the branch
-		MinSeq idx.Event // minimum observed e.Seq in the branch
+		seq    idx.Event
+		minSeq idx.Event
 	}
 
 	// allVecs is container of all the vector clocks
@@ -33,6 +34,16 @@ type (
 		beforeTime HighestBeforeTime
 	}
 )
+
+// Seq is a maximum observed e.Seq in the branch
+func (b *BranchSeq) Seq() idx.Event {
+	return b.seq
+}
+
+// MinSeq is a minimum observed e.Seq in the branch
+func (b *BranchSeq) MinSeq() idx.Event {
+	return b.minSeq
+}
 
 // NewLowestAfterSeq creates new LowestAfterSeq vector.
 func NewLowestAfterSeq(size int) LowestAfterSeq {
@@ -49,7 +60,7 @@ func NewHighestBeforeSeq(size int) HighestBeforeSeq {
 	return make(HighestBeforeSeq, size*8)
 }
 
-// Get i's position in the byte-encoded vector clock
+// get i's position in the byte-encoded vector clock
 func (b LowestAfterSeq) Get(i idx.Validator) idx.Event {
 	for int(i) >= b.Size() {
 		return 0
@@ -72,16 +83,16 @@ func (b *LowestAfterSeq) Set(i idx.Validator, seq idx.Event) {
 	binary.LittleEndian.PutUint32((*b)[i*4:(i+1)*4], uint32(seq))
 }
 
-// Get i's position in the byte-encoded vector clock
-func (b HighestBeforeTime) Get(i idx.Validator) inter.Timestamp {
+// get i's position in the byte-encoded vector clock
+func (b HighestBeforeTime) Get(i idx.Validator) dag.RawTimestamp {
 	for int(i) >= b.Size() {
 		return 0
 	}
-	return inter.Timestamp(binary.LittleEndian.Uint64(b[i*8 : (i+1)*8]))
+	return dag.RawTimestamp(binary.LittleEndian.Uint64(b[i*8 : (i+1)*8]))
 }
 
 // Set i's position in the byte-encoded vector clock
-func (b *HighestBeforeTime) Set(i idx.Validator, time inter.Timestamp) {
+func (b *HighestBeforeTime) Set(i idx.Validator, time dag.RawTimestamp) {
 	for int(i) >= b.Size() {
 		// append zeros if exceeds size
 		*b = append(*b, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
@@ -99,8 +110,8 @@ func (b HighestBeforeSeq) Size() int {
 	return len(b) / 8
 }
 
-// Get i's position in the byte-encoded vector clock
-func (b HighestBeforeSeq) Get(i idx.Validator) BranchSeq {
+// get i's position in the byte-encoded vector clock
+func (b HighestBeforeSeq) get(i idx.Validator) BranchSeq {
 	for int(i) >= b.Size() {
 		return BranchSeq{}
 	}
@@ -108,9 +119,15 @@ func (b HighestBeforeSeq) Get(i idx.Validator) BranchSeq {
 	seq2 := binary.LittleEndian.Uint32(b[i*8+4 : i*8+8])
 
 	return BranchSeq{
-		Seq:    idx.Event(seq1),
-		MinSeq: idx.Event(seq2),
+		seq:    idx.Event(seq1),
+		minSeq: idx.Event(seq2),
 	}
+}
+
+// Get i's position in the byte-encoded vector clock
+func (b HighestBeforeSeq) Get(i idx.Validator) dagidx.Seq {
+	v := b.get(i)
+	return &v
 }
 
 // Set i's position in the byte-encoded vector clock
@@ -119,15 +136,15 @@ func (b *HighestBeforeSeq) Set(i idx.Validator, seq BranchSeq) {
 		// append zeros if exceeds size
 		*b = append(*b, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
 	}
-	binary.LittleEndian.PutUint32((*b)[i*8:i*8+4], uint32(seq.Seq))
-	binary.LittleEndian.PutUint32((*b)[i*8+4:i*8+8], uint32(seq.MinSeq))
+	binary.LittleEndian.PutUint32((*b)[i*8:i*8+4], uint32(seq.Seq()))
+	binary.LittleEndian.PutUint32((*b)[i*8+4:i*8+8], uint32(seq.MinSeq()))
 }
 
 var (
 	// forkDetectedSeq is a special marker of observed fork by a creator
 	forkDetectedSeq = BranchSeq{
-		Seq:    0,
-		MinSeq: idx.Event(math.MaxInt32),
+		seq:    0,
+		minSeq: idx.Event(math.MaxInt32),
 	}
 )
 

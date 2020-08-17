@@ -4,17 +4,17 @@ import (
 	"errors"
 
 	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter"
+	"github.com/Fantom-foundation/go-lachesis/inter/dag"
 )
 
 // dfsSubgraph iterates all the event which are observed by head, and accepted by a filter
 // Excluding head
 // filter MAY BE called twice for the same event.
-func (vi *Index) dfsSubgraph(head *inter.EventHeaderData, walk func(hash.Event) (godeeper bool)) error {
+func (vi *Index) dfsSubgraph(head dag.Event, walk func(hash.Event) (godeeper bool)) error {
 	stack := make(hash.EventsStack, 0, vi.validators.Len()*5)
 
 	// first element
-	stack.PushAll(head.Parents)
+	stack.PushAll(head.Parents())
 
 	for next := stack.Pop(); next != nil; next = stack.Pop() {
 		curr := *next
@@ -30,7 +30,7 @@ func (vi *Index) dfsSubgraph(head *inter.EventHeaderData, walk func(hash.Event) 
 		}
 
 		// memorize parents
-		stack.PushAll(event.Parents)
+		stack.PushAll(event.Parents())
 	}
 
 	return nil
