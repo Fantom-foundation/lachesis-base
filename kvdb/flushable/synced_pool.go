@@ -48,10 +48,10 @@ func NewSyncedPool(producer kvdb.DbProducer) *SyncedPool {
 }
 
 func (p *SyncedPool) callbacks(name string) (
-	onOpen func() kvdb.KeyValueStore,
+	onOpen func() kvdb.DropableStore,
 	onDrop func(),
 ) {
-	onOpen = func() kvdb.KeyValueStore {
+	onOpen = func() kvdb.DropableStore {
 		return p.producer.OpenDb(name)
 	}
 
@@ -69,14 +69,14 @@ func (p *SyncedPool) dropDb(name string) {
 	p.queuedDrops[name] = struct{}{}
 }
 
-func (p *SyncedPool) GetDb(name string) kvdb.KeyValueStore {
+func (p *SyncedPool) GetDb(name string) kvdb.DropableStore {
 	p.Lock()
 	defer p.Unlock()
 
 	return p.getDb(name)
 }
 
-func (p *SyncedPool) getDb(name string) kvdb.KeyValueStore {
+func (p *SyncedPool) getDb(name string) kvdb.DropableStore {
 	wrapper := p.wrappers[name]
 	if wrapper != nil {
 		return wrapper
@@ -112,7 +112,7 @@ func (p *SyncedPool) flush(id []byte) error {
 			continue
 		}
 		// db.Close() is called inside wrapper.Close()
-		db.Drop()
+		db.(kvdb.DropableStore).Drop()
 	}
 	p.queuedDrops = make(map[string]struct{})
 

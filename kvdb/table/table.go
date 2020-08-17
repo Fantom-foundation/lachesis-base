@@ -3,12 +3,12 @@ package table
 import (
 	"bytes"
 
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 // Table wraps the underling DB, so all the table's data is stored with a prefix in underling DB
 type Table struct {
-	db     ethdb.KeyValueStore
+	db     kvdb.Store
 	prefix []byte
 }
 
@@ -37,7 +37,7 @@ func noPrefix(key, prefix []byte) []byte {
  * Database
  */
 
-func New(db ethdb.KeyValueStore, prefix []byte) *Table {
+func New(db kvdb.Store, prefix []byte) *Table {
 	return &Table{db, prefix}
 }
 
@@ -68,7 +68,7 @@ func (t *Table) Delete(key []byte) error {
 	return t.db.Delete(prefixed(key, t.prefix))
 }
 
-func (t *Table) NewBatch() ethdb.Batch {
+func (t *Table) NewBatch() kvdb.Batch {
 	return &batch{t.db.NewBatch(), t.prefix}
 }
 
@@ -85,7 +85,7 @@ func (t *Table) Compact(start []byte, limit []byte) error {
  */
 
 type iterator struct {
-	it     ethdb.Iterator
+	it     kvdb.Iterator
 	prefix []byte
 }
 
@@ -114,15 +114,15 @@ func (it *iterator) Release() {
 	*it = iterator{}
 }
 
-func (t *Table) NewIterator() ethdb.Iterator {
+func (t *Table) NewIterator() kvdb.Iterator {
 	return &iterator{t.db.NewIteratorWithPrefix(t.prefix), t.prefix}
 }
 
-func (t *Table) NewIteratorWithStart(start []byte) ethdb.Iterator {
+func (t *Table) NewIteratorWithStart(start []byte) kvdb.Iterator {
 	return &iterator{t.db.NewIteratorWithStart(prefixed(start, t.prefix)), t.prefix}
 }
 
-func (t *Table) NewIteratorWithPrefix(itPrefix []byte) ethdb.Iterator {
+func (t *Table) NewIteratorWithPrefix(itPrefix []byte) kvdb.Iterator {
 	return &iterator{t.db.NewIteratorWithPrefix(prefixed(itPrefix, t.prefix)), t.prefix}
 }
 
@@ -131,7 +131,7 @@ func (t *Table) NewIteratorWithPrefix(itPrefix []byte) ethdb.Iterator {
  */
 
 type batch struct {
-	batch  ethdb.Batch
+	batch  kvdb.Batch
 	prefix []byte
 }
 
@@ -155,7 +155,7 @@ func (b *batch) Reset() {
 	b.batch.Reset()
 }
 
-func (b *batch) Replay(w ethdb.KeyValueWriter) error {
+func (b *batch) Replay(w kvdb.Writer) error {
 	return b.batch.Replay(&replayer{w, b.prefix})
 }
 
@@ -164,7 +164,7 @@ func (b *batch) Replay(w ethdb.KeyValueWriter) error {
  */
 
 type replayer struct {
-	writer ethdb.KeyValueWriter
+	writer kvdb.Writer
 	prefix []byte
 }
 

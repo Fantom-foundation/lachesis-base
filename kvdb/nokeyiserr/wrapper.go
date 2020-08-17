@@ -2,7 +2,7 @@ package nokeyiserr
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 var (
@@ -10,17 +10,17 @@ var (
 )
 
 type Wrapper struct {
-	ethdb.KeyValueStore
+	kvdb.Store
 }
 
 // Wrap creates new Wrapper
-func Wrap(db ethdb.KeyValueStore) *Wrapper {
+func Wrap(db kvdb.Store) *Wrapper {
 	return &Wrapper{db}
 }
 
-// Get implements ETH-style Get. ETH databases expect an error if key not found, unlike Lachesis
+// get returns error if key isn't found
 func (w *Wrapper) Get(key []byte) ([]byte, error) {
-	val, err := w.KeyValueStore.Get(key)
+	val, err := w.Store.Get(key)
 	if val == nil && err == nil {
 		return nil, errNotFound
 	}

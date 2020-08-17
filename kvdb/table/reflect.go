@@ -2,13 +2,12 @@ package table
 
 import (
 	"bytes"
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	"reflect"
-
-	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 // MigrateTables sets target fields to database tables.
-func MigrateTables(s interface{}, db ethdb.KeyValueStore) {
+func MigrateTables(s interface{}, db kvdb.Store) {
 	value := reflect.ValueOf(s).Elem()
 
 	var keys uniqKeys

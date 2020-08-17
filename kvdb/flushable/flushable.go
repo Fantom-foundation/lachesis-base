@@ -5,23 +5,21 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
-
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 var (
 	errClosed = errors.New("database closed")
 )
 
-// Flushable is a ethdb.Database wrapper around any Database.
+// Flushable is a kvdb.Store wrapper around any Database.
 // On reading, it looks in memory cache first. If not found, it looks in a parent DB.
 // On writing, it writes only in cache. To flush the cache into parent DB, call Flush().
 type Flushable struct {
 	onDrop     func()
-	underlying kvdb.KeyValueStore
+	underlying kvdb.Store
 
 	modified       *rbt.Tree // modified, comparing to parent, pairs. deleted values are nil
 	sizeEstimation *int
@@ -31,16 +29,16 @@ type Flushable struct {
 
 // Wrap underlying db.
 // All the writes into the cache won't be written in parent until .Flush() is called.
-func Wrap(parent kvdb.KeyValueStore) *Flushable {
+func Wrap(parent kvdb.DropableStore) *Flushable {
 	if parent == nil {
 		panic("nil parent")
 	}
 
-	return WrapWithDrop(parent, func() { parent.Drop() })
+	return WrapWithDrop(parent, parent.Drop)
 }
 
 // WrapWithDrop is the same as Wrap, but defines onDrop callback.
-func WrapWithDrop(parent kvdb.KeyValueStore, drop func()) *Flushable {
+func WrapWithDrop(parent kvdb.Store, drop func()) *Flushable {
 	if parent == nil {
 		panic("nil parent")
 	}
@@ -96,7 +94,7 @@ func (w *Flushable) Has(key []byte) (bool, error) {
 	return w.underlying.Has(key)
 }
 
-// Get returns key-value pair by key. Looks in cache first, then - in DB.
+// get returns key-value pair by key. Looks in cache first, then - in DB.
 func (w *Flushable) Get(key []byte) ([]byte, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
@@ -205,7 +203,7 @@ func (w *Flushable) flush() error {
 			return err
 		}
 
-		if batch.ValueSize() > ethdb.IdealBatchSize {
+		if batch.ValueSize() > kvdb.IdealBatchSize {
 			err = batch.Write()
 			if err != nil {
 				return err
@@ -241,7 +239,7 @@ type iterator struct {
 	key, val []byte
 	prevKey  []byte
 
-	parentIt ethdb.Iterator
+	parentIt kvdb.Iterator
 	parentOk bool
 
 	treeNode *rbt.Node
@@ -393,7 +391,7 @@ func (it *iterator) Release() {
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the memory database.
-func (w *Flushable) NewIterator() ethdb.Iterator {
+func (w *Flushable) NewIterator() kvdb.Iterator {
 	return &iterator{
 		lock:     w.lock,
 		tree:     w.modified,
@@ -404,7 +402,7 @@ func (w *Flushable) NewIterator() ethdb.Iterator {
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
-func (w *Flushable) NewIteratorWithStart(start []byte) ethdb.Iterator {
+func (w *Flushable) NewIteratorWithStart(start []byte) kvdb.Iterator {
 	return &iterator{
 		lock:     w.lock,
 		tree:     w.modified,
@@ -415,7 +413,7 @@ func (w *Flushable) NewIteratorWithStart(start []byte) ethdb.Iterator {
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
-func (w *Flushable) NewIteratorWithPrefix(prefix []byte) ethdb.Iterator {
+func (w *Flushable) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
 	return &iterator{
 		lock:     w.lock,
 		tree:     w.modified,
@@ -430,7 +428,7 @@ func (w *Flushable) NewIteratorWithPrefix(prefix []byte) ethdb.Iterator {
  */
 
 // NewBatch creates new batch.
-func (w *Flushable) NewBatch() ethdb.Batch {
+func (w *Flushable) NewBatch() kvdb.Batch {
 	return &cacheBatch{db: w}
 }
 
@@ -491,7 +489,7 @@ func (b *cacheBatch) Reset() {
 }
 
 // Replay replays the batch contents.
-func (b *cacheBatch) Replay(w ethdb.KeyValueWriter) error {
+func (b *cacheBatch) Replay(w kvdb.Writer) error {
 	for _, kv := range b.writes {
 		if kv.v == nil {
 			if err := w.Delete(kv.k); err != nil {

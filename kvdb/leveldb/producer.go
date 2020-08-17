@@ -43,7 +43,7 @@ func (p *producer) Names() []string {
 }
 
 // OpenDb or create db with name.
-func (p *producer) OpenDb(name string) kvdb.KeyValueStore {
+func (p *producer) OpenDb(name string) kvdb.DropableStore {
 	dir := name + "-ldb"
 	path := filepath.Join(p.datadir, dir)
 
@@ -67,7 +67,7 @@ func (p *producer) OpenDb(name string) kvdb.KeyValueStore {
 
 	}
 
-	db, err := New(path, 64, 0, "", onClose, onDrop)
+	db, err := New(path, 64, 0, onClose, onDrop)
 	if err != nil {
 		panic(err)
 	}

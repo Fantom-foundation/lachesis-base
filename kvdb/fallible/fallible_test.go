@@ -15,7 +15,7 @@ func TestFallible(t *testing.T) {
 	var (
 		key = []byte("test-key")
 		val = []byte("test-value")
-		db  kvdb.KeyValueStore
+		db  kvdb.Store
 		err error
 	)
 

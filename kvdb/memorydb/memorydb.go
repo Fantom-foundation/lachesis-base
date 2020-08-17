@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
+
+	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
 var (
@@ -95,7 +96,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 	return ok, nil
 }
 
-// Get retrieves the given key if it's present in the key-value store.
+// get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
@@ -150,7 +151,7 @@ func (db *Database) Delete(key []byte) error {
 
 // NewBatch creates a write-only key-value store that buffers changes to its host
 // database until a final write is called.
-func (db *Database) NewBatch() ethdb.Batch {
+func (db *Database) NewBatch() kvdb.Batch {
 	return &batch{
 		db: db,
 	}
@@ -158,14 +159,14 @@ func (db *Database) NewBatch() ethdb.Batch {
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the memory database.
-func (db *Database) NewIterator() ethdb.Iterator {
+func (db *Database) NewIterator() kvdb.Iterator {
 	return db.NewIteratorWithStart(nil)
 }
 
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
-func (db *Database) NewIteratorWithStart(start []byte) ethdb.Iterator {
+func (db *Database) NewIteratorWithStart(start []byte) kvdb.Iterator {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -194,7 +195,7 @@ func (db *Database) NewIteratorWithStart(start []byte) ethdb.Iterator {
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
-func (db *Database) NewIteratorWithPrefix(prefix []byte) ethdb.Iterator {
+func (db *Database) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
@@ -299,7 +300,7 @@ func (b *batch) Reset() {
 }
 
 // Replay replays the batch contents.
-func (b *batch) Replay(w ethdb.KeyValueWriter) error {
+func (b *batch) Replay(w kvdb.Writer) error {
 	for _, keyvalue := range b.writes {
 		if keyvalue.delete {
 			if err := w.Delete(keyvalue.key); err != nil {

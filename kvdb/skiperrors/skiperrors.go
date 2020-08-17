@@ -1,22 +1,20 @@
 package skiperrors
 
 import (
-	"github.com/ethereum/go-ethereum/ethdb"
-
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
-// wrapper is a kvdb.KeyValueStore wrapper around any kvdb.KeyValueStore.
+// wrapper is a kvdb.Store wrapper around any kvdb.Store.
 // It ignores some errors of underlying store.
 // NOTE: ignoring is not implemented at Iterator, Batch, .
 type wrapper struct {
-	underlying kvdb.KeyValueStore
+	underlying kvdb.Store
 
 	errs []error
 }
 
-// Wrap returns a wrapped kvdb.KeyValueStore.
-func Wrap(db kvdb.KeyValueStore, errs ...error) kvdb.KeyValueStore {
+// Wrap returns a wrapped kvdb.Store.
+func Wrap(db kvdb.Store, errs ...error) kvdb.Store {
 	return &wrapper{
 		underlying: db,
 		errs:       errs,
@@ -50,7 +48,7 @@ func (f *wrapper) Has(key []byte) (bool, error) {
 	return has, err
 }
 
-// Get retrieves the given key if it's present in the key-value data store.
+// get retrieves the given key if it's present in the key-value data store.
 func (f *wrapper) Get(key []byte) ([]byte, error) {
 	b, err := f.underlying.Get(key)
 	if f.skip(err) {
@@ -79,26 +77,26 @@ func (f *wrapper) Delete(key []byte) error {
 
 // NewBatch creates a write-only database that buffers changes to its host db
 // until a final write is called.
-func (f *wrapper) NewBatch() ethdb.Batch {
+func (f *wrapper) NewBatch() kvdb.Batch {
 	return f.underlying.NewBatch()
 }
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the key-value database.
-func (f *wrapper) NewIterator() ethdb.Iterator {
+func (f *wrapper) NewIterator() kvdb.Iterator {
 	return f.underlying.NewIterator()
 }
 
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
-func (f *wrapper) NewIteratorWithStart(start []byte) ethdb.Iterator {
+func (f *wrapper) NewIteratorWithStart(start []byte) kvdb.Iterator {
 	return f.underlying.NewIteratorWithStart(start)
 }
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
-func (f *wrapper) NewIteratorWithPrefix(prefix []byte) ethdb.Iterator {
+func (f *wrapper) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
 	return f.underlying.NewIteratorWithPrefix(prefix)
 }
 
@@ -133,9 +131,4 @@ func (f *wrapper) Close() error {
 		return nil
 	}
 	return err
-}
-
-// Drop drops database.
-func (f *wrapper) Drop() {
-	f.underlying.Drop()
 }

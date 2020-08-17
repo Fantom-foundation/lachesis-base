@@ -4,8 +4,6 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/ethereum/go-ethereum/ethdb"
-
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
@@ -13,16 +11,16 @@ var (
 	errWriteLimit = errors.New("write limit is over")
 )
 
-// Fallible is a kvdb.KeyValueStore wrapper around any kvdb.KeyValueStore.
+// Fallible is a kvdb.Store wrapper around any kvdb.Store.
 // It falls when write counter is full for test purpose.
 type Fallible struct {
-	Underlying kvdb.KeyValueStore
+	Underlying kvdb.DropableStore
 
 	writes int32
 }
 
-// Wrap returns a wrapped kvdb.KeyValueStore with counter 0. Set it manually.
-func Wrap(db kvdb.KeyValueStore) *Fallible {
+// Wrap returns a wrapped kvdb.Store with counter 0. Set it manually.
+func Wrap(db kvdb.DropableStore) *Fallible {
 	return &Fallible{
 		Underlying: db,
 	}
@@ -54,7 +52,7 @@ func (f *Fallible) Has(key []byte) (bool, error) {
 	return f.Underlying.Has(key)
 }
 
-// Get retrieves the given key if it's present in the key-value data store.
+// get retrieves the given key if it's present in the key-value data store.
 func (f *Fallible) Get(key []byte) ([]byte, error) {
 	return f.Underlying.Get(key)
 }
@@ -74,26 +72,26 @@ func (f *Fallible) Delete(key []byte) error {
 
 // NewBatch creates a write-only database that buffers changes to its host db
 // until a final write is called.
-func (f *Fallible) NewBatch() ethdb.Batch {
+func (f *Fallible) NewBatch() kvdb.Batch {
 	return f.Underlying.NewBatch()
 }
 
 // NewIterator creates a binary-alphabetical iterator over the entire keyspace
 // contained within the key-value database.
-func (f *Fallible) NewIterator() ethdb.Iterator {
+func (f *Fallible) NewIterator() kvdb.Iterator {
 	return f.Underlying.NewIterator()
 }
 
 // NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
 // database content starting at a particular initial key (or after, if it does
 // not exist).
-func (f *Fallible) NewIteratorWithStart(start []byte) ethdb.Iterator {
+func (f *Fallible) NewIteratorWithStart(start []byte) kvdb.Iterator {
 	return f.Underlying.NewIteratorWithStart(start)
 }
 
 // NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix.
-func (f *Fallible) NewIteratorWithPrefix(prefix []byte) ethdb.Iterator {
+func (f *Fallible) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
 	return f.Underlying.NewIteratorWithPrefix(prefix)
 }
 

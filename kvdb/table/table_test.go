@@ -29,7 +29,7 @@ func tempLevelDB(name string) *leveldb.Database {
 		}
 	}
 
-	diskdb, err := leveldb.New(dir, 16, 0, "", nil, drop)
+	diskdb, err := leveldb.New(dir, 16, 0, nil, drop)
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary database: %v", err))
 	}
@@ -57,7 +57,7 @@ func TestTable(t *testing.T) {
 	defer leveldb2.Drop()
 	defer leveldb2.Close()
 
-	for name, db := range map[string]kvdb.KeyValueStore{
+	for name, db := range map[string]kvdb.Store{
 		"memory":                       memorydb.New(),
 		"leveldb":                      leveldb1,
 		"cache-over-leveldb":           flushable.Wrap(leveldb2),
@@ -68,7 +68,7 @@ func TestTable(t *testing.T) {
 
 			// tables
 			t1 := New(db, []byte("t1"))
-			tables := map[string]kvdb.KeyValueStore{
+			tables := map[string]kvdb.Store{
 				"/t1":   t1,
 				"/t1/x": t1.NewTable([]byte("x")),
 				"/t2":   New(db, []byte("t2")),

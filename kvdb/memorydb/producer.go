@@ -4,7 +4,7 @@ import (
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
 )
 
-type Mod func(kvdb.KeyValueStore) kvdb.KeyValueStore
+type Mod func(kvdb.DropableStore) kvdb.DropableStore
 
 type producer struct {
 	fs   *fakeFS
@@ -25,7 +25,7 @@ func (p *producer) Names() []string {
 }
 
 // OpenDb or create db with name.
-func (p *producer) OpenDb(name string) kvdb.KeyValueStore {
+func (p *producer) OpenDb(name string) kvdb.DropableStore {
 	db := p.fs.OpenFakeDB(name)
 
 	for _, mod := range p.mods {

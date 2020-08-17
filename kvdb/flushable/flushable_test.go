@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Fantom-foundation/go-lachesis/kvdb"
@@ -38,7 +37,7 @@ func TestFlushable(t *testing.T) {
 	defer leveldb2.Close()
 
 	// create wrappers
-	dbs := map[string]kvdb.KeyValueStore{
+	dbs := map[string]kvdb.Store{
 		"leveldb": leveldb1,
 		"memory":  memorydb.New(),
 	}
@@ -51,7 +50,7 @@ func TestFlushable(t *testing.T) {
 	baseLdb := table.New(dbs["leveldb"], []byte{})
 	baseMem := table.New(dbs["memory"], []byte{})
 
-	dbsTables := [][]ethdb.KeyValueStore{
+	dbsTables := [][]kvdb.Store{
 		{
 			dbs["leveldb"],
 			baseLdb.NewTable([]byte{0, 1}),
@@ -66,7 +65,7 @@ func TestFlushable(t *testing.T) {
 
 	baseLdb = table.New(flushableDbs["cache-over-leveldb"], []byte{})
 	baseMem = table.New(flushableDbs["cache-over-memory"], []byte{})
-	flushableDbsTables := [][]kvdb.KeyValueStore{
+	flushableDbsTables := [][]kvdb.Store{
 		{
 			flushableDbs["cache-over-leveldb"],
 			baseLdb.NewTable([]byte{0, 1}),
@@ -112,7 +111,7 @@ func TestFlushable(t *testing.T) {
 		// random put/delete operations
 		putDeleteRandom := func() {
 			for j := 0; j < tablesNum; j++ {
-				var batches []ethdb.Batch
+				var batches []kvdb.Batch
 				for i := 0; i < groupsNum; i++ {
 					batches = append(batches, dbsTables[i][j].NewBatch())
 					batches = append(batches, flushableDbsTables[i][j].NewBatch())
@@ -176,9 +175,9 @@ func TestFlushable(t *testing.T) {
 		for j := 0; j < tablesNum; j++ {
 			expectPairs := []kv{}
 
-			testForEach := func(db ethdb.KeyValueStore, first bool) {
+			testForEach := func(db kvdb.Store, first bool) {
 
-				var it ethdb.Iterator
+				var it kvdb.Iterator
 				if try%3 == 0 {
 					it = db.NewIterator()
 				} else if try%3 == 1 {
