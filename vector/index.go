@@ -61,7 +61,7 @@ type Index struct {
 
 var _ dagidx.DagIndexer = (*Index)(nil)
 
-// DefaultConfig returns default index config for tests
+// DefaultConfig returns default index config
 func DefaultConfig() IndexConfig {
 	return IndexConfig{
 		Caches: IndexCacheConfig{

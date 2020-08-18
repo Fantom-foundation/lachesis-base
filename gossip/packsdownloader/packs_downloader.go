@@ -35,6 +35,16 @@ type Config struct {
 	MaxPeers int
 }
 
+// DefaultConfig returns default downloader config
+func DefaultConfig() Config {
+	return Config{6}
+}
+
+// DefaultConfig returns default downloader config for tests
+func LiteConfig() Config {
+	return Config{2}
+}
+
 // New creates a packs fetcher to retrieve events based on pack announcements.
 func New(fetcher *fetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn, config Config) *PacksDownloader {
 	return &PacksDownloader{
