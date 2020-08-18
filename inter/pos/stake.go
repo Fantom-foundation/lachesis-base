@@ -1,7 +1,7 @@
 package pos
 
 import (
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
 type (

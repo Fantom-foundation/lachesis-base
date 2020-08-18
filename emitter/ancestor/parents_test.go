@@ -8,14 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/Fantom-foundation/go-lachesis/inter/pos"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
-	"github.com/Fantom-foundation/go-lachesis/utils"
-	"github.com/Fantom-foundation/go-lachesis/vector"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/utils"
+	"github.com/Fantom-foundation/lachesis-base/vector"
 )
 
 func TestCasualityStrategy(t *testing.T) {

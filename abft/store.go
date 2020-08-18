@@ -7,10 +7,10 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	lru "github.com/hashicorp/golang-lru"
 
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/table"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
 // Store is a abft persistent storage working over parent key-value database.

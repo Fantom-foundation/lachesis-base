@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/status-im/keycard-go/hexutils"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 type SyncedPool struct {

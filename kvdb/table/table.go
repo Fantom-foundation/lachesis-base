@@ -3,7 +3,7 @@ package table
 import (
 	"bytes"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 // Table wraps the underling DB, so all the table's data is stored with a prefix in underling DB

@@ -1,6 +1,6 @@
 package devnulldb
 
-import "github.com/Fantom-foundation/go-lachesis/kvdb"
+import "github.com/Fantom-foundation/lachesis-base/kvdb"
 
 // Database is an always empty database.
 type Database struct{}

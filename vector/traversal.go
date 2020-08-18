@@ -3,8 +3,8 @@ package vector
 import (
 	"errors"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
 // dfsSubgraph iterates all the event which are observed by head, and accepted by a filter

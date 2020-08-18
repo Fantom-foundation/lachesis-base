@@ -3,11 +3,11 @@ package vector
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
-	"github.com/Fantom-foundation/go-lachesis/inter/pos"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 )
 
 var (

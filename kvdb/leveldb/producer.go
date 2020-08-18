@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 type producer struct {

@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
+	"github.com/Fantom-foundation/lachesis-base/hash"
 )
 
 /*

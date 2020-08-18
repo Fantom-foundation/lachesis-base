@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync/atomic"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 var (

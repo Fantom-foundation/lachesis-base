@@ -6,10 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	"github.com/Fantom-foundation/go-lachesis/abft/election"
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/abft/election"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
 var (

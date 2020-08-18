@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/ethereum/go-ethereum/common"
 )

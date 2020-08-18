@@ -5,9 +5,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/Fantom-foundation/go-lachesis/gossip/fetcher"
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/gossip/fetcher"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	tree "github.com/emirpasic/gods/maps/treemap"
 )
 

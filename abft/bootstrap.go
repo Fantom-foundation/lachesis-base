@@ -3,11 +3,11 @@ package abft
 import (
 	"errors"
 
-	"github.com/Fantom-foundation/go-lachesis/abft/election"
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/Fantom-foundation/go-lachesis/inter/pos"
-	"github.com/Fantom-foundation/go-lachesis/lachesis"
+	"github.com/Fantom-foundation/lachesis-base/abft/election"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/lachesis"
 )
 
 const (

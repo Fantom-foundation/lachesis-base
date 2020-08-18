@@ -3,8 +3,8 @@ package abft
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 )
 
 // GenesisState stores state of previous Epoch

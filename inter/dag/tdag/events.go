@@ -3,8 +3,8 @@ package tdag
 import (
 	"strings"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
 // Events is a ordered slice of events.

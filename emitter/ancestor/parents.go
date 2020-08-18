@@ -1,7 +1,7 @@
 package ancestor
 
 import (
-	"github.com/Fantom-foundation/go-lachesis/hash"
+	"github.com/Fantom-foundation/lachesis-base/hash"
 )
 
 // SearchStrategy defines a criteria used to estimate the "best" subset of parents to emit event with.

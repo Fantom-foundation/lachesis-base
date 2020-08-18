@@ -3,7 +3,7 @@ package election
 import (
 	"crypto/sha256"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
+	"github.com/Fantom-foundation/lachesis-base/hash"
 )
 
 // DebugStateHash may be used in tests to match election state

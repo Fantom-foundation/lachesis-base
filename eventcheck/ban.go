@@ -3,7 +3,7 @@ package eventcheck
 import (
 	"errors"
 
-	"github.com/Fantom-foundation/go-lachesis/eventcheck/epochcheck"
+	"github.com/Fantom-foundation/lachesis-base/eventcheck/epochcheck"
 )
 
 var (

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag/tdag"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 )
 
 func TestEventBuffer(t *testing.T) {

@@ -3,7 +3,7 @@ before:
     - make clean proto vendor
 builds:
   - main: ./cmd/lachesis/main.go
-    binary: go-lachesis
+    binary: lachesis-base
     ldflags:
       - -linkmode external -extldflags -static -s -w
       - -X main.gitCommit={{ .ShortCommit }}
@@ -49,10 +49,10 @@ nfpm:
     - rpm
 
   empty_folders:
-    - /var/log/go-lachesis
+    - /var/log/lachesis-base
 
   files:
-    "scripts/daemon/go-lachesis.service": "/lib/systemd/system/go-lachesis.service"
+    "scripts/daemon/lachesis-base.service": "/lib/systemd/system/lachesis-base.service"
 
   # scripts:
   #   preinstall: "scripts/preinstall.bash"

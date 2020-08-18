@@ -3,7 +3,7 @@ package vector
 import (
 	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 func (vi *Index) setRlp(table kvdb.Store, key []byte, val interface{}) {

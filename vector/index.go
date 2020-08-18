@@ -6,14 +6,14 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 
-	"github.com/Fantom-foundation/go-lachesis/abft/dagidx"
-	"github.com/Fantom-foundation/go-lachesis/hash"
-	"github.com/Fantom-foundation/go-lachesis/inter/dag"
-	"github.com/Fantom-foundation/go-lachesis/inter/idx"
-	"github.com/Fantom-foundation/go-lachesis/inter/pos"
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/flushable"
-	"github.com/Fantom-foundation/go-lachesis/kvdb/table"
+	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
+	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
 // IndexCacheConfig - config for cache sizes of Index

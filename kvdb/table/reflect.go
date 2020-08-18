@@ -2,7 +2,7 @@ package table
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/go-lachesis/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"reflect"
 )
 

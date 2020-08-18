@@ -3,9 +3,9 @@ package abft
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/go-lachesis/abft/dagidx"
-	"github.com/Fantom-foundation/go-lachesis/abft/election"
-	"github.com/Fantom-foundation/go-lachesis/lachesis"
+	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
+	"github.com/Fantom-foundation/lachesis-base/abft/election"
+	"github.com/Fantom-foundation/lachesis-base/lachesis"
 )
 
 // Lachesis processes events to reach finality on their order.

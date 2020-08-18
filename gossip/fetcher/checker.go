@@ -1,6 +1,6 @@
 package fetcher
 
-import "github.com/Fantom-foundation/go-lachesis/inter/dag"
+import "github.com/Fantom-foundation/lachesis-base/inter/dag"
 
 type LightCheck func(dag.Event) error
 
