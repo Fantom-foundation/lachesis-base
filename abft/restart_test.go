@@ -154,7 +154,7 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 				return memorydb.New()
 			}
 
-			restored := New(prev.config, prev.crit, store, prev.input, vector.NewIndex(vector.LiteConfig(), prev.crit))
+			restored := New(store, prev.input, vector.NewIndex(prev.crit, vector.LiteConfig()), prev.crit, prev.config)
 			assertar.NoError(restored.Bootstrap(prev.callback))
 
 			lchs[RESTORED].Lachesis = restored

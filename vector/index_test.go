@@ -51,7 +51,7 @@ func BenchmarkIndex_Add(b *testing.B) {
 		events[e.ID()] = e
 	}
 
-	vecClock := NewIndex(LiteConfig(), func(err error) { panic(err) })
+	vecClock := NewIndex(func(err error) { panic(err) }, LiteConfig())
 	vecClock.Reset(validators, memorydb.New(), getEvent)
 
 	for i := 0; i < b.N; i++ {

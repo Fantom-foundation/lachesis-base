@@ -96,7 +96,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		panic(err)
 	}
 
-	vecClock := vector.NewIndex(vector.LiteConfig(), crit)
+	vecClock := vector.NewIndex(crit, vector.LiteConfig())
 	vecClock.Reset(validators, memorydb.New(), getEvent)
 
 	// build vector index

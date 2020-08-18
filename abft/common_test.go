@@ -62,7 +62,7 @@ func FakeLachesis(nodes []idx.StakerID, stakes []pos.Stake, mods ...memorydb.Mod
 	input := NewEventStore()
 
 	config := LiteConfig()
-	lch := New(config, crit, store, input, vector.NewIndex(vector.LiteConfig(), crit))
+	lch := New(store, input, vector.NewIndex(crit, vector.LiteConfig()), crit, config)
 
 	extended := &TestLachesis{
 		Lachesis: lch,

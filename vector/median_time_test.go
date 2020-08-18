@@ -17,7 +17,7 @@ func TestMedianTimeOnIndex(t *testing.T) {
 	weights := []pos.Stake{5, 4, 3, 2, 1}
 	validators := pos.ArrayToValidators(nodes, weights)
 
-	vi := NewIndex(LiteConfig(), func(err error) { panic(err) })
+	vi := NewIndex(func(err error) { panic(err) }, LiteConfig())
 	vi.Reset(validators, memorydb.New(), nil)
 
 	assertar := assert.New(t)
@@ -174,7 +174,7 @@ func testMedianTime(t *testing.T, dagAscii string, weights []pos.Stake, claimedT
 		return events[id]
 	}
 
-	vi := NewIndex(LiteConfig(), func(err error) { panic(err) })
+	vi := NewIndex(func(err error) { panic(err) }, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
 	// push

@@ -86,7 +86,7 @@ func LiteConfig() IndexConfig {
 }
 
 // NewIndex creates Index instance.
-func NewIndex(config IndexConfig, crit func(error)) *Index {
+func NewIndex(crit func(error), config IndexConfig) *Index {
 	vi := &Index{
 		cfg:  config,
 		crit: crit,

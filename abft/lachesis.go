@@ -26,7 +26,7 @@ type Lachesis struct {
 var _ lachesis.Consensus = (*Lachesis)(nil)
 
 // New creates Lachesis instance.
-func New(config Config, crit func(error), store *Store, input EventSource, vecClock dagidx.DagIndexer) *Lachesis {
+func New(store *Store, input EventSource, vecClock dagidx.DagIndexer, crit func(error), config Config) *Lachesis {
 	p := &Lachesis{
 		config:        config,
 		store:         store,

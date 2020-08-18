@@ -48,7 +48,7 @@ func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
 		return events[id]
 	}
 
-	vi := NewIndex(LiteConfig(), tCrit)
+	vi := NewIndex(tCrit, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
 	_, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
@@ -136,7 +136,7 @@ func testForklessCaused(t *testing.T, dagAscii string) {
 		return events[id]
 	}
 
-	vi := NewIndex(LiteConfig(), tCrit)
+	vi := NewIndex(tCrit, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
 	_, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
@@ -454,7 +454,7 @@ func TestForklessCausedRandom(t *testing.T) {
 		return events[id]
 	}
 
-	vi := NewIndex(LiteConfig(), tCrit)
+	vi := NewIndex(tCrit, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
 	// push
@@ -536,7 +536,7 @@ func TestRandomForksSanity(t *testing.T) {
 		return processed[id]
 	}
 
-	vi := NewIndex(LiteConfig(), tCrit)
+	vi := NewIndex(tCrit, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
 	// Many forks from each node in large graph, so probability of not seeing a fork is negligible
@@ -665,7 +665,7 @@ func TestRandomForks(t *testing.T) {
 				return processed[id]
 			}
 
-			vi := NewIndex(LiteConfig(), tCrit)
+			vi := NewIndex(tCrit, LiteConfig())
 			vi.Reset(validators, memorydb.New(), getEvent)
 
 			_ = tdag.ForEachRandFork(nodes, cheaters, test.eventsNum, test.parentsNum, test.forksNum, r, tdag.ForEachEvent{
