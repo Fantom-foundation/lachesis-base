@@ -14,7 +14,7 @@ import (
 func TestEventBuffer(t *testing.T) {
 	nodes := tdag.GenNodes(5)
 
-	var ordered []dag.Event
+	var ordered dag.Events
 	r := rand.New(rand.NewSource(time.Now().Unix()))
 	_ = tdag.ForEachRandEvent(nodes, 10, 3, r, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
@@ -59,7 +59,7 @@ func TestEventBuffer(t *testing.T) {
 			return processed[e]
 		},
 
-		Check: func(e dag.Event, parents []dag.Event) error {
+		Check: func(e dag.Event, parents dag.Events) error {
 			checked++
 			if e.RawTime() != dag.RawTimestamp(e.Seq()) {
 				return errors.New("malformed event time")

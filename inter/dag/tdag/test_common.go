@@ -43,7 +43,7 @@ func ForEachRandFork(
 	r *rand.Rand,
 	callback ForEachEvent,
 ) (
-	events map[idx.StakerID][]dag.Event,
+	events map[idx.StakerID]dag.Events,
 ) {
 	if r == nil {
 		// fixed seed
@@ -51,7 +51,7 @@ func ForEachRandFork(
 	}
 	// init results
 	nodeCount := len(nodes)
-	events = make(map[idx.StakerID][]dag.Event, nodeCount)
+	events = make(map[idx.StakerID]dag.Events, nodeCount)
 	cheaters := map[idx.StakerID]int{}
 	for _, cheater := range cheatersArr {
 		cheaters[cheater] = 0
@@ -147,7 +147,7 @@ func ForEachRandEvent(
 	r *rand.Rand,
 	callback ForEachEvent,
 ) (
-	events map[idx.StakerID][]dag.Event,
+	events map[idx.StakerID]dag.Events,
 ) {
 	return ForEachRandFork(nodes, []idx.StakerID{}, eventCount, parentCount, 0, r, callback)
 }
@@ -161,12 +161,12 @@ func GenRandEvents(
 	parentCount int,
 	r *rand.Rand,
 ) (
-	events map[idx.StakerID][]dag.Event,
+	events map[idx.StakerID]dag.Events,
 ) {
 	return ForEachRandEvent(nodes, eventCount, parentCount, r, ForEachEvent{})
 }
 
-func delPeerIndex(events map[idx.StakerID][]dag.Event) (res dag.Events) {
+func delPeerIndex(events map[idx.StakerID]dag.Events) (res dag.Events) {
 	for _, ee := range events {
 		res = append(res, ee...)
 	}

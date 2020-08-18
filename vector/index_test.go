@@ -32,7 +32,7 @@ a2.1 ──╣      ║      ║      ║
 
 func BenchmarkIndex_Add(b *testing.B) {
 	b.StopTimer()
-	ordered := make([]dag.Event, 0)
+	ordered := make(dag.Events, 0)
 	nodes, _, _ := tdag.ASCIIschemeForEach(testASCIIScheme, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)

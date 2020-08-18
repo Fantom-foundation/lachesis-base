@@ -22,7 +22,7 @@ type (
 		Drop    func(e dag.Event, peer string, err error)
 		Get     func(hash.Event) dag.Event
 		Exists  func(hash.Event) bool
-		Check   func(e dag.Event, parents []dag.Event) error
+		Check   func(e dag.Event, parents dag.Events) error
 	}
 )
 
@@ -69,7 +69,7 @@ func (buf *EventBuffer) pushEvent(e *event, incompleteEventsList []*event, stric
 		return
 	}
 
-	parents := make([]dag.Event, len(e.Parents())) // use local buffer for thread safety
+	parents := make(dag.Events, len(e.Parents())) // use local buffer for thread safety
 	for i, p := range e.Parents() {
 		_, _ = buf.incompletes.Get(p) // updating the "recently used"-ness of the key
 		parent := buf.callback.Get(p)

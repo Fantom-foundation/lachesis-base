@@ -90,7 +90,7 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 		}
 	}
 
-	var ordered []dag.Event
+	var ordered dag.Events
 	eventCount := int(maxEpochBlocks) * 4
 	parentCount := 5
 	if parentCount > len(nodes) {

@@ -27,10 +27,10 @@ func ASCIIschemeForEach(
 	callback ForEachEvent,
 ) (
 	nodes []idx.StakerID,
-	events map[idx.StakerID][]dag.Event,
+	events map[idx.StakerID]dag.Events,
 	names map[string]dag.Event,
 ) {
-	events = make(map[idx.StakerID][]dag.Event)
+	events = make(map[idx.StakerID]dag.Events)
 	names = make(map[string]dag.Event)
 	var (
 		prevFarRefs map[int]int
@@ -215,7 +215,7 @@ func ASCIIschemeToDAG(
 	scheme string,
 ) (
 	nodes []idx.StakerID,
-	events map[idx.StakerID][]dag.Event,
+	events map[idx.StakerID]dag.Events,
 	names map[string]dag.Event,
 ) {
 	return ASCIIschemeForEach(scheme, ForEachEvent{})

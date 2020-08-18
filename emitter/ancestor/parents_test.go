@@ -78,7 +78,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		return
 	}
 
-	ordered := make([]dag.Event, 0)
+	ordered := make(dag.Events, 0)
 	nodes, _, _ := tdag.ASCIIschemeForEach(asciiScheme, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
@@ -106,7 +106,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	}
 
 	// divide events by stage
-	var stages [][]dag.Event
+	var stages []dag.Events
 	for _, e := range ordered {
 		name := e.(*tdag.TestEvent).Name
 		stage := decode(name)

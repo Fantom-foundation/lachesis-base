@@ -156,7 +156,7 @@ func TestMedianTimeOnDAG(t *testing.T) {
 func testMedianTime(t *testing.T, dagAscii string, weights []pos.Stake, claimedTimes map[string]dag.RawTimestamp, medianTimes map[string]dag.RawTimestamp, genesis dag.RawTimestamp) {
 	assertar := assert.New(t)
 
-	var ordered []dag.Event
+	var ordered dag.Events
 	nodes, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
 		Build: func(e dag.MutableEvent, name string) error {
 			e.SetRawTime(claimedTimes[name])

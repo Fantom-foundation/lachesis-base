@@ -15,7 +15,7 @@ type Checkers struct {
 }
 
 // Validate runs all the checks except Lachesis-related
-func (v *Checkers) Validate(e dag.Event, parents []dag.Event) error {
+func (v *Checkers) Validate(e dag.Event, parents dag.Events) error {
 	if err := v.Basiccheck.Validate(e); err != nil {
 		return err
 	}

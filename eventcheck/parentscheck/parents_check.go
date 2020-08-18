@@ -22,7 +22,7 @@ func New() *Checker {
 }
 
 // Validate event
-func (v *Checker) Validate(e dag.Event, parents []dag.Event) error {
+func (v *Checker) Validate(e dag.Event, parents dag.Events) error {
 	if len(e.Parents()) != len(parents) {
 		panic("parentscheck: expected event's parents as an argument")
 	}
