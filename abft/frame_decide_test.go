@@ -15,46 +15,46 @@ import (
 )
 
 func TestConfirmBlocks_1(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{1}, 0)
+	testConfirmBlocks(t, []pos.Weight{1}, 0)
 }
 
 func TestConfirmBlocks_big1(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{math.MaxUint64}, 0)
+	testConfirmBlocks(t, []pos.Weight{math.MaxUint64}, 0)
 }
 
 func TestConfirmBlocks_big2(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
+	testConfirmBlocks(t, []pos.Weight{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestConfirmBlocks_4(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{1, 2, 3, 4}, 0)
+	testConfirmBlocks(t, []pos.Weight{1, 2, 3, 4}, 0)
 }
 
 func TestConfirmBlocks_3_1(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{1, 1, 1, 1}, 1)
+	testConfirmBlocks(t, []pos.Weight{1, 1, 1, 1}, 1)
 }
 
 func TestConfirmBlocks_67_33(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{33, 67}, 1)
+	testConfirmBlocks(t, []pos.Weight{33, 67}, 1)
 }
 
 func TestConfirmBlocks_67_33_4(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{11, 11, 11, 67}, 3)
+	testConfirmBlocks(t, []pos.Weight{11, 11, 11, 67}, 3)
 }
 
 func TestConfirmBlocks_67_33_5(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{11, 11, 11, 33, 34}, 3)
+	testConfirmBlocks(t, []pos.Weight{11, 11, 11, 33, 34}, 3)
 }
 
 func TestConfirmBlocks_2_8_10(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
+	testConfirmBlocks(t, []pos.Weight{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
 }
 
-func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
+func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	assertar := assert.New(t)
 
-	nodes := tdag.GenNodes(len(stakes))
-	lch, _, input := FakeLachesis(nodes, stakes)
+	nodes := tdag.GenNodes(len(weights))
+	lch, _, input := FakeLachesis(nodes, weights)
 
 	var (
 		frames []idx.Frame

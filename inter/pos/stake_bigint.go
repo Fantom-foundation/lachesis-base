@@ -15,16 +15,16 @@ func NewBigBuilder() ValidatorsBigBuilder {
 }
 
 // Set appends item to ValidatorsBuilder object
-func (vv ValidatorsBigBuilder) Set(id idx.ValidatorID, stake *big.Int) {
-	if stake == nil || stake.Sign() == 0 {
+func (vv ValidatorsBigBuilder) Set(id idx.ValidatorID, weight *big.Int) {
+	if weight == nil || weight.Sign() == 0 {
 		delete(vv, id)
 	} else {
-		vv[id] = stake
+		vv[id] = weight
 	}
 }
 
 // Build new read-only Validators object
-func (vv ValidatorsBigBuilder) TotalStake() *big.Int {
+func (vv ValidatorsBigBuilder) TotalWeight() *big.Int {
 	res := new(big.Int)
 	for _, w := range vv {
 		res = res.Add(res, w)
@@ -34,7 +34,7 @@ func (vv ValidatorsBigBuilder) TotalStake() *big.Int {
 
 // Build new read-only Validators object
 func (vv ValidatorsBigBuilder) Build() *Validators {
-	totalBits := vv.TotalStake().BitLen()
+	totalBits := vv.TotalWeight().BitLen()
 	// use downscaling by a 2^n ratio, instead of n for simplicity and performance reasons
 	shift := uint(0)
 	if totalBits > 63 {
@@ -44,7 +44,7 @@ func (vv ValidatorsBigBuilder) Build() *Validators {
 	builder := NewBuilder()
 	for v, w := range vv {
 		weight := new(big.Int).Rsh(w, shift)
-		builder.Set(v, Stake(weight.Uint64()))
+		builder.Set(v, Weight(weight.Uint64()))
 	}
 	return builder.Build()
 }

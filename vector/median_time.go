@@ -12,7 +12,7 @@ import (
 
 // medianTimeIndex is a handy index for the MedianTime() func
 type medianTimeIndex struct {
-	stake       pos.Stake
+	weight      pos.Weight
 	claimedTime dag.RawTimestamp
 }
 
@@ -25,29 +25,29 @@ func (vi *Index) MedianTime(id hash.Event, defaultTime dag.RawTimestamp) dag.Raw
 		vi.crit(fmt.Errorf("event=%s not found", id.String()))
 	}
 
-	honestTotalStake := pos.Stake(0) // isn't equal to validators.TotalStake(), because doesn't count cheaters
+	honestTotalWeight := pos.Weight(0) // isn't equal to validators.TotalWeight(), because doesn't count cheaters
 	highests := make([]medianTimeIndex, 0, len(vi.validatorIdxs))
 	// convert []HighestBefore -> []medianTimeIndex
 	for creatorIdxI := range vi.validators.IDs() {
 		creatorIdx := idx.Validator(creatorIdxI)
 		highest := medianTimeIndex{}
-		highest.stake = vi.validators.GetStakeByIdx(creatorIdx)
+		highest.weight = vi.validators.GetWeightByIdx(creatorIdx)
 		highest.claimedTime = times.Get(creatorIdx)
 		seq := beforeSeq.Get(creatorIdx)
 
 		// edge cases
 		if seq.IsForkDetected() {
 			// cheaters don't influence medianTime
-			highest.stake = 0
+			highest.weight = 0
 		} else if seq.Seq() == 0 {
 			// if no event was observed from this node, then use genesisTime
 			highest.claimedTime = defaultTime
 		}
 
 		highests = append(highests, highest)
-		honestTotalStake += highest.stake
+		honestTotalWeight += highest.weight
 	}
-	// it's technically possible honestTotalStake == 0 (all validators are cheaters)
+	// it's technically possible honestTotalWeight == 0 (all validators are cheaters)
 
 	// sort by claimed time (partial order is enough here, because we need only claimedTime)
 	sort.Slice(highests, func(i, j int) bool {
@@ -56,23 +56,23 @@ func (vi *Index) MedianTime(id hash.Event, defaultTime dag.RawTimestamp) dag.Raw
 	})
 
 	// Calculate weighted median
-	halfStake := honestTotalStake / 2
-	var currStake pos.Stake
+	halfWeight := honestTotalWeight / 2
+	var currWeight pos.Weight
 	var median dag.RawTimestamp
 	for _, highest := range highests {
-		currStake += highest.stake
-		if currStake >= halfStake {
+		currWeight += highest.weight
+		if currWeight >= halfWeight {
 			median = highest.claimedTime
 			break
 		}
 	}
 
 	// sanity check
-	if currStake < halfStake || currStake > honestTotalStake {
-		vi.crit(fmt.Errorf("median wasn't calculated correctly, median=%d, currStake=%d, totalStake=%d, len(highests)=%d, id=%s",
+	if currWeight < halfWeight || currWeight > honestTotalWeight {
+		vi.crit(fmt.Errorf("median wasn't calculated correctly, median=%d, currWeight=%d, totalWeight=%d, len(highests)=%d, id=%s",
 			median,
-			currStake,
-			honestTotalStake,
+			currWeight,
+			honestTotalWeight,
 			len(highests),
 			id.String(),
 		))

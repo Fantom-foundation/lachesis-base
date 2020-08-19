@@ -20,42 +20,42 @@ import (
 )
 
 func TestRestart_1(t *testing.T) {
-	testRestart(t, []pos.Stake{1}, 0)
+	testRestart(t, []pos.Weight{1}, 0)
 }
 
 func TestRestart_big1(t *testing.T) {
-	testRestart(t, []pos.Stake{math.MaxUint64}, 0)
+	testRestart(t, []pos.Weight{math.MaxUint64}, 0)
 }
 
 func TestRestart_big2(t *testing.T) {
-	testRestart(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
+	testRestart(t, []pos.Weight{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestRestart_4(t *testing.T) {
-	testRestart(t, []pos.Stake{1, 2, 3, 4}, 0)
+	testRestart(t, []pos.Weight{1, 2, 3, 4}, 0)
 }
 
 func TestRestart_3_1(t *testing.T) {
-	testRestart(t, []pos.Stake{1, 1, 1, 1}, 1)
+	testRestart(t, []pos.Weight{1, 1, 1, 1}, 1)
 }
 
 func TestRestart_67_33(t *testing.T) {
-	testRestart(t, []pos.Stake{33, 67}, 1)
+	testRestart(t, []pos.Weight{33, 67}, 1)
 }
 
 func TestRestart_67_33_4(t *testing.T) {
-	testRestart(t, []pos.Stake{11, 11, 11, 67}, 3)
+	testRestart(t, []pos.Weight{11, 11, 11, 67}, 3)
 }
 
 func TestRestart_67_33_5(t *testing.T) {
-	testRestart(t, []pos.Stake{11, 11, 11, 33, 34}, 3)
+	testRestart(t, []pos.Weight{11, 11, 11, 33, 34}, 3)
 }
 
 func TestRestart_2_8_10(t *testing.T) {
-	testRestart(t, []pos.Stake{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
+	testRestart(t, []pos.Weight{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
 }
 
-func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
+func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	assertar := assert.New(t)
 
 	const (
@@ -65,11 +65,11 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 		RESTORED  = 2 // compare with sample
 	)
 
-	nodes := tdag.GenNodes(len(stakes))
+	nodes := tdag.GenNodes(len(weights))
 	lchs := make([]*TestLachesis, 0, COUNT)
 	inputs := make([]*EventStore, 0, COUNT)
 	for i := 0; i < COUNT; i++ {
-		lch, _, input := FakeLachesis(nodes, stakes)
+		lch, _, input := FakeLachesis(nodes, weights)
 		lchs = append(lchs, lch)
 		inputs = append(inputs, input)
 	}

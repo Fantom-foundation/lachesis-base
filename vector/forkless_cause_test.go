@@ -41,7 +41,7 @@ a0_1(3)  b0_1     c0_1     d0_1     e0_1     f0_1     g0_1     h0_1     i0_1    
 
 func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
 	nodes, _, _ := tdag.ASCIIschemeToDAG(dagAscii)
-	validators := pos.EqualStakeValidators(nodes, 1)
+	validators := pos.EqualWeightValidators(nodes, 1)
 
 	events := make(map[hash.Event]dag.Event)
 	getEvent := func(id hash.Event) dag.Event {
@@ -129,7 +129,7 @@ func testForklessCaused(t *testing.T, dagAscii string) {
 	assertar := assert.New(t)
 
 	nodes, _, _ := tdag.ASCIIschemeToDAG(dagAscii)
-	validators := pos.EqualStakeValidators(nodes, 1)
+	validators := pos.EqualWeightValidators(nodes, 1)
 
 	events := make(map[hash.Event]dag.Event)
 	getEvent := func(id hash.Event) dag.Event {
@@ -447,7 +447,7 @@ func TestForklessCausedRandom(t *testing.T) {
 		},
 	})
 
-	validators := pos.EqualStakeValidators(nodes, 1)
+	validators := pos.EqualWeightValidators(nodes, 1)
 
 	events := make(map[hash.Event]dag.Event)
 	getEvent := func(id hash.Event) dag.Event {
@@ -523,12 +523,12 @@ func TestRandomForksSanity(t *testing.T) {
 
 	validatorsBuilder := pos.NewBuilder()
 	for _, peer := range nodes {
-		validatorsBuilder.Set(peer, pos.Stake(1))
+		validatorsBuilder.Set(peer, pos.Weight(1))
 	}
 
-	validatorsBuilder.Set(cheaters[0], pos.Stake(2))
-	validatorsBuilder.Set(nodes[3], pos.Stake(2))
-	validatorsBuilder.Set(nodes[4], pos.Stake(3))
+	validatorsBuilder.Set(cheaters[0], pos.Weight(2))
+	validatorsBuilder.Set(nodes[3], pos.Weight(2))
+	validatorsBuilder.Set(nodes[4], pos.Weight(3))
 	validators := validatorsBuilder.Build()
 
 	processed := make(map[hash.Event]dag.Event)
@@ -657,7 +657,7 @@ func TestRandomForks(t *testing.T) {
 			nodes := tdag.GenNodes(test.nodesNum)
 			cheaters := nodes[:test.cheatersNum]
 
-			validators := pos.EqualStakeValidators(nodes, 1)
+			validators := pos.EqualWeightValidators(nodes, 1)
 
 			processedArr := dag.Events{}
 			processed := make(map[hash.Event]dag.Event)
@@ -766,7 +766,7 @@ func codegen4ForklessCausedStability() {
 
 	validators := make(pos.Validators, len(peers))
 	for _, peer := range peers {
-		validators.Set(peer, pos.Stake(1))
+		validators.Set(peer, pos.Weight(1))
 	}
 	vi := NewIndex(validators, memorydb.New())
 

@@ -11,21 +11,21 @@ import (
 
 type (
 	cache struct {
-		indexes    map[idx.ValidatorID]idx.Validator
-		stakes     []Stake
-		ids        []idx.ValidatorID
-		totalStake Stake
+		indexes     map[idx.ValidatorID]idx.Validator
+		weights     []Weight
+		ids         []idx.ValidatorID
+		totalWeight Weight
 	}
-	// Validators group of an epoch with stakes.
+	// Validators group of an epoch with weights.
 	// Optimized for BFT algorithm calculations.
 	// Read-only.
 	Validators struct {
-		values map[idx.ValidatorID]Stake
+		values map[idx.ValidatorID]Weight
 		cache  cache
 	}
 
 	// ValidatorsBuilder is a helper to create Validators object
-	ValidatorsBuilder map[idx.ValidatorID]Stake
+	ValidatorsBuilder map[idx.ValidatorID]Weight
 )
 
 // NewBuilder creates new mutable ValidatorsBuilder
@@ -34,11 +34,11 @@ func NewBuilder() ValidatorsBuilder {
 }
 
 // Set appends item to ValidatorsBuilder object
-func (vv ValidatorsBuilder) Set(id idx.ValidatorID, stake Stake) {
-	if stake == 0 {
+func (vv ValidatorsBuilder) Set(id idx.ValidatorID, weight Weight) {
+	if weight == 0 {
 		delete(vv, id)
 	} else {
-		vv[id] = stake
+		vv[id] = weight
 	}
 }
 
@@ -47,20 +47,20 @@ func (vv ValidatorsBuilder) Build() *Validators {
 	return newValidators(vv)
 }
 
-// EqualStakeValidators builds new read-only Validators object with equal stakes (for tests)
-func EqualStakeValidators(ids []idx.ValidatorID, stake Stake) *Validators {
+// EqualWeightValidators builds new read-only Validators object with equal weights (for tests)
+func EqualWeightValidators(ids []idx.ValidatorID, weight Weight) *Validators {
 	builder := NewBuilder()
 	for _, id := range ids {
-		builder.Set(id, stake)
+		builder.Set(id, weight)
 	}
 	return builder.Build()
 }
 
 // ArrayToValidators builds new read-only Validators object from array
-func ArrayToValidators(ids []idx.ValidatorID, stakes []Stake) *Validators {
+func ArrayToValidators(ids []idx.ValidatorID, weights []Weight) *Validators {
 	builder := NewBuilder()
 	for i, id := range ids {
-		builder.Set(id, stakes[i])
+		builder.Set(id, weights[i])
 	}
 	return builder.Build()
 }
@@ -88,18 +88,18 @@ func (vv *Validators) Len() int {
 func (vv *Validators) calcCaches() cache {
 	cache := cache{
 		indexes: make(map[idx.ValidatorID]idx.Validator),
-		stakes:  make([]Stake, vv.Len()),
+		weights: make([]Weight, vv.Len()),
 		ids:     make([]idx.ValidatorID, vv.Len()),
 	}
 
 	for i, v := range vv.sortedArray() {
 		cache.indexes[v.ID] = idx.Validator(i)
-		cache.stakes[i] = v.Stake
+		cache.weights[i] = v.Weight
 		cache.ids[i] = v.ID
-		totalStakeBefore := cache.totalStake
-		cache.totalStake += v.Stake
+		totalWeightBefore := cache.totalWeight
+		cache.totalWeight += v.Weight
 		// check overflow
-		if cache.totalStake < totalStakeBefore {
+		if cache.totalWeight < totalWeightBefore {
 			panic("validators weight overflow")
 		}
 	}
@@ -107,8 +107,8 @@ func (vv *Validators) calcCaches() cache {
 	return cache
 }
 
-// get returns stake for validator by ID
-func (vv *Validators) Get(id idx.ValidatorID) Stake {
+// get returns weight for validator by ID
+func (vv *Validators) Get(id idx.ValidatorID) Weight {
 	return vv.values[id]
 }
 
@@ -117,9 +117,9 @@ func (vv *Validators) GetIdx(id idx.ValidatorID) idx.Validator {
 	return vv.cache.indexes[id]
 }
 
-// GetStakeByIdx returns stake for validator by index
-func (vv *Validators) GetStakeByIdx(i idx.Validator) Stake {
-	return vv.cache.stakes[i]
+// GetWeightByIdx returns weight for validator by index
+func (vv *Validators) GetWeightByIdx(i idx.Validator) Weight {
+	return vv.cache.weights[i]
 }
 
 // Exists returns boolean true if address exists in Validators object
@@ -139,10 +139,10 @@ func (vv *Validators) SortedIDs() []idx.ValidatorID {
 	return vv.cache.ids
 }
 
-// SortedStakes returns deterministically sorted stakes.
+// SortedWeights returns deterministically sorted weights.
 // The order is the same as for Idxs().
-func (vv *Validators) SortedStakes() []Stake {
-	return vv.cache.stakes
+func (vv *Validators) SortedWeights() []Weight {
+	return vv.cache.weights
 }
 
 // Idxs gets deterministic total order of validators.
@@ -150,13 +150,13 @@ func (vv *Validators) Idxs() map[idx.ValidatorID]idx.Validator {
 	return vv.cache.indexes
 }
 
-// sortedArray is sorted by stake and ID
+// sortedArray is sorted by weight and ID
 func (vv *Validators) sortedArray() validators {
 	array := make(validators, 0, len(vv.values))
 	for id, s := range vv.values {
 		array = append(array, validator{
-			ID:    id,
-			Stake: s,
+			ID:     id,
+			Weight: s,
 		})
 	}
 	sort.Sort(array)
@@ -174,13 +174,13 @@ func (vv *Validators) Builder() ValidatorsBuilder {
 }
 
 // Quorum limit of validators.
-func (vv *Validators) Quorum() Stake {
-	return vv.TotalStake()*2/3 + 1
+func (vv *Validators) Quorum() Weight {
+	return vv.TotalWeight()*2/3 + 1
 }
 
-// TotalStake of validators.
-func (vv *Validators) TotalStake() (sum Stake) {
-	return vv.cache.totalStake
+// TotalWeight of validators.
+func (vv *Validators) TotalWeight() (sum Weight) {
+	return vv.cache.totalWeight
 }
 
 // EncodeRLP is for RLP serialization.
@@ -197,7 +197,7 @@ func (vv *Validators) DecodeRLP(s *rlp.Stream) error {
 
 	builder := NewBuilder()
 	for _, w := range arr {
-		builder.Set(w.ID, w.Stake)
+		builder.Set(w.ID, w.Weight)
 	}
 	*vv = *builder.Build()
 

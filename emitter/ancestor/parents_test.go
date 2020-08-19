@@ -86,7 +86,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		},
 	})
 
-	validators := pos.EqualStakeValidators(nodes, 1)
+	validators := pos.EqualWeightValidators(nodes, 1)
 
 	events := make(map[hash.Event]dag.Event)
 	getEvent := func(id hash.Event) dag.Event {

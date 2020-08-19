@@ -6,16 +6,16 @@ import (
 
 type (
 	validator struct {
-		ID    idx.ValidatorID
-		Stake Stake
+		ID     idx.ValidatorID
+		Weight Weight
 	}
 
 	validators []validator
 )
 
 func (vv validators) Less(i, j int) bool {
-	if vv[i].Stake != vv[j].Stake {
-		return vv[i].Stake > vv[j].Stake
+	if vv[i].Weight != vv[j].Weight {
+		return vv[i].Weight > vv[j].Weight
 	}
 
 	return vv[i].ID < vv[j].ID

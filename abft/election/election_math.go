@@ -53,7 +53,7 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 				allVotes = el.validators.NewCounter()
 			)
 
-			// calc number of "yes" and "no", weighted by validator's stake
+			// calc number of "yes" and "no", weighted by validator's weight
 			var subjectHash *hash.Event
 			for _, observedRoot := range observedRoots {
 				vid := voteID{

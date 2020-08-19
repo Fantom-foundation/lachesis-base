@@ -5,31 +5,31 @@ import (
 )
 
 type (
-	// Stake amount.
-	Stake uint64
+	// Weight amount.
+	Weight uint64
 )
 
 type (
-	// StakeCounterProvider providers stake counter.
-	StakeCounterProvider func() *StakeCounter
+	// WeightCounterProvider providers weight counter.
+	WeightCounterProvider func() *WeightCounter
 
-	// StakeCounter counts stakes.
-	StakeCounter struct {
+	// WeightCounter counts weights.
+	WeightCounter struct {
 		validators Validators
 		already    []bool // idx.Validator -> bool
 
-		quorum Stake
-		sum    Stake
+		quorum Weight
+		sum    Weight
 	}
 )
 
 // NewCounter constructor.
-func (vv Validators) NewCounter() *StakeCounter {
-	return newStakeCounter(vv)
+func (vv Validators) NewCounter() *WeightCounter {
+	return newWeightCounter(vv)
 }
 
-func newStakeCounter(vv Validators) *StakeCounter {
-	return &StakeCounter{
+func newWeightCounter(vv Validators) *WeightCounter {
+	return &WeightCounter{
 		validators: vv,
 		quorum:     vv.Quorum(),
 		already:    make([]bool, vv.Len()),
@@ -38,28 +38,28 @@ func newStakeCounter(vv Validators) *StakeCounter {
 }
 
 // Count validator and return true if it hadn't counted before.
-func (s *StakeCounter) Count(v idx.ValidatorID) bool {
+func (s *WeightCounter) Count(v idx.ValidatorID) bool {
 	validatorIdx := s.validators.GetIdx(v)
 	return s.CountByIdx(validatorIdx)
 }
 
 // CountByIdx validator and return true if it hadn't counted before.
-func (s *StakeCounter) CountByIdx(validatorIdx idx.Validator) bool {
+func (s *WeightCounter) CountByIdx(validatorIdx idx.Validator) bool {
 	if s.already[validatorIdx] {
 		return false
 	}
 	s.already[validatorIdx] = true
 
-	s.sum += s.validators.GetStakeByIdx(validatorIdx)
+	s.sum += s.validators.GetWeightByIdx(validatorIdx)
 	return true
 }
 
 // HasQuorum achieved.
-func (s *StakeCounter) HasQuorum() bool {
+func (s *WeightCounter) HasQuorum() bool {
 	return s.sum >= s.quorum
 }
 
-// Sum of counted stakes.
-func (s *StakeCounter) Sum() Stake {
+// Sum of counted weights.
+func (s *WeightCounter) Sum() Weight {
 	return s.sum
 }

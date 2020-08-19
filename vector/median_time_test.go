@@ -14,7 +14,7 @@ import (
 
 func TestMedianTimeOnIndex(t *testing.T) {
 	nodes := tdag.GenNodes(5)
-	weights := []pos.Stake{5, 4, 3, 2, 1}
+	weights := []pos.Weight{5, 4, 3, 2, 1}
 	validators := pos.ArrayToValidators(nodes, weights)
 
 	vi := NewIndex(func(err error) { panic(err) }, LiteConfig())
@@ -23,7 +23,7 @@ func TestMedianTimeOnIndex(t *testing.T) {
 	assertar := assert.New(t)
 	{ // seq=0
 		e := hash.ZeroEvent
-		// validator indexes are sorted by stake amount
+		// validator indexes are sorted by weight amount
 		beforeSeq := NewHighestBeforeSeq(validators.Len())
 		beforeTime := NewHighestBeforeTime(validators.Len())
 
@@ -48,7 +48,7 @@ func TestMedianTimeOnIndex(t *testing.T) {
 
 	{ // fork seen = true
 		e := hash.ZeroEvent
-		// validator indexes are sorted by stake amount
+		// validator indexes are sorted by weight amount
 		beforeSeq := NewHighestBeforeSeq(validators.Len())
 		beforeTime := NewHighestBeforeTime(validators.Len())
 
@@ -73,7 +73,7 @@ func TestMedianTimeOnIndex(t *testing.T) {
 
 	{ // normal
 		e := hash.ZeroEvent
-		// validator indexes are sorted by stake amount
+		// validator indexes are sorted by weight amount
 		beforeSeq := NewHighestBeforeSeq(validators.Len())
 		beforeTime := NewHighestBeforeTime(validators.Len())
 
@@ -122,7 +122,7 @@ func TestMedianTimeOnDAG(t *testing.T) {
  ╠════════════╫═══════════ nodeC002
 `
 
-	weights := []pos.Stake{3, 4, 2, 1}
+	weights := []pos.Weight{3, 4, 2, 1}
 	genesisTime := dag.RawTimestamp(1)
 	claimedTimes := map[string]dag.RawTimestamp{
 		"nodeA001": dag.RawTimestamp(111),
@@ -153,7 +153,7 @@ func TestMedianTimeOnDAG(t *testing.T) {
 	})
 }
 
-func testMedianTime(t *testing.T, dagAscii string, weights []pos.Stake, claimedTimes map[string]dag.RawTimestamp, medianTimes map[string]dag.RawTimestamp, genesis dag.RawTimestamp) {
+func testMedianTime(t *testing.T, dagAscii string, weights []pos.Weight, claimedTimes map[string]dag.RawTimestamp, medianTimes map[string]dag.RawTimestamp, genesis dag.RawTimestamp) {
 	assertar := assert.New(t)
 
 	var ordered dag.Events

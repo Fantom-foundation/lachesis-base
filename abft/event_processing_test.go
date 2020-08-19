@@ -18,52 +18,52 @@ const (
 )
 
 func TestLachesisRandom_1(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{1}, 0)
+	testLachesisRandom(t, []pos.Weight{1}, 0)
 }
 
 func TestLachesisRandom_big1(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{math.MaxUint64}, 0)
+	testLachesisRandom(t, []pos.Weight{math.MaxUint64}, 0)
 }
 
 func TestLachesisRandom_big2(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
+	testLachesisRandom(t, []pos.Weight{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestLachesisRandom_4(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{1, 2, 3, 4}, 0)
+	testLachesisRandom(t, []pos.Weight{1, 2, 3, 4}, 0)
 }
 
 func TestLachesisRandom_3_1(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{1, 1, 1, 1}, 1)
+	testLachesisRandom(t, []pos.Weight{1, 1, 1, 1}, 1)
 }
 
 func TestLachesisRandom_67_33(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{33, 67}, 1)
+	testLachesisRandom(t, []pos.Weight{33, 67}, 1)
 }
 
 func TestLachesisRandom_67_33_4(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{11, 11, 11, 67}, 3)
+	testLachesisRandom(t, []pos.Weight{11, 11, 11, 67}, 3)
 }
 
 func TestLachesisRandom_67_33_5(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{11, 11, 11, 33, 34}, 3)
+	testLachesisRandom(t, []pos.Weight{11, 11, 11, 33, 34}, 3)
 }
 
 func TestLachesisRandom_2_8_10(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
+	testLachesisRandom(t, []pos.Weight{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
 }
 
 // TestLachesis 's possibility to get consensus in general on any event order.
-func testLachesisRandom(t *testing.T, stakes []pos.Stake, cheatersCount int) {
+func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	assertar := assert.New(t)
 
 	const lchCount = 3
-	nodes := tdag.GenNodes(len(stakes))
+	nodes := tdag.GenNodes(len(weights))
 
 	lchs := make([]*TestLachesis, 0, lchCount)
 	inputs := make([]*EventStore, 0, lchCount)
 	for i := 0; i < lchCount; i++ {
-		lch, _, input := FakeLachesis(nodes, stakes)
+		lch, _, input := FakeLachesis(nodes, weights)
 		lchs = append(lchs, lch)
 		inputs = append(inputs, input)
 	}

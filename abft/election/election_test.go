@@ -22,7 +22,7 @@ type fakeEdge struct {
 }
 
 type (
-	stakes map[string]pos.Stake
+	weights map[string]pos.Weight
 )
 
 type testExpected struct {
@@ -33,10 +33,10 @@ type testExpected struct {
 
 func TestProcessRoot(t *testing.T) {
 
-	t.Run("4 equalStakes notDecided", func(t *testing.T) {
+	t.Run("4 equalWeights notDecided", func(t *testing.T) {
 		testProcessRoot(t,
 			nil,
-			stakes{
+			weights{
 				"nodeA": 1,
 				"nodeB": 1,
 				"nodeC": 1,
@@ -57,14 +57,14 @@ a2_2══╬═════╬═════╣
 `)
 	})
 
-	t.Run("4 equalStakes", func(t *testing.T) {
+	t.Run("4 equalWeights", func(t *testing.T) {
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "b0_0",
 				DecisiveRoots:  map[string]bool{"a2_2": true},
 			},
-			stakes{
+			weights{
 				"nodeA": 1,
 				"nodeB": 1,
 				"nodeC": 1,
@@ -85,14 +85,14 @@ a2_2══╬═════╬═════╣
 `)
 	})
 
-	t.Run("4 equalStakes missingRoot", func(t *testing.T) {
+	t.Run("4 equalWeights missingRoot", func(t *testing.T) {
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "b0_0",
 				DecisiveRoots:  map[string]bool{"a2_2": true},
 			},
-			stakes{
+			weights{
 				"nodeA": 1,
 				"nodeB": 1,
 				"nodeC": 1,
@@ -111,14 +111,14 @@ a2_2══╬═════╣     ║
 `)
 	})
 
-	t.Run("4 differentStakes", func(t *testing.T) {
+	t.Run("4 differentWeights", func(t *testing.T) {
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "a0_0",
 				DecisiveRoots:  map[string]bool{"b2_2": true},
 			},
-			stakes{
+			weights{
 				"nodeA": 1000000000000000000,
 				"nodeB": 1,
 				"nodeC": 1,
@@ -139,14 +139,14 @@ a1_1══╬═════╣     ║
 `)
 	})
 
-	t.Run("4 differentStakes 4rounds", func(t *testing.T) {
+	t.Run("4 differentWeights 4rounds", func(t *testing.T) {
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "a0_0",
 				DecisiveRoots:  map[string]bool{"a4_4": true},
 			},
-			stakes{
+			weights{
 				"nodeA": 4,
 				"nodeB": 2,
 				"nodeC": 1,
@@ -188,7 +188,7 @@ a4_4══╣     ║     ║
 func testProcessRoot(
 	t *testing.T,
 	expected *testExpected,
-	stakes stakes,
+	weights weights,
 	dagAscii string,
 ) {
 	assertar := assert.New(t)
@@ -241,7 +241,7 @@ func testProcessRoot(
 
 	validatorsBuilder := pos.NewBuilder()
 	for _, node := range nodes {
-		validatorsBuilder.Set(node, stakes[utils.NameOf(node)])
+		validatorsBuilder.Set(node, weights[utils.NameOf(node)])
 	}
 	validators := validatorsBuilder.Build()
 

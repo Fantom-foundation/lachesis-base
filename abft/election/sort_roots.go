@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-// Chooses the decided "yes" roots with the greatest stake amount.
+// Chooses the decided "yes" roots with the greatest weight amount.
 // This root serves as a "checkpoint" within DAG, as it's guaranteed to be final and consistent unless more than 1/3W are Byzantine.
 // Other validators will come to the same Atropos not later than current highest frame + 2.
 func (el *Election) chooseAtropos() (*Res, error) {

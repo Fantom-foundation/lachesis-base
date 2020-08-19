@@ -23,14 +23,14 @@ type TestLachesis struct {
 	applyBlock applyBlockFn
 }
 
-// FakeLachesis creates empty abft with mem store and equal stakes of nodes in genesis.
-func FakeLachesis(nodes []idx.ValidatorID, stakes []pos.Stake, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore) {
+// FakeLachesis creates empty abft with mem store and equal weights of nodes in genesis.
+func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore) {
 	validators := make(pos.ValidatorsBuilder, len(nodes))
 	for i, v := range nodes {
-		if stakes == nil {
+		if weights == nil {
 			validators[v] = 1
 		} else {
-			validators[v] = stakes[i]
+			validators[v] = weights[i]
 		}
 	}
 
