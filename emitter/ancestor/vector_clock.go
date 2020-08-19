@@ -22,7 +22,7 @@ type CasualityStrategy struct {
 }
 
 type DagIndex interface {
-	GetHighestBeforeSeq(id hash.Event) dagidx.HighestBeforeSeq
+	dagidx.VectorClock
 }
 
 // NewCasualityStrategy creates new CasualityStrategy with provided vector clock

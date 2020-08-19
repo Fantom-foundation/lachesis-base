@@ -18,9 +18,7 @@ type HighestBeforeSeq interface {
 	Get(i idx.Validator) Seq
 }
 
-type DagIndex interface {
-	GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq
-
+type ForklessCause interface {
 	// ForklessCause calculates "sufficient coherence" between the events.
 	// The A.HighestBefore array remembers the sequence number of the last
 	// event by each validator that is an ancestor of A. The array for
@@ -38,8 +36,13 @@ type DagIndex interface {
 	ForklessCause(aID, bID hash.Event) bool
 }
 
+type VectorClock interface {
+	GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq
+}
+
 type DagIndexer interface {
-	DagIndex
+	VectorClock
+	ForklessCause
 
 	Add(dag.Event) error
 	Flush()
