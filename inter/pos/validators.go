@@ -28,11 +28,6 @@ type (
 	ValidatorsBuilder map[idx.StakerID]Stake
 )
 
-var (
-	// EmptyValidators is empty validators group
-	EmptyValidators = NewBuilder().Build()
-)
-
 // NewBuilder creates new mutable ValidatorsBuilder
 func NewBuilder() ValidatorsBuilder {
 	return ValidatorsBuilder{}
@@ -101,7 +96,12 @@ func (vv *Validators) calcCaches() cache {
 		cache.indexes[v.ID] = idx.Validator(i)
 		cache.stakes[i] = v.Stake
 		cache.ids[i] = v.ID
+		totalStakeBefore := cache.totalStake
 		cache.totalStake += v.Stake
+		// check overflow
+		if cache.totalStake < totalStakeBefore {
+			panic("validators weight overflow")
+		}
 	}
 
 	return cache

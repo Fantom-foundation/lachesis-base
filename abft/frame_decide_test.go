@@ -23,7 +23,7 @@ func TestConfirmBlocks_big1(t *testing.T) {
 }
 
 func TestConfirmBlocks_big2(t *testing.T) {
-	testConfirmBlocks(t, []pos.Stake{math.MaxUint64, math.MaxUint64}, 0)
+	testConfirmBlocks(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestConfirmBlocks_4(t *testing.T) {

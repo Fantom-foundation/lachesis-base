@@ -26,7 +26,7 @@ func TestLachesisRandom_big1(t *testing.T) {
 }
 
 func TestLachesisRandom_big2(t *testing.T) {
-	testLachesisRandom(t, []pos.Stake{math.MaxUint64, math.MaxUint64}, 0)
+	testLachesisRandom(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestLachesisRandom_4(t *testing.T) {

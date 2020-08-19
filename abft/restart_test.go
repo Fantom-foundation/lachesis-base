@@ -28,7 +28,7 @@ func TestRestart_big1(t *testing.T) {
 }
 
 func TestRestart_big2(t *testing.T) {
-	testRestart(t, []pos.Stake{math.MaxUint64, math.MaxUint64}, 0)
+	testRestart(t, []pos.Stake{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
 }
 
 func TestRestart_4(t *testing.T) {
