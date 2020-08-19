@@ -70,31 +70,34 @@ func (p *Orderer) checkAndSaveEvent(e dag.Event) error {
 
 // calculates Atropos election for the root, calls p.onFrameDecided if election was decided
 func (p *Orderer) handleElection(root dag.Event) error {
-	if root != nil { // if root is nil, then just bootstrap election
-		if !root.IsRoot() {
-			return nil
-		}
+	if !root.IsRoot() {
+		return nil
+	}
 
-		decided, err := p.processRoot(root.Frame(), root.Creator(), root.ID())
-		if err != nil {
-			return err
-		}
-		if decided == nil {
-			return nil
-		}
+	decided, err := p.processRoot(root.Frame(), root.Creator(), root.ID())
+	if err != nil {
+		return err
+	}
+	if decided == nil {
+		return nil
+	}
 
-		// if we’re here, then this root has observed that lowest not decided frame is decided now
-		sealed, err := p.onFrameDecided(decided.Frame, decided.Atropos)
-		if err != nil {
-			return err
-		}
-		if sealed {
-			return nil
-		}
+	// if we’re here, then this root has observed that lowest not decided frame is decided now
+	sealed, err := p.onFrameDecided(decided.Frame, decided.Atropos)
+	if err != nil {
+		return err
+	}
+	if sealed {
+		return nil
 	}
 
 	// then call processKnownRoots until it returns nil -
 	// it’s needed because new elections may already have enough votes, because we process elections from lowest to highest
+	return p.bootstrapElection()
+}
+
+// bootstrapElection calls processKnownRoots until it returns nil
+func (p *Orderer) bootstrapElection() error {
 	for {
 		decided, err := p.processKnownRoots()
 		if err != nil {

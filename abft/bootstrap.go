@@ -47,7 +47,7 @@ func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	p.election = election.New(p.store.GetValidators(), p.store.GetLastDecidedFrame()+1, p.dagIndex.ForklessCause, p.store.GetFrameRoots)
 
 	// events reprocessing
-	return p.handleElection(nil)
+	return p.bootstrapElection()
 }
 
 func (p *Orderer) loadEpochDB() error {
