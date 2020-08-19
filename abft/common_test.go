@@ -46,6 +46,7 @@ func FakeLachesis(nodes []idx.StakerID, stakes []pos.Stake, mods ...memorydb.Mod
 	err := store.ApplyGenesis(&Genesis{
 		Validators: validators.Build(),
 		Atropos:    hash.ZeroEvent,
+		Epoch:      FirstEpoch,
 	})
 	if err != nil {
 		panic(err)

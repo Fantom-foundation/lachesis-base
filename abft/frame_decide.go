@@ -18,12 +18,12 @@ func (p *Orderer) onFrameDecided(frame idx.Frame, atropos hash.Event) (bool, err
 	lastDecidedState := *p.store.GetLastDecidedState()
 	lastDecidedState.LastAtropos = atropos
 	if newValidators != nil {
-		lastDecidedState.LastDecidedFrame = firstFrame - 1
+		lastDecidedState.LastDecidedFrame = FirstFrame - 1
 		err := p.sealEpoch(newValidators)
 		if err != nil {
 			return true, err
 		}
-		p.election.Reset(newValidators, firstFrame)
+		p.election.Reset(newValidators, FirstFrame)
 	} else {
 		lastDecidedState.LastDecidedFrame = frame
 		p.election.Reset(p.store.GetValidators(), frame+1)

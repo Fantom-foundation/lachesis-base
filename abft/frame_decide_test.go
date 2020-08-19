@@ -81,7 +81,7 @@ func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 
 		},
 		Build: func(e dag.MutableEvent, name string) error {
-			e.SetEpoch(firstEpoch)
+			e.SetEpoch(FirstEpoch)
 			return lch.Build(e)
 		},
 	})

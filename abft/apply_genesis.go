@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 )
 
-// GenesisState stores state of previous Epoch
+// Genesis stores genesis state
 type Genesis struct {
+	Epoch      idx.Epoch
 	Validators *pos.Validators
 	Atropos    hash.Event
 }
@@ -29,9 +31,9 @@ func (s *Store) ApplyGenesis(g *Genesis) error {
 	ds := &LastDecidedState{}
 
 	es.Validators = g.Validators
-	es.Epoch = firstEpoch
+	es.Epoch = g.Epoch
 	ds.LastAtropos = g.Atropos
-	ds.LastDecidedFrame = firstFrame - 1
+	ds.LastDecidedFrame = FirstFrame - 1
 
 	s.SetEpochState(es)
 	s.SetLastDecidedState(ds)

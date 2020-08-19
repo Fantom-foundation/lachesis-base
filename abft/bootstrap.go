@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	firstFrame = idx.Frame(1)
-	firstEpoch = idx.Epoch(1)
+	FirstFrame = idx.Frame(1)
+	FirstEpoch = idx.Epoch(1)
 )
 
 // LastDecidedState is for persistent storing.

@@ -85,7 +85,7 @@ func testLachesisRandom(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 				lchs[0].ProcessEvent(e))
 		},
 		Build: func(e dag.MutableEvent, name string) error {
-			e.SetEpoch(firstEpoch)
+			e.SetEpoch(FirstEpoch)
 			return lchs[0].Build(e)
 		},
 	})
@@ -93,7 +93,7 @@ func testLachesisRandom(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 	for i := 1; i < len(lchs); i++ {
 		ee := reorder(ordered)
 		for _, e := range ee {
-			if e.Epoch() != firstEpoch {
+			if e.Epoch() != FirstEpoch {
 				continue
 			}
 			inputs[i].SetEvent(e)
