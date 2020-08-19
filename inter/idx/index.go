@@ -23,8 +23,8 @@ type (
 	// Pack numeration.
 	Pack uint32
 
-	// StakerID numeration.
-	StakerID uint32
+	// ValidatorID numeration.
+	ValidatorID uint32
 )
 
 // Bytes gets the byte representation of the index.
@@ -53,7 +53,7 @@ func (p Pack) Bytes() []byte {
 }
 
 // Bytes gets the byte representation of the index.
-func (s StakerID) Bytes() []byte {
+func (s ValidatorID) Bytes() []byte {
 	return bigendian.Uint32ToBytes(uint32(s))
 }
 
@@ -92,9 +92,9 @@ func BytesToPack(b []byte) Pack {
 	return Pack(bigendian.BytesToUint32(b))
 }
 
-// BytesToStakerID converts bytes to staker index.
-func BytesToStakerID(b []byte) StakerID {
-	return StakerID(bigendian.BytesToUint32(b))
+// BytesToValidatorID converts bytes to validator index.
+func BytesToValidatorID(b []byte) ValidatorID {
+	return ValidatorID(bigendian.BytesToUint32(b))
 }
 
 // MaxLamport return max value

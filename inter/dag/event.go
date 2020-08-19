@@ -12,7 +12,7 @@ type Event interface {
 	Seq() idx.Event
 	Frame() idx.Frame
 	IsRoot() bool
-	Creator() idx.StakerID
+	Creator() idx.ValidatorID
 	Lamport() idx.Lamport
 	RawTime() RawTimestamp
 
@@ -31,7 +31,7 @@ type MutableEvent interface {
 	SetSeq(idx.Event)
 	SetFrame(idx.Frame)
 	SetIsRoot(bool)
-	SetCreator(idx.StakerID)
+	SetCreator(idx.ValidatorID)
 	SetLamport(idx.Lamport)
 	SetRawTime(RawTimestamp)
 
@@ -51,7 +51,7 @@ type BaseEvent struct {
 	frame  idx.Frame
 	isRoot bool
 
-	creator idx.StakerID
+	creator idx.ValidatorID
 
 	parents hash.Events
 
@@ -112,7 +112,7 @@ func (e *BaseEvent) Frame() idx.Frame { return e.frame }
 
 func (e *BaseEvent) IsRoot() bool { return e.isRoot }
 
-func (e *BaseEvent) Creator() idx.StakerID { return e.creator }
+func (e *BaseEvent) Creator() idx.ValidatorID { return e.creator }
 
 func (e *BaseEvent) Parents() hash.Events { return e.parents }
 
@@ -130,7 +130,7 @@ func (e *MutableBaseEvent) SetFrame(v idx.Frame) { e.frame = v }
 
 func (e *MutableBaseEvent) SetIsRoot(v bool) { e.isRoot = v }
 
-func (e *MutableBaseEvent) SetCreator(v idx.StakerID) { e.creator = v }
+func (e *MutableBaseEvent) SetCreator(v idx.ValidatorID) { e.creator = v }
 
 func (e *MutableBaseEvent) SetParents(v hash.Events) { e.parents = v }
 

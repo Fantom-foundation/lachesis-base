@@ -308,8 +308,8 @@ func Of(data ...[]byte) (hash Hash) {
  */
 
 // FakePeer generates random fake peer id for testing purpose.
-func FakePeer(seed ...int64) idx.StakerID {
-	return idx.BytesToStakerID(FakeHash(seed...).Bytes()[:4])
+func FakePeer(seed ...int64) idx.ValidatorID {
+	return idx.BytesToValidatorID(FakeHash(seed...).Bytes()[:4])
 }
 
 // FakeEpoch gives fixed value of fake epoch for testing purpose.

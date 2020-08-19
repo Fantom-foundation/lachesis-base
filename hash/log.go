@@ -11,14 +11,14 @@ var (
 	eventNameDictMu sync.RWMutex
 
 	// nodeNameDict is an optional dictionary to make node address human readable in log.
-	nodeNameDict = make(map[idx.StakerID]string)
+	nodeNameDict = make(map[idx.ValidatorID]string)
 
 	// eventNameDict is an optional dictionary to make events human readable in log.
 	eventNameDict = make(map[Event]string)
 )
 
 // SetNodeName sets an optional human readable alias of node address in log.
-func SetNodeName(n idx.StakerID, name string) {
+func SetNodeName(n idx.ValidatorID, name string) {
 	nodeNameDictMu.Lock()
 	defer nodeNameDictMu.Unlock()
 
@@ -34,7 +34,7 @@ func SetEventName(e Event, name string) {
 }
 
 // GetNodeName gets an optional human readable alias of node address.
-func GetNodeName(n idx.StakerID) string {
+func GetNodeName(n idx.ValidatorID) string {
 	nodeNameDictMu.RLock()
 	defer nodeNameDictMu.RUnlock()
 

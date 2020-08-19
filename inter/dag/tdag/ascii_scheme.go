@@ -26,11 +26,11 @@ func ASCIIschemeForEach(
 	scheme string,
 	callback ForEachEvent,
 ) (
-	nodes []idx.StakerID,
-	events map[idx.StakerID]dag.Events,
+	nodes []idx.ValidatorID,
+	events map[idx.ValidatorID]dag.Events,
 	names map[string]dag.Event,
 ) {
-	events = make(map[idx.StakerID]dag.Events)
+	events = make(map[idx.ValidatorID]dag.Events)
 	names = make(map[string]dag.Event)
 	var (
 		prevFarRefs map[int]int
@@ -121,7 +121,7 @@ func ASCIIschemeForEach(
 		for i, name := range nNames {
 			// make node if don't exist
 			if len(nodes) <= nCreators[i] {
-				validator := idx.BytesToStakerID(hash.Of([]byte(name)).Bytes()[:4])
+				validator := idx.BytesToValidatorID(hash.Of([]byte(name)).Bytes()[:4])
 				nodes = append(nodes, validator)
 				events[validator] = nil
 			}
@@ -214,8 +214,8 @@ func ASCIIschemeForEach(
 func ASCIIschemeToDAG(
 	scheme string,
 ) (
-	nodes []idx.StakerID,
-	events map[idx.StakerID]dag.Events,
+	nodes []idx.ValidatorID,
+	events map[idx.ValidatorID]dag.Events,
 	names map[string]dag.Event,
 ) {
 	return ASCIIschemeForEach(scheme, ForEachEvent{})
@@ -229,13 +229,13 @@ func DAGtoASCIIscheme(events dag.Events) (string, error) {
 		scheme rows
 
 		processed = make(map[hash.Event]dag.Event)
-		nodeCols  = make(map[idx.StakerID]int)
+		nodeCols  = make(map[idx.ValidatorID]int)
 		ok        bool
 
-		eventIndex       = make(map[idx.StakerID]map[hash.Event]int)
-		creatorLastIndex = make(map[idx.StakerID]int)
+		eventIndex       = make(map[idx.ValidatorID]map[hash.Event]int)
+		creatorLastIndex = make(map[idx.ValidatorID]int)
 
-		seqCount = make(map[idx.StakerID]map[idx.Event]int)
+		seqCount = make(map[idx.ValidatorID]map[idx.Event]int)
 	)
 	for _, e := range events {
 		// if count of unique seq > 1 -> fork

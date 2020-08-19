@@ -182,7 +182,7 @@ func TestValidators_Big(t *testing.T) {
 	assert.Equal(t, Stake(0x7ffffffffffff), v.Get(4))
 	assert.Equal(t, Stake(0x3fffffffffffffff), v.Get(5))
 
-	for v := idx.StakerID(1); v < 5000; v++ {
+	for v := idx.ValidatorID(1); v < 5000; v++ {
 		b.Set(v, new(big.Int).Mul(big.NewInt(int64(v)), maxBig(400)))
 	}
 	v = b.Build()

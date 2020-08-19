@@ -7,11 +7,11 @@ import (
 )
 
 // Cheaters is a slice type for storing cheaters list.
-type Cheaters []idx.StakerID
+type Cheaters []idx.ValidatorID
 
 // Set returns map of cheaters
-func (s Cheaters) Set() map[idx.StakerID]struct{} {
-	set := map[idx.StakerID]struct{}{}
+func (s Cheaters) Set() map[idx.ValidatorID]struct{} {
+	set := map[idx.ValidatorID]struct{}{}
 	for _, element := range s {
 		set[element] = struct{}{}
 	}

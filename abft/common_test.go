@@ -24,7 +24,7 @@ type TestLachesis struct {
 }
 
 // FakeLachesis creates empty abft with mem store and equal stakes of nodes in genesis.
-func FakeLachesis(nodes []idx.StakerID, stakes []pos.Stake, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore) {
+func FakeLachesis(nodes []idx.ValidatorID, stakes []pos.Stake, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore) {
 	validators := make(pos.ValidatorsBuilder, len(nodes))
 	for i, v := range nodes {
 		if stakes == nil {

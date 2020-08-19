@@ -89,7 +89,7 @@ func (p *Lachesis) applyAtropos(decidedFrame idx.Frame, atropos hash.Event) *pos
 
 	validators := p.store.GetValidators()
 	// cheaters are ordered deterministically
-	cheaters := make([]idx.StakerID, 0, validators.Len())
+	cheaters := make([]idx.ValidatorID, 0, validators.Len())
 	for creatorIdx, creator := range validators.SortedIDs() {
 		if atroposVecClock.Get(idx.Validator(creatorIdx)).IsForkDetected() {
 			cheaters = append(cheaters, creator)

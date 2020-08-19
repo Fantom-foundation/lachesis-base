@@ -32,7 +32,7 @@ type IndexConfig struct {
 type Index struct {
 	crit          func(error)
 	validators    *pos.Validators
-	validatorIdxs map[idx.StakerID]idx.Validator
+	validatorIdxs map[idx.ValidatorID]idx.Validator
 
 	bi *branchesInfo
 

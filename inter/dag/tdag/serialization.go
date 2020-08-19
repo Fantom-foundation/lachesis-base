@@ -15,7 +15,7 @@ type TestEventMarshaling struct {
 	Frame  idx.Frame
 	IsRoot bool
 
-	Creator idx.StakerID
+	Creator idx.ValidatorID
 
 	Parents hash.Events
 

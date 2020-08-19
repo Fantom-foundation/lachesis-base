@@ -44,9 +44,9 @@ func (s *Store) AddRoot(root dag.Event) {
 }
 
 const (
-	frameSize    = 4
-	stakerIDSize = 4
-	eventIDSize  = 32
+	frameSize       = 4
+	validatorIDSize = 4
+	eventIDSize     = 32
 )
 
 // GetFrameRoots returns all the roots in the specified frame
@@ -66,15 +66,15 @@ func (s *Store) GetFrameRoots(f idx.Frame) []election.RootAndSlot {
 	defer it.Release()
 	for it.Next() {
 		key := it.Key()
-		if len(key) != frameSize+stakerIDSize+eventIDSize {
+		if len(key) != frameSize+validatorIDSize+eventIDSize {
 			s.crit(fmt.Errorf("roots table: incorrect key len=%d", len(key)))
 		}
 		r := election.RootAndSlot{
 			Slot: election.Slot{
 				Frame:     idx.BytesToFrame(key[:frameSize]),
-				Validator: idx.BytesToStakerID(key[frameSize : frameSize+stakerIDSize]),
+				Validator: idx.BytesToValidatorID(key[frameSize : frameSize+validatorIDSize]),
 			},
-			ID: hash.BytesToEvent(key[frameSize+stakerIDSize:]),
+			ID: hash.BytesToEvent(key[frameSize+validatorIDSize:]),
 		}
 		if r.Slot.Frame != f {
 			s.crit(fmt.Errorf("roots table: invalid frame=%d, expected=%d", r.Slot.Frame, f))

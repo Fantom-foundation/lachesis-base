@@ -118,7 +118,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	}
 
 	heads := hash.EventsSet{}
-	tips := map[idx.StakerID]*hash.Event{}
+	tips := map[idx.ValidatorID]*hash.Event{}
 	// check
 	for stage, ee := range stages {
 		t.Logf("Stage %d:", stage)

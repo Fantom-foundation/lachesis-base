@@ -6,7 +6,7 @@ import (
 
 type (
 	validator struct {
-		ID    idx.StakerID
+		ID    idx.ValidatorID
 		Stake Stake
 	}
 

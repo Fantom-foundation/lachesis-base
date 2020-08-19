@@ -16,10 +16,10 @@ import (
 func GenNodes(
 	nodeCount int,
 ) (
-	nodes []idx.StakerID,
+	nodes []idx.ValidatorID,
 ) {
 	// init results
-	nodes = make([]idx.StakerID, nodeCount)
+	nodes = make([]idx.ValidatorID, nodeCount)
 	// make and name nodes
 	for i := 0; i < nodeCount; i++ {
 		addr := hash.FakePeer()
@@ -35,15 +35,15 @@ func GenNodes(
 //   - callbacks are called for each new event;
 //   - events maps node address to array of its events;
 func ForEachRandFork(
-	nodes []idx.StakerID,
-	cheatersArr []idx.StakerID,
+	nodes []idx.ValidatorID,
+	cheatersArr []idx.ValidatorID,
 	eventCount int,
 	parentCount int,
 	forksCount int,
 	r *rand.Rand,
 	callback ForEachEvent,
 ) (
-	events map[idx.StakerID]dag.Events,
+	events map[idx.ValidatorID]dag.Events,
 ) {
 	if r == nil {
 		// fixed seed
@@ -51,8 +51,8 @@ func ForEachRandFork(
 	}
 	// init results
 	nodeCount := len(nodes)
-	events = make(map[idx.StakerID]dag.Events, nodeCount)
-	cheaters := map[idx.StakerID]int{}
+	events = make(map[idx.ValidatorID]dag.Events, nodeCount)
+	cheaters := map[idx.ValidatorID]int{}
 	for _, cheater := range cheatersArr {
 		cheaters[cheater] = 0
 	}
@@ -141,32 +141,32 @@ func ForEachRandFork(
 //   - callbacks are called for each new event;
 //   - events maps node address to array of its events;
 func ForEachRandEvent(
-	nodes []idx.StakerID,
+	nodes []idx.ValidatorID,
 	eventCount int,
 	parentCount int,
 	r *rand.Rand,
 	callback ForEachEvent,
 ) (
-	events map[idx.StakerID]dag.Events,
+	events map[idx.ValidatorID]dag.Events,
 ) {
-	return ForEachRandFork(nodes, []idx.StakerID{}, eventCount, parentCount, 0, r, callback)
+	return ForEachRandFork(nodes, []idx.ValidatorID{}, eventCount, parentCount, 0, r, callback)
 }
 
 // GenRandEvents generates random events for test purpose.
 // Result:
 //   - events maps node address to array of its events;
 func GenRandEvents(
-	nodes []idx.StakerID,
+	nodes []idx.ValidatorID,
 	eventCount int,
 	parentCount int,
 	r *rand.Rand,
 ) (
-	events map[idx.StakerID]dag.Events,
+	events map[idx.ValidatorID]dag.Events,
 ) {
 	return ForEachRandEvent(nodes, eventCount, parentCount, r, ForEachEvent{})
 }
 
-func delPeerIndex(events map[idx.StakerID]dag.Events) (res dag.Events) {
+func delPeerIndex(events map[idx.ValidatorID]dag.Events) (res dag.Events) {
 	for _, ee := range events {
 		res = append(res, ee...)
 	}

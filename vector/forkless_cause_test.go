@@ -484,12 +484,12 @@ func TestForklessCausedRandom(t *testing.T) {
 
 type eventSlot struct {
 	seq     idx.Event
-	creator idx.StakerID
+	creator idx.ValidatorID
 }
 
 // naive implementation of fork detection, O(n)
-func testForksDetected(vi *Index, head dag.Event) (cheaters map[idx.StakerID]bool, err error) {
-	cheaters = map[idx.StakerID]bool{}
+func testForksDetected(vi *Index, head dag.Event) (cheaters map[idx.ValidatorID]bool, err error) {
+	cheaters = map[idx.ValidatorID]bool{}
 	visited := hash.EventsSet{}
 	detected := map[eventSlot]int{}
 	onWalk := func(id hash.Event) (godeeper bool) {
@@ -519,7 +519,7 @@ func testForksDetected(vi *Index, head dag.Event) (cheaters map[idx.StakerID]boo
 
 func TestRandomForksSanity(t *testing.T) {
 	nodes := tdag.GenNodes(8)
-	cheaters := []idx.StakerID{nodes[0], nodes[1], nodes[2]}
+	cheaters := []idx.ValidatorID{nodes[0], nodes[1], nodes[2]}
 
 	validatorsBuilder := pos.NewBuilder()
 	for _, peer := range nodes {

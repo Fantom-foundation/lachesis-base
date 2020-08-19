@@ -28,7 +28,7 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 	notDecidedRoots := el.notDecidedRoots()
 
 	var observedRoots []RootAndSlot
-	var observedRootsMap map[idx.StakerID]RootAndSlot
+	var observedRootsMap map[idx.ValidatorID]RootAndSlot
 	if round == 1 {
 		observedRootsMap = el.observedRootsMap(newRoot.ID, newRoot.Slot.Frame-1)
 	} else {

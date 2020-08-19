@@ -38,19 +38,19 @@ func newStakeCounter(vv Validators) *StakeCounter {
 }
 
 // Count validator and return true if it hadn't counted before.
-func (s *StakeCounter) Count(v idx.StakerID) bool {
-	stakerIdx := s.validators.GetIdx(v)
-	return s.CountByIdx(stakerIdx)
+func (s *StakeCounter) Count(v idx.ValidatorID) bool {
+	validatorIdx := s.validators.GetIdx(v)
+	return s.CountByIdx(validatorIdx)
 }
 
 // CountByIdx validator and return true if it hadn't counted before.
-func (s *StakeCounter) CountByIdx(stakerIdx idx.Validator) bool {
-	if s.already[stakerIdx] {
+func (s *StakeCounter) CountByIdx(validatorIdx idx.Validator) bool {
+	if s.already[validatorIdx] {
 		return false
 	}
-	s.already[stakerIdx] = true
+	s.already[validatorIdx] = true
 
-	s.sum += s.validators.GetStakeByIdx(stakerIdx)
+	s.sum += s.validators.GetStakeByIdx(validatorIdx)
 	return true
 }
 

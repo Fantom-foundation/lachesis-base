@@ -11,21 +11,21 @@ import (
 
 type (
 	cache struct {
-		indexes    map[idx.StakerID]idx.Validator
+		indexes    map[idx.ValidatorID]idx.Validator
 		stakes     []Stake
-		ids        []idx.StakerID
+		ids        []idx.ValidatorID
 		totalStake Stake
 	}
 	// Validators group of an epoch with stakes.
 	// Optimized for BFT algorithm calculations.
 	// Read-only.
 	Validators struct {
-		values map[idx.StakerID]Stake
+		values map[idx.ValidatorID]Stake
 		cache  cache
 	}
 
 	// ValidatorsBuilder is a helper to create Validators object
-	ValidatorsBuilder map[idx.StakerID]Stake
+	ValidatorsBuilder map[idx.ValidatorID]Stake
 )
 
 // NewBuilder creates new mutable ValidatorsBuilder
@@ -34,7 +34,7 @@ func NewBuilder() ValidatorsBuilder {
 }
 
 // Set appends item to ValidatorsBuilder object
-func (vv ValidatorsBuilder) Set(id idx.StakerID, stake Stake) {
+func (vv ValidatorsBuilder) Set(id idx.ValidatorID, stake Stake) {
 	if stake == 0 {
 		delete(vv, id)
 	} else {
@@ -48,7 +48,7 @@ func (vv ValidatorsBuilder) Build() *Validators {
 }
 
 // EqualStakeValidators builds new read-only Validators object with equal stakes (for tests)
-func EqualStakeValidators(ids []idx.StakerID, stake Stake) *Validators {
+func EqualStakeValidators(ids []idx.ValidatorID, stake Stake) *Validators {
 	builder := NewBuilder()
 	for _, id := range ids {
 		builder.Set(id, stake)
@@ -57,7 +57,7 @@ func EqualStakeValidators(ids []idx.StakerID, stake Stake) *Validators {
 }
 
 // ArrayToValidators builds new read-only Validators object from array
-func ArrayToValidators(ids []idx.StakerID, stakes []Stake) *Validators {
+func ArrayToValidators(ids []idx.ValidatorID, stakes []Stake) *Validators {
 	builder := NewBuilder()
 	for i, id := range ids {
 		builder.Set(id, stakes[i])
@@ -87,9 +87,9 @@ func (vv *Validators) Len() int {
 // calcCaches calculates internal caches for validators
 func (vv *Validators) calcCaches() cache {
 	cache := cache{
-		indexes: make(map[idx.StakerID]idx.Validator),
+		indexes: make(map[idx.ValidatorID]idx.Validator),
 		stakes:  make([]Stake, vv.Len()),
-		ids:     make([]idx.StakerID, vv.Len()),
+		ids:     make([]idx.ValidatorID, vv.Len()),
 	}
 
 	for i, v := range vv.sortedArray() {
@@ -108,12 +108,12 @@ func (vv *Validators) calcCaches() cache {
 }
 
 // get returns stake for validator by ID
-func (vv *Validators) Get(id idx.StakerID) Stake {
+func (vv *Validators) Get(id idx.ValidatorID) Stake {
 	return vv.values[id]
 }
 
 // GetIdx returns index (offset) of validator in the group
-func (vv *Validators) GetIdx(id idx.StakerID) idx.Validator {
+func (vv *Validators) GetIdx(id idx.ValidatorID) idx.Validator {
 	return vv.cache.indexes[id]
 }
 
@@ -123,19 +123,19 @@ func (vv *Validators) GetStakeByIdx(i idx.Validator) Stake {
 }
 
 // Exists returns boolean true if address exists in Validators object
-func (vv *Validators) Exists(id idx.StakerID) bool {
+func (vv *Validators) Exists(id idx.ValidatorID) bool {
 	_, ok := vv.values[id]
 	return ok
 }
 
 // IDs returns not sorted ids.
-func (vv *Validators) IDs() []idx.StakerID {
+func (vv *Validators) IDs() []idx.ValidatorID {
 	return vv.cache.ids
 }
 
 // SortedIDs returns deterministically sorted ids.
 // The order is the same as for Idxs().
-func (vv *Validators) SortedIDs() []idx.StakerID {
+func (vv *Validators) SortedIDs() []idx.ValidatorID {
 	return vv.cache.ids
 }
 
@@ -146,7 +146,7 @@ func (vv *Validators) SortedStakes() []Stake {
 }
 
 // Idxs gets deterministic total order of validators.
-func (vv *Validators) Idxs() map[idx.StakerID]idx.Validator {
+func (vv *Validators) Idxs() map[idx.ValidatorID]idx.Validator {
 	return vv.cache.indexes
 }
 

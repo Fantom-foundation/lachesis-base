@@ -7,7 +7,7 @@ import (
 )
 
 // ValidatorsBuilderBig is a helper to create Validators object out of bigint numbers
-type ValidatorsBigBuilder map[idx.StakerID]*big.Int
+type ValidatorsBigBuilder map[idx.ValidatorID]*big.Int
 
 // NewBigBuilder creates new mutable ValidatorsBigBuilder
 func NewBigBuilder() ValidatorsBigBuilder {
@@ -15,7 +15,7 @@ func NewBigBuilder() ValidatorsBigBuilder {
 }
 
 // Set appends item to ValidatorsBuilder object
-func (vv ValidatorsBigBuilder) Set(id idx.StakerID, stake *big.Int) {
+func (vv ValidatorsBigBuilder) Set(id idx.ValidatorID, stake *big.Int) {
 	if stake == nil || stake.Sign() == 0 {
 		delete(vv, id)
 	} else {

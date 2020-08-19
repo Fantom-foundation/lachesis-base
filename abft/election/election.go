@@ -15,7 +15,7 @@ type (
 		validators *pos.Validators
 
 		// election state
-		decidedRoots map[idx.StakerID]voteValue // decided roots at "frameToDecide"
+		decidedRoots map[idx.ValidatorID]voteValue // decided roots at "frameToDecide"
 		votes        map[voteID]voteValue
 
 		// external world
@@ -32,7 +32,7 @@ type (
 	// Due to a fork, different roots may occupy the same slot
 	Slot struct {
 		Frame     idx.Frame
-		Validator idx.StakerID
+		Validator idx.ValidatorID
 	}
 
 	// RootAndSlot specifies concrete root of slot.
@@ -44,7 +44,7 @@ type (
 
 type voteID struct {
 	fromRoot     hash.Event
-	forValidator idx.StakerID
+	forValidator idx.ValidatorID
 }
 type voteValue struct {
 	decided      bool
@@ -80,12 +80,12 @@ func (el *Election) Reset(validators *pos.Validators, frameToDecide idx.Frame) {
 	el.validators = validators
 	el.frameToDecide = frameToDecide
 	el.votes = make(map[voteID]voteValue)
-	el.decidedRoots = make(map[idx.StakerID]voteValue)
+	el.decidedRoots = make(map[idx.ValidatorID]voteValue)
 }
 
 // return root slots which are not within el.decidedRoots
-func (el *Election) notDecidedRoots() []idx.StakerID {
-	notDecidedRoots := make([]idx.StakerID, 0, el.validators.Len())
+func (el *Election) notDecidedRoots() []idx.ValidatorID {
+	notDecidedRoots := make([]idx.ValidatorID, 0, el.validators.Len())
 
 	for _, validator := range el.validators.IDs() {
 		if _, ok := el.decidedRoots[validator]; !ok {
@@ -111,8 +111,8 @@ func (el *Election) observedRoots(root hash.Event, frame idx.Frame) []RootAndSlo
 	return observedRoots
 }
 
-func (el *Election) observedRootsMap(root hash.Event, frame idx.Frame) map[idx.StakerID]RootAndSlot {
-	observedRootsMap := make(map[idx.StakerID]RootAndSlot, el.validators.Len())
+func (el *Election) observedRootsMap(root hash.Event, frame idx.Frame) map[idx.ValidatorID]RootAndSlot {
+	observedRootsMap := make(map[idx.ValidatorID]RootAndSlot, el.validators.Len())
 
 	frameRoots := el.getFrameRoots(frame)
 	for _, frameRoot := range frameRoots {

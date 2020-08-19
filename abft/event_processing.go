@@ -118,7 +118,7 @@ func (p *Orderer) bootstrapElection() error {
 	return nil
 }
 
-func (p *Orderer) processRoot(f idx.Frame, from idx.StakerID, id hash.Event) (*election.Res, error) {
+func (p *Orderer) processRoot(f idx.Frame, from idx.ValidatorID, id hash.Event) (*election.Res, error) {
 	return p.election.ProcessRoot(election.RootAndSlot{
 		ID: id,
 		Slot: election.Slot{
