@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 
-	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
@@ -58,8 +57,6 @@ type Index struct {
 
 	cfg IndexConfig
 }
-
-var _ dagidx.DagIndexer = (*Index)(nil)
 
 // DefaultConfig returns default index config
 func DefaultConfig() IndexConfig {
@@ -235,12 +232,12 @@ func (vi *Index) fillEventVectors(e dag.Event) (allVecs, error) {
 	for _, pVec := range parentsVecs {
 		// calculate HighestBefore vector. Detect forks for a case when parent observes a fork
 		for branchID := idx.Validator(0); branchID < idx.Validator(len(vi.bi.BranchIDCreatorIdxs)); branchID++ {
-			hisSeq := pVec.beforeSeq.get(branchID)
+			hisSeq := pVec.beforeSeq.Get(branchID)
 			if hisSeq.seq == 0 && !hisSeq.IsForkDetected() {
 				// hisSeq doesn't observe anything about this branchID
 				continue
 			}
-			mySeq := myVecs.beforeSeq.get(branchID)
+			mySeq := myVecs.beforeSeq.Get(branchID)
 
 			if mySeq.IsForkDetected() {
 				// mySeq observes the maximum already
@@ -266,7 +263,7 @@ func (vi *Index) fillEventVectors(e dag.Event) (allVecs, error) {
 	}
 	// Detect forks, which were not observed by parents
 	for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
-		if myVecs.beforeSeq.get(n).IsForkDetected() {
+		if myVecs.beforeSeq.Get(n).IsForkDetected() {
 			// fork is already detected from the creator
 			continue
 		}
@@ -276,8 +273,8 @@ func (vi *Index) fillEventVectors(e dag.Event) (allVecs, error) {
 					continue
 				}
 
-				a := myVecs.beforeSeq.get(branchID1)
-				b := myVecs.beforeSeq.get(branchID2)
+				a := myVecs.beforeSeq.Get(branchID1)
+				b := myVecs.beforeSeq.Get(branchID2)
 
 				if a.seq == 0 || b.seq == 0 {
 					continue
@@ -320,7 +317,7 @@ func (vi *Index) fillEventVectors(e dag.Event) (allVecs, error) {
 }
 
 // GetHighestBeforeSeq returns HighestBefore vector clock without branches, where branches are merged into one
-func (vi *Index) GetHighestBeforeSeq(id hash.Event) dagidx.HighestBeforeSeq {
+func (vi *Index) GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq {
 	mergedSeq, _ := vi.getHighestBeforeAllBranchesTime(id)
 	return mergedSeq
 }
@@ -338,7 +335,7 @@ func (vi *Index) getHighestBeforeAllBranchesTime(id hash.Event) (HighestBeforeSe
 			highestBranchSeq := BranchSeq{}
 			highestBranchTime := dag.RawTimestamp(0)
 			for _, branchID := range branches {
-				branch := beforeSeq.get(branchID)
+				branch := beforeSeq.Get(branchID)
 				if branch.IsForkDetected() {
 					highestBranchSeq = branch
 					break

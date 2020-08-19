@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"math"
 
-	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
@@ -60,7 +59,7 @@ func NewHighestBeforeSeq(size int) HighestBeforeSeq {
 	return make(HighestBeforeSeq, size*8)
 }
 
-// get i's position in the byte-encoded vector clock
+// Get i's position in the byte-encoded vector clock
 func (b LowestAfterSeq) Get(i idx.Validator) idx.Event {
 	for int(i) >= b.Size() {
 		return 0
@@ -83,7 +82,7 @@ func (b *LowestAfterSeq) Set(i idx.Validator, seq idx.Event) {
 	binary.LittleEndian.PutUint32((*b)[i*4:(i+1)*4], uint32(seq))
 }
 
-// get i's position in the byte-encoded vector clock
+// Get i's position in the byte-encoded vector clock
 func (b HighestBeforeTime) Get(i idx.Validator) dag.RawTimestamp {
 	for int(i) >= b.Size() {
 		return 0
@@ -110,8 +109,8 @@ func (b HighestBeforeSeq) Size() int {
 	return len(b) / 8
 }
 
-// get i's position in the byte-encoded vector clock
-func (b HighestBeforeSeq) get(i idx.Validator) BranchSeq {
+// Get i's position in the byte-encoded vector clock
+func (b HighestBeforeSeq) Get(i idx.Validator) BranchSeq {
 	for int(i) >= b.Size() {
 		return BranchSeq{}
 	}
@@ -122,12 +121,6 @@ func (b HighestBeforeSeq) get(i idx.Validator) BranchSeq {
 		seq:    idx.Event(seq1),
 		minSeq: idx.Event(seq2),
 	}
-}
-
-// Get i's position in the byte-encoded vector clock
-func (b HighestBeforeSeq) Get(i idx.Validator) dagidx.Seq {
-	v := b.get(i)
-	return &v
 }
 
 // Set i's position in the byte-encoded vector clock

@@ -56,7 +56,7 @@ type PushEventFn func(e dag.Event, peer string)
 // inject represents a schedules import operation.
 type inject struct {
 	events dag.Events // Incoming events
-	time   time.Time   // Timestamp when received
+	time   time.Time  // Timestamp when received
 
 	peer string // Identifier of the peer which sent events
 

@@ -11,7 +11,7 @@ type eventFilterFn func(event dag.Event) bool
 
 // dfsSubgraph iterates all the events which are observed by head, and accepted by a filter.
 // filter MAY BE called twice for the same event.
-func (p *Lachesis) dfsSubgraph(head hash.Event, filter eventFilterFn) error {
+func (p *Orderer) dfsSubgraph(head hash.Event, filter eventFilterFn) error {
 	stack := make(hash.EventsStack, 0, 300)
 
 	for pwalk := &head; pwalk != nil; pwalk = stack.Pop() {

@@ -1,7 +1,6 @@
 package abft
 
 import (
-	"errors"
 	"math"
 	"math/rand"
 	"testing"
@@ -61,12 +60,11 @@ func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 		frames []idx.Frame
 		blocks []*lachesis.Block
 	)
-	applyBlock := lch.callback.ApplyBlock
-	lch.callback.ApplyBlock = func(block *lachesis.Block) *pos.Validators {
+	lch.applyBlock = func(block *lachesis.Block) *pos.Validators {
 		frames = append(frames, lch.store.GetLastDecidedFrame()+1)
 		blocks = append(blocks, block)
 
-		return applyBlock(block)
+		return nil
 	}
 
 	eventCount := int(TestMaxEpochBlocks)
@@ -83,14 +81,6 @@ func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 
 		},
 		Build: func(e dag.MutableEvent, name string) error {
-			if e.SelfParent() != nil {
-				selfParent := *e.SelfParent()
-				filtered := lch.vecClock.NoCheaters(e.SelfParent(), e.Parents())
-				if len(filtered) == 0 || filtered[0] != selfParent {
-					return errors.New("observe myself as a cheater")
-				}
-				e.SetParents(filtered)
-			}
 			e.SetEpoch(firstEpoch)
 			return lch.Build(e)
 		},
@@ -110,7 +100,8 @@ func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 		atropos := blocks[i].Atropos
 
 		// call confirmBlock again
-		gotBlock, err := lch.confirmBlock(frame, atropos)
+		_, err := lch.onFrameDecided(frame, atropos)
+		gotBlock := lch.blocks[idx.Block(len(lch.blocks))]
 
 		if !assertar.NoError(err) {
 			break
@@ -118,7 +109,10 @@ func testConfirmBlocks(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 		if !assertar.LessOrEqual(gotBlock.Cheaters.Len(), cheatersCount) {
 			break
 		}
-		if !assertar.Equal(block.Events, gotBlock.Events) {
+		if !assertar.Equal(block.Cheaters, gotBlock.Cheaters) {
+			break
+		}
+		if !assertar.Equal(block.Atropos, gotBlock.Atropos) {
 			break
 		}
 	}

@@ -15,9 +15,9 @@ import (
 
 // Store is a abft persistent storage working over parent key-value database.
 type Store struct {
-	getDB EpochDBProducer
-	cfg   StoreConfig
-	crit  func(error)
+	getEpochDB EpochDBProducer
+	cfg        StoreConfig
+	crit       func(error)
 
 	mainDB kvdb.Store
 	table  struct {
@@ -48,10 +48,10 @@ type EpochDBProducer func(epoch idx.Epoch) kvdb.DropableStore
 // NewStore creates store over key-value db.
 func NewStore(mainDB kvdb.Store, getDB EpochDBProducer, crit func(error), cfg StoreConfig) *Store {
 	s := &Store{
-		getDB:  getDB,
-		cfg:    cfg,
-		crit:   crit,
-		mainDB: mainDB,
+		getEpochDB: getDB,
+		cfg:        cfg,
+		crit:       crit,
+		mainDB:     mainDB,
 	}
 
 	table.MigrateTables(&s.table, s.mainDB)
@@ -123,7 +123,7 @@ func (s *Store) openEpochDB(n idx.Epoch) error {
 		s.cache.FrameRoots.Purge()
 	}
 
-	s.epochDB = s.getDB(n)
+	s.epochDB = s.getEpochDB(n)
 	table.MigrateTables(&s.epochTable, s.epochDB)
 	return nil
 }

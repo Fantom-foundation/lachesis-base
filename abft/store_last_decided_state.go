@@ -33,7 +33,3 @@ func (s *Store) GetLastDecidedState() *LastDecidedState {
 func (s *Store) GetLastDecidedFrame() idx.Frame {
 	return s.GetLastDecidedState().LastDecidedFrame
 }
-
-func (s *Store) GetLastDecidedBlock() idx.Block {
-	return s.GetLastDecidedState().LastBlockN
-}

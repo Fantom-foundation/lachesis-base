@@ -563,7 +563,7 @@ func TestRandomForksSanity(t *testing.T) {
 		ee := events[node]
 		highestBefore := vi.getHighestBeforeSeq(ee[len(ee)-1].ID())
 		for n, cheater := range nodes {
-			branchSeq := highestBefore.get(idxs[cheater])
+			branchSeq := highestBefore.Get(idxs[cheater])
 			isCheater := n < len(cheaters)
 			assertar.Equal(isCheater, branchSeq.IsForkDetected(), cheater)
 			if isCheater {
@@ -696,7 +696,7 @@ func TestRandomForks(t *testing.T) {
 
 				for _, cheater := range nodes {
 					expectedCheater := expectedCheaters[cheater]
-					branchSeq := highestBefore.get(idxs[cheater])
+					branchSeq := highestBefore.Get(idxs[cheater])
 					assertar.Equal(expectedCheater, branchSeq.IsForkDetected(), e.String())
 					if expectedCheater {
 						assertar.Equal(idx.Event(0), branchSeq.Seq(), e.String())

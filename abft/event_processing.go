@@ -1,9 +1,6 @@
 package abft
 
 import (
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
 	"github.com/Fantom-foundation/lachesis-base/abft/election"
@@ -13,37 +10,19 @@ import (
 )
 
 var (
-	ErrCheatersObserved = errors.New("cheaters observed by self-parent aren't allowed as parents")
-	ErrWrongFrame       = errors.New("claimed frame mismatched with calculated")
-	ErrWrongIsRoot      = errors.New("claimed isRoot mismatched with calculated")
+	ErrWrongFrame  = errors.New("claimed frame mismatched with calculated")
+	ErrWrongIsRoot = errors.New("claimed isRoot mismatched with calculated")
 )
-
-type uniqueID struct {
-	counter *big.Int
-}
-
-func (u *uniqueID) sample() [24]byte {
-	u.counter = u.counter.Add(u.counter, common.Big1)
-	var id [24]byte
-	copy(id[:], u.counter.Bytes())
-	return id
-}
 
 // Build fills consensus-related fields: Frame, IsRoot
 // returns error if event should be dropped
-func (p *Lachesis) Build(e dag.MutableEvent) error {
+func (p *Orderer) Build(e dag.MutableEvent) error {
 	// sanity check
 	if e.Epoch() != p.store.GetEpoch() {
 		p.crit(errors.New("event has wrong epoch"))
 	}
 	if !p.store.GetValidators().Exists(e.Creator()) {
 		p.crit(errors.New("event wasn't created by an existing validator"))
-	}
-	e.SetID(p.uniqueDirtyID.sample())
-	err := p.vecClock.Add(e)
-	defer p.vecClock.DropNotFlushed()
-	if err != nil {
-		return err
 	}
 
 	frame, isRoot := p.calcFrameIdx(e, false)
@@ -57,7 +36,7 @@ func (p *Lachesis) Build(e dag.MutableEvent) error {
 // Event order matter: parents first.
 // All the event checkers must be launched.
 // ProcessEvent is not safe for concurrent use.
-func (p *Lachesis) ProcessEvent(e dag.Event) (err error) {
+func (p *Orderer) ProcessEvent(e dag.Event) (err error) {
 	err = p.checkAndSaveEvent(e)
 	if err != nil {
 		return err
@@ -73,18 +52,7 @@ func (p *Lachesis) ProcessEvent(e dag.Event) (err error) {
 }
 
 // checkAndSaveEvent checks consensus-related fields: Frame, IsRoot
-func (p *Lachesis) checkAndSaveEvent(e dag.Event) error {
-	// don't link to known cheaters
-	if len(p.vecClock.NoCheaters(e.SelfParent(), e.Parents())) != len(e.Parents()) {
-		return ErrCheatersObserved
-	}
-
-	err := p.vecClock.Add(e)
-	defer p.vecClock.DropNotFlushed()
-	if err != nil {
-		return err
-	}
-
+func (p *Orderer) checkAndSaveEvent(e dag.Event) error {
 	// check frame & isRoot
 	frameIdx, isRoot := p.calcFrameIdx(e, true)
 	if e.IsRoot() != isRoot {
@@ -97,14 +65,11 @@ func (p *Lachesis) checkAndSaveEvent(e dag.Event) error {
 	if e.IsRoot() {
 		p.store.AddRoot(e)
 	}
-
-	// save in DB the {vectorindex, e, heads}
-	p.vecClock.Flush()
 	return nil
 }
 
 // calculates Atropos election for the root, calls p.onFrameDecided if election was decided
-func (p *Lachesis) handleElection(root dag.Event) error {
+func (p *Orderer) handleElection(root dag.Event) error {
 	if root != nil { // if root is nil, then just bootstrap election
 		if !root.IsRoot() {
 			return nil
@@ -150,7 +115,7 @@ func (p *Lachesis) handleElection(root dag.Event) error {
 	return nil
 }
 
-func (p *Lachesis) processRoot(f idx.Frame, from idx.StakerID, id hash.Event) (*election.Res, error) {
+func (p *Orderer) processRoot(f idx.Frame, from idx.StakerID, id hash.Event) (*election.Res, error) {
 	return p.election.ProcessRoot(election.RootAndSlot{
 		ID: id,
 		Slot: election.Slot{
@@ -162,7 +127,7 @@ func (p *Lachesis) processRoot(f idx.Frame, from idx.StakerID, id hash.Event) (*
 
 // The function is similar to processRoot, but it fully re-processes the current voting.
 // This routine should be called after node startup, and after each decided frame.
-func (p *Lachesis) processKnownRoots() (*election.Res, error) {
+func (p *Orderer) processKnownRoots() (*election.Res, error) {
 	// iterate all the roots from LastDecidedFrame+1 to highest, call processRoot for each
 	lastDecidedFrame := p.store.GetLastDecidedFrame()
 	var decided *election.Res
@@ -186,11 +151,11 @@ func (p *Lachesis) processKnownRoots() (*election.Res, error) {
 }
 
 // forklessCausedByQuorumOn returns true if event is forkless caused by 2/3W roots on specified frame
-func (p *Lachesis) forklessCausedByQuorumOn(e dag.Event, f idx.Frame) bool {
+func (p *Orderer) forklessCausedByQuorumOn(e dag.Event, f idx.Frame) bool {
 	observedCounter := p.store.GetValidators().NewCounter()
 	// check "observing" prev roots only if called by creator, or if creator has marked that event as root
 	for _, it := range p.store.GetFrameRoots(f) {
-		if p.vecClock.ForklessCause(e.ID(), it.ID) {
+		if p.dagIndex.ForklessCause(e.ID(), it.ID) {
 			observedCounter.Count(it.Slot.Validator)
 		}
 		if observedCounter.HasQuorum() {
@@ -203,7 +168,7 @@ func (p *Lachesis) forklessCausedByQuorumOn(e dag.Event, f idx.Frame) bool {
 // calcFrameIdx checks root-conditions for new event
 // and returns event's frame.
 // It is not safe for concurrent use.
-func (p *Lachesis) calcFrameIdx(e dag.Event, checkOnly bool) (frame idx.Frame, isRoot bool) {
+func (p *Orderer) calcFrameIdx(e dag.Event, checkOnly bool) (frame idx.Frame, isRoot bool) {
 	if len(e.Parents()) == 0 {
 		// special case for very first events in the epoch
 		return 1, true

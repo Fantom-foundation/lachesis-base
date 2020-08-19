@@ -1,26 +1,19 @@
-package dagidx
+package abft
 
 import (
+	"github.com/Fantom-foundation/lachesis-base/abft/election"
 	"github.com/Fantom-foundation/lachesis-base/hash"
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
-type Seq interface {
-	Seq() idx.Event
-	IsForkDetected() bool
+type OrdererCallbacks struct {
+	ApplyAtropos func(decidedFrame idx.Frame, atropos hash.Event) (sealEpoch *pos.Validators)
+
+	EpochDBLoaded func()
 }
 
-type HighestBeforeSeq interface {
-	Size() int
-	Get(i idx.Validator) Seq
-}
-
-type DagIndex interface {
-	GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq
-
+type OrdererDagIndex interface {
 	// ForklessCause calculates "sufficient coherence" between the events.
 	// The A.HighestBefore array remembers the sequence number of the last
 	// event by each validator that is an ancestor of A. The array for
@@ -38,12 +31,31 @@ type DagIndex interface {
 	ForklessCause(aID, bID hash.Event) bool
 }
 
-type DagIndexer interface {
-	DagIndex
+// Unlike processes events to reach finality on their order.
+// Unlike abft.Lachesis, this raw level of abstraction doesn't track cheaters detection
+type Orderer struct {
+	config Config
+	crit   func(error)
+	store  *Store
+	input  EventSource
 
-	Add(dag.Event) error
-	Flush()
-	DropNotFlushed()
+	election *election.Election
+	dagIndex OrdererDagIndex
 
-	Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event)
+	callback OrdererCallbacks
+}
+
+// New creates Orderer instance.
+// Unlike Lachesis, Orderer doesn't updates DAG indexes for events, and doesn't detect cheaters
+// It has only one purpose - reaching consensus on events order.
+func NewOrderer(store *Store, input EventSource, dagIndex OrdererDagIndex, crit func(error), config Config) *Orderer {
+	p := &Orderer{
+		config:   config,
+		store:    store,
+		input:    input,
+		crit:     crit,
+		dagIndex: dagIndex,
+	}
+
+	return p
 }

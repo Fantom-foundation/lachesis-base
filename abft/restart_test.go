@@ -15,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
+	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
 	"github.com/Fantom-foundation/lachesis-base/vector"
 )
 
@@ -79,9 +80,7 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 	// seal epoch on decided frame == maxEpochBlocks
 	for _, _lch := range lchs {
 		lch := _lch // capture
-		applyBlock := lch.callback.ApplyBlock
-		lch.callback.ApplyBlock = func(block *lachesis.Block) *pos.Validators {
-			_ = applyBlock(block)
+		lch.applyBlock = func(block *lachesis.Block) *pos.Validators {
 			if lch.store.GetLastDecidedFrame()+1 == idx.Frame(maxEpochBlocks) {
 				// seal epoch
 				return lch.store.GetValidators()
@@ -107,14 +106,6 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 				ordered = append(ordered, e)
 			},
 			Build: func(e dag.MutableEvent, name string) error {
-				if e.SelfParent() != nil {
-					selfParent := *e.SelfParent()
-					filtered := lchs[0].vecClock.NoCheaters(e.SelfParent(), e.Parents())
-					if len(filtered) == 0 || filtered[0] != selfParent {
-						return errors.New("observe myself as a cheater")
-					}
-					e.SetParents(filtered)
-				}
 				if epoch != lchs[GENERATOR].store.GetEpoch() {
 					return errors.New("epoch already sealed, skip")
 				}
@@ -147,14 +138,14 @@ func testRestart(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 				it.Release()
 			}
 			restartEpoch := prev.store.GetEpoch()
-			store.getDB = func(epoch idx.Epoch) kvdb.DropableStore {
+			store.getEpochDB = func(epoch idx.Epoch) kvdb.DropableStore {
 				if epoch == restartEpoch {
 					return restartEpochDB
 				}
 				return memorydb.New()
 			}
 
-			restored := New(store, prev.input, vector.NewIndex(prev.crit, vector.LiteConfig()), prev.crit, prev.config)
+			restored := NewLachesis(store, prev.input, &adapters.VectorToDagIndexer{vector.NewIndex(prev.crit, vector.LiteConfig())}, prev.crit, prev.config)
 			assertar.NoError(restored.Bootstrap(prev.callback))
 
 			lchs[RESTORED].Lachesis = restored
@@ -189,7 +180,7 @@ func compareStates(assertar *assert.Assertions, expected, restored *TestLachesis
 	assertar.Equal(
 		*(expected.store.GetEpochState()), *(restored.store.GetEpochState()))
 	// check LastAtropos and Head() method
-	if expected.store.GetLastDecidedBlock() != 0 {
+	if len(expected.blocks) != 0 {
 		assertar.Equal(
 			expected.blocks[idx.Block(len(expected.blocks))].Atropos,
 			restored.store.GetLastDecidedState().LastAtropos,
@@ -199,7 +190,6 @@ func compareStates(assertar *assert.Assertions, expected, restored *TestLachesis
 
 func compareBlocks(assertar *assert.Assertions, expected, restored *TestLachesis) {
 	assertar.Equal(len(expected.blocks), len(restored.blocks))
-	assertar.Equal(len(expected.blocks), int(restored.store.GetLastDecidedBlock()))
 	for i := idx.Block(1); i <= idx.Block(len(restored.blocks)); i++ {
 		if !assertar.NotNil(restored.blocks[i]) ||
 			!assertar.Equal(expected.blocks[i], restored.blocks[i]) {

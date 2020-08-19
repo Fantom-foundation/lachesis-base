@@ -1,7 +1,6 @@
 package abft
 
 import (
-	"errors"
 	"math"
 	"math/rand"
 	"testing"
@@ -86,14 +85,6 @@ func testLachesisRandom(t *testing.T, stakes []pos.Stake, cheatersCount int) {
 				lchs[0].ProcessEvent(e))
 		},
 		Build: func(e dag.MutableEvent, name string) error {
-			if e.SelfParent() != nil {
-				selfParent := *e.SelfParent()
-				filtered := lchs[0].vecClock.NoCheaters(e.SelfParent(), e.Parents())
-				if len(filtered) == 0 || filtered[0] != selfParent {
-					return errors.New("observe myself as a cheater")
-				}
-				e.SetParents(filtered)
-			}
 			e.SetEpoch(firstEpoch)
 			return lchs[0].Build(e)
 		},
@@ -138,9 +129,9 @@ func compareResults(t *testing.T, lchs []*TestLachesis) {
 			assertar.Equal(*(lchs[j].store.GetLastDecidedState()), *(lchs[i].store.GetLastDecidedState()))
 			assertar.Equal(*(lchs[j].store.GetEpochState()), *(lchs[i].store.GetEpochState()))
 
-			both := lch0.store.GetLastDecidedBlock()
-			if both > lch1.store.GetLastDecidedBlock() {
-				both = lch1.store.GetLastDecidedBlock()
+			both := idx.Block(len(lch0.blocks))
+			if both > idx.Block(len(lch1.blocks)) {
+				both = idx.Block(len(lch1.blocks))
 			}
 
 			for b := idx.Block(1); b <= both; b++ {

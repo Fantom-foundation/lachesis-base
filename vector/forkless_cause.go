@@ -39,7 +39,7 @@ func (vi *Index) ForklessCause(aID, bID hash.Event) bool {
 func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 	vi.initBranchesInfo()
 
-	// get events by hash
+	// Get events by hash
 	a := vi.getHighestBeforeSeq(aID)
 	if a == nil {
 		vi.crit(fmt.Errorf("Event A=%s not found", aID.String()))
@@ -49,7 +49,7 @@ func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 	// check A doesn't observe any forks from B
 	if vi.atLeastOneFork() {
 		bBranchID := vi.getEventBranchID(bID)
-		if a.get(bBranchID).IsForkDetected() { // B is observed as cheater by A
+		if a.Get(bBranchID).IsForkDetected() { // B is observed as cheater by A
 			return false
 		}
 	}
@@ -68,7 +68,7 @@ func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 
 		// bLowestAfter := vi.GetLowestAfterSeq_(bID, branchID)   // lowest event from creator on branchID, which observes B
 		bLowestAfter := b.Get(branchID)   // lowest event from creator on branchID, which observes B
-		aHighestBefore := a.get(branchID) // highest event from creator, observed by A
+		aHighestBefore := a.Get(branchID) // highest event from creator, observed by A
 
 		// if lowest event from branchID which observes B <= highest from branchID observed by A
 		// then {highest from branchID observed by A} observes B
@@ -97,7 +97,7 @@ func (vi *Index) NoCheaters(selfParent *hash.Event, options hash.Events) hash.Ev
 		if header == nil {
 			vi.crit(fmt.Errorf("Event=%s not found", id.String()))
 		}
-		if !highest.get(vi.validatorIdxs[header.Creator()]).IsForkDetected() {
+		if !highest.Get(vi.validatorIdxs[header.Creator()]).IsForkDetected() {
 			filtered.Add(id)
 		}
 	}

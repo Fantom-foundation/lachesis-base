@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
-	"github.com/Fantom-foundation/lachesis-base/lachesis"
 )
 
 const (
@@ -19,7 +18,6 @@ const (
 type LastDecidedState struct {
 	// fields can change only after a frame is decided
 	LastDecidedFrame idx.Frame
-	LastBlockN       idx.Block
 	LastAtropos      hash.Event
 }
 
@@ -31,7 +29,7 @@ type EpochState struct {
 }
 
 // Bootstrap restores abft's state from store.
-func (p *Lachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error {
+func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	if p.election != nil {
 		return errors.New("already bootstrapped")
 	}
@@ -43,13 +41,15 @@ func (p *Lachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error {
 	if err != nil {
 		return err
 	}
-	p.vecClock.Reset(p.store.GetValidators(), p.store.epochTable.VectorIndex, p.input.GetEvent)
-	p.election = election.New(p.store.GetValidators(), p.store.GetLastDecidedFrame()+1, p.vecClock.ForklessCause, p.store.GetFrameRoots)
+	if p.callback.EpochDBLoaded != nil {
+		p.callback.EpochDBLoaded()
+	}
+	p.election = election.New(p.store.GetValidators(), p.store.GetLastDecidedFrame()+1, p.dagIndex.ForklessCause, p.store.GetFrameRoots)
 
 	// events reprocessing
 	return p.handleElection(nil)
 }
 
-func (p *Lachesis) loadEpochDB() error {
+func (p *Orderer) loadEpochDB() error {
 	return p.store.openEpochDB(p.store.GetEpoch())
 }

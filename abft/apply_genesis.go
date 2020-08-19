@@ -32,7 +32,6 @@ func (s *Store) ApplyGenesis(g *Genesis) error {
 	es.Epoch = firstEpoch
 	ds.LastAtropos = g.Atropos
 	ds.LastDecidedFrame = firstFrame - 1
-	ds.LastBlockN = 0
 
 	s.SetEpochState(es)
 	s.SetLastDecidedState(ds)

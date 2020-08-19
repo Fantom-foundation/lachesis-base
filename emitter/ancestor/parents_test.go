@@ -1,6 +1,7 @@
 package ancestor
 
 import (
+	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
 	"sort"
 	"strconv"
 	"strings"
@@ -137,7 +138,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		for _, node := range nodes {
 			selfParent := tips[node]
 
-			strategy := NewCasualityStrategy(vecClock, validators)
+			strategy := NewCasualityStrategy(&adapters.VectorToDagIndexer{vecClock}, validators)
 
 			selfParentResult, parents := FindBestParents(5, heads.Slice(), selfParent, strategy)
 

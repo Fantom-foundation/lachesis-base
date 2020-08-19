@@ -1,34 +1,26 @@
 package abft
 
 import (
-	"errors"
 	"fmt"
-
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
+	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
 	"github.com/Fantom-foundation/lachesis-base/vector"
 )
+
+type applyBlockFn func(block *lachesis.Block) *pos.Validators
 
 // TestLachesis extends Lachesis for tests.
 type TestLachesis struct {
 	*Lachesis
 
 	blocks map[idx.Block]*lachesis.Block
-}
 
-func (p *TestLachesis) EventsTillBlock(until idx.Block) hash.Events {
-	res := make(hash.Events, 0)
-	for i := idx.Block(1); i <= until; i++ {
-		if p.blocks[i] == nil {
-			break
-		}
-		res = append(res, p.blocks[i].Events...)
-	}
-	return res
+	applyBlock applyBlockFn
 }
 
 // FakeLachesis creates empty abft with mem store and equal stakes of nodes in genesis.
@@ -62,28 +54,28 @@ func FakeLachesis(nodes []idx.StakerID, stakes []pos.Stake, mods ...memorydb.Mod
 	input := NewEventStore()
 
 	config := LiteConfig()
-	lch := New(store, input, vector.NewIndex(crit, vector.LiteConfig()), crit, config)
+	lch := NewLachesis(store, input, &adapters.VectorToDagIndexer{vector.NewIndex(crit, vector.LiteConfig())}, crit, config)
 
 	extended := &TestLachesis{
 		Lachesis: lch,
 		blocks:   map[idx.Block]*lachesis.Block{},
 	}
 
-	err = extended.Bootstrap(lachesis.ConsensusCallbacks{
-		ApplyBlock: func(block *lachesis.Block) (sealEpoch *pos.Validators) {
-			// track block events
-			if extended.blocks[block.Index] != nil {
-				extended.crit(errors.New("created block twice"))
-			}
-			if block.Index < 1 {
-				extended.crit(errors.New("invalid block number"))
-			}
-			if block.Index > 1 && extended.blocks[block.Index-1] == nil {
-				extended.crit(errors.New("created a block without previous block"))
-			}
-			extended.blocks[block.Index] = block
+	blockIdx := idx.Block(0)
 
-			return nil
+	err = extended.Bootstrap(lachesis.ConsensusCallbacks{
+		BeginBlock: func(block *lachesis.Block) lachesis.BlockCallbacks {
+			blockIdx++
+			return lachesis.BlockCallbacks{
+				EndBlock: func() (sealEpoch *pos.Validators) {
+					// track blocks
+					extended.blocks[blockIdx] = block
+					if extended.applyBlock != nil {
+						return extended.applyBlock(block)
+					}
+					return nil
+				},
+			}
 		},
 	})
 	if err != nil {

@@ -19,7 +19,7 @@ type medianTimeIndex struct {
 // MedianTime calculates weighted median of claimed time within highest observed events.
 func (vi *Index) MedianTime(id hash.Event, defaultTime dag.RawTimestamp) dag.RawTimestamp {
 	vi.initBranchesInfo()
-	// get event by hash
+	// Get event by hash
 	beforeSeq, times := vi.getHighestBeforeAllBranchesTime(id)
 	if beforeSeq == nil || times == nil {
 		vi.crit(fmt.Errorf("event=%s not found", id.String()))
@@ -33,7 +33,7 @@ func (vi *Index) MedianTime(id hash.Event, defaultTime dag.RawTimestamp) dag.Raw
 		highest := medianTimeIndex{}
 		highest.stake = vi.validators.GetStakeByIdx(creatorIdx)
 		highest.claimedTime = times.Get(creatorIdx)
-		seq := beforeSeq.get(creatorIdx)
+		seq := beforeSeq.Get(creatorIdx)
 
 		// edge cases
 		if seq.IsForkDetected() {
