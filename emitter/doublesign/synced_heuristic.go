@@ -6,13 +6,14 @@ import (
 )
 
 type SyncStatus struct {
-	PeersNum              int
-	Now                   time.Time
-	Startup               time.Time
-	LastConnected         time.Time
-	P2PSynced             time.Time
-	BecameValidator       time.Time
-	LastSelfExternalEvent time.Time
+	PeersNum                  int
+	Now                       time.Time
+	Startup                   time.Time
+	LastConnected             time.Time
+	P2PSynced                 time.Time
+	BecameValidator           time.Time
+	ExternalSelfEventCreated  time.Time
+	ExternalSelfEventDetected time.Time
 }
 
 func (s *SyncStatus) Since(t time.Time) time.Duration {
@@ -38,8 +39,11 @@ func SyncedToEmit(s SyncStatus, threshold time.Duration) (time.Duration, error) 
 	if s.P2PSynced.IsZero() {
 		return 0, ErrP2PSyncOngoing
 	}
-	if s.Since(s.LastSelfExternalEvent) < threshold {
-		return threshold - s.Since(s.LastSelfExternalEvent), ErrSelfEventsOngoing
+	if s.Since(s.ExternalSelfEventDetected) < threshold {
+		return threshold - s.Since(s.ExternalSelfEventDetected), ErrSelfEventsOngoing
+	}
+	if s.Since(s.ExternalSelfEventCreated) < threshold {
+		return threshold - s.Since(s.ExternalSelfEventCreated), ErrSelfEventsOngoing
 	}
 	if s.Since(s.BecameValidator) < threshold {
 		return threshold - s.Since(s.BecameValidator), ErrJustBecameValidator
