@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
 	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
-	"github.com/Fantom-foundation/lachesis-base/vector"
+	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 
 type applyBlockFn func(block *lachesis.Block) *pos.Validators
@@ -55,7 +55,7 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 	input := NewEventStore()
 
 	config := LiteConfig()
-	lch := NewLachesis(store, input, &adapters.VectorToDagIndexer{vector.NewIndex(crit, vector.LiteConfig())}, crit, config)
+	lch := NewLachesis(store, input, &adapters.VectorToDagIndexer{vecfc.NewIndex(crit, vecfc.LiteConfig())}, crit, config)
 
 	extended := &TestLachesis{
 		Lachesis: lch,

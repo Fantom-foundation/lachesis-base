@@ -6,7 +6,7 @@ import (
 
 // SearchStrategy defines a criteria used to estimate the "best" subset of parents to emit event with.
 type SearchStrategy interface {
-	// Init must be called before using the strategy
+	// InitBranchesInfo must be called before using the strategy
 	Init(selfParent *hash.Event)
 	// Find chooses the hash from the specified options
 	Find(options hash.Events) hash.Event

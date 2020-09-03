@@ -29,9 +29,11 @@ type BlockCallbacks struct {
 }
 
 type BeginBlockFn func(block *Block) BlockCallbacks
+type CheckEventFn func(event dag.Event) error
 
 // ConsensusCallbacks contains callbacks called during block processing by consensus engine
 type ConsensusCallbacks struct {
 	// BeginBlock returns further callbacks for processing of this block
 	BeginBlock BeginBlockFn
+	CheckEvent CheckEventFn
 }

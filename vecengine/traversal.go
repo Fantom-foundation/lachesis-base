@@ -1,4 +1,4 @@
-package vector
+package vecengine
 
 import (
 	"errors"
@@ -7,10 +7,10 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
-// dfsSubgraph iterates all the event which are observed by head, and accepted by a filter
+// DfsSubgraph iterates all the event which are observed by head, and accepted by a filter
 // Excluding head
 // filter MAY BE called twice for the same event.
-func (vi *Index) dfsSubgraph(head dag.Event, walk func(hash.Event) (godeeper bool)) error {
+func (vi *Engine) DfsSubgraph(head dag.Event, walk func(hash.Event) (godeeper bool)) error {
 	stack := make(hash.EventsStack, 0, vi.validators.Len()*5)
 
 	// first element

@@ -1,4 +1,4 @@
-package vector
+package vecfc
 
 import (
 	"fmt"
@@ -30,6 +30,7 @@ func (vi *Index) ForklessCause(aID, bID hash.Event) bool {
 		return res.(bool)
 	}
 
+	vi.Engine.InitBranchesInfo()
 	res := vi.forklessCause(aID, bID)
 
 	vi.cache.ForklessCause.Add(kv{aID, bID}, res)
@@ -37,25 +38,23 @@ func (vi *Index) ForklessCause(aID, bID hash.Event) bool {
 }
 
 func (vi *Index) forklessCause(aID, bID hash.Event) bool {
-	vi.initBranchesInfo()
-
 	// Get events by hash
-	a := vi.getHighestBeforeSeq(aID)
+	a := vi.GetHighestBefore(aID)
 	if a == nil {
 		vi.crit(fmt.Errorf("Event A=%s not found", aID.String()))
 		return false
 	}
 
 	// check A doesn't observe any forks from B
-	if vi.atLeastOneFork() {
-		bBranchID := vi.getEventBranchID(bID)
+	if vi.Engine.AtLeastOneFork() {
+		bBranchID := vi.Engine.GetEventBranchID(bID)
 		if a.Get(bBranchID).IsForkDetected() { // B is observed as cheater by A
 			return false
 		}
 	}
 
 	// check A observes that {QUORUM} non-cheater-validators observe B
-	b := vi.getLowestAfterSeq(bID)
+	b := vi.GetLowestAfter(bID)
 	if b == nil {
 		vi.crit(fmt.Errorf("Event B=%s not found", bID.String()))
 		return false
@@ -63,7 +62,8 @@ func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 
 	yes := vi.validators.NewCounter()
 	// calculate forkless causing using the indexes
-	for branchIDint, creatorIdx := range vi.bi.BranchIDCreatorIdxs {
+	branchIDs := vi.Engine.BranchesInfo().BranchIDCreatorIdxs
+	for branchIDint, creatorIdx := range branchIDs {
 		branchID := idx.Validator(branchIDint)
 
 		// bLowestAfter := vi.GetLowestAfterSeq_(bID, branchID)   // lowest event from creator on branchID, which observes B
@@ -72,34 +72,12 @@ func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 
 		// if lowest event from branchID which observes B <= highest from branchID observed by A
 		// then {highest from branchID observed by A} observes B
-		if bLowestAfter <= aHighestBefore.seq && bLowestAfter != 0 && !aHighestBefore.IsForkDetected() {
+		if bLowestAfter <= aHighestBefore.Seq && bLowestAfter != 0 && !aHighestBefore.IsForkDetected() {
 			// we may count the same creator multiple times (on different branches)!
 			// so not every call increases the counter
 			yes.CountByIdx(creatorIdx)
+		} else {
 		}
 	}
 	return yes.HasQuorum()
-}
-
-// NoCheaters excludes events which are observed by selfParents as cheaters.
-// Called by emitter to exclude cheater's events from potential parents list.
-func (vi *Index) NoCheaters(selfParent *hash.Event, options hash.Events) hash.Events {
-	if selfParent == nil {
-		return options
-	}
-	vi.initBranchesInfo()
-
-	// no need to merge, because every branch is marked by IsForkDetected if fork is observed
-	highest := vi.getHighestBeforeSeq(*selfParent)
-	filtered := make(hash.Events, 0, len(options))
-	for _, id := range options {
-		header := vi.getEvent(id)
-		if header == nil {
-			vi.crit(fmt.Errorf("Event=%s not found", id.String()))
-		}
-		if !highest.Get(vi.validatorIdxs[header.Creator()]).IsForkDetected() {
-			filtered.Add(id)
-		}
-	}
-	return filtered
 }

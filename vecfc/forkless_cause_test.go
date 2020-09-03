@@ -1,4 +1,4 @@
-package vector
+package vecfc
 
 import (
 	"fmt"
@@ -508,7 +508,7 @@ func testForksDetected(vi *Index, head dag.Event) (cheaters map[idx.ValidatorID]
 		return true
 	}
 	onWalk(head.ID())
-	err = vi.dfsSubgraph(head, onWalk)
+	err = vi.DfsSubgraph(head, onWalk)
 	for s, count := range detected {
 		if count > 1 {
 			cheaters[s.creator] = true
@@ -561,15 +561,15 @@ func TestRandomForksSanity(t *testing.T) {
 	idxs := validatorsBuilder.Build().Idxs()
 	for _, node := range nodes {
 		ee := events[node]
-		highestBefore := vi.getHighestBeforeSeq(ee[len(ee)-1].ID())
+		highestBefore := vi.GetMergedHighestBefore(ee[len(ee)-1].ID())
 		for n, cheater := range nodes {
 			branchSeq := highestBefore.Get(idxs[cheater])
 			isCheater := n < len(cheaters)
 			assertar.Equal(isCheater, branchSeq.IsForkDetected(), cheater)
 			if isCheater {
-				assertar.Equal(idx.Event(0), branchSeq.Seq(), cheater)
+				assertar.Equal(idx.Event(0), branchSeq.Seq, cheater)
 			} else {
-				assertar.NotEqual(idx.Event(0), branchSeq.Seq(), cheater)
+				assertar.NotEqual(idx.Event(0), branchSeq.Seq, cheater)
 			}
 		}
 	}
@@ -650,8 +650,6 @@ func TestRandomForks(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("Test #%d", i), func(t *testing.T) {
-			testTime := 100
-
 			r := rand.New(rand.NewSource(int64(i)))
 
 			nodes := tdag.GenNodes(test.nodesNum)
@@ -680,17 +678,13 @@ func TestRandomForks(t *testing.T) {
 						panic(err)
 					}
 				},
-				Build: func(e dag.MutableEvent, name string) error {
-					e.SetRawTime(dag.RawTimestamp(r.Intn(testTime)))
-					return nil
-				},
 			})
 
 			assertar := assert.New(t)
 			idxs := validators.Idxs()
 			// check that fork observing is identical to naive version
 			for _, e := range processed {
-				highestBefore := vi.getHighestBeforeSeq(e.ID())
+				highestBefore := vi.GetHighestBefore(e.ID())
 				expectedCheaters, err := testForksDetected(vi, e)
 				assertar.NoError(err)
 
@@ -699,16 +693,14 @@ func TestRandomForks(t *testing.T) {
 					branchSeq := highestBefore.Get(idxs[cheater])
 					assertar.Equal(expectedCheater, branchSeq.IsForkDetected(), e.String())
 					if expectedCheater {
-						assertar.Equal(idx.Event(0), branchSeq.Seq(), e.String())
+						assertar.Equal(idx.Event(0), branchSeq.Seq, e.String())
 					}
 				}
 			}
 
 			// memorize results of ForklessCause and MedianTime
 			forklessCauseMap := map[kv]bool{}
-			medianTimeMap := map[hash.Event]dag.RawTimestamp{}
 			for _, a := range processedArr {
-				medianTimeMap[a.ID()] = vi.MedianTime(a.ID(), dag.RawTimestamp(testTime/2))
 				for _, b := range processedArr {
 					pair := kv{
 						a: a.ID(),
@@ -720,9 +712,8 @@ func TestRandomForks(t *testing.T) {
 
 			vi.DropNotFlushed() // drops everything, because wasn't flushed
 			for _, e := range processed {
-				assertar.Nil(vi.getHighestBeforeSeq(e.ID()))
-				assertar.Nil(vi.getLowestAfterSeq(e.ID()))
-				assertar.Nil(vi.getHighestBeforeTime(e.ID()))
+				assertar.Nil(vi.GetHighestBefore(e.ID()))
+				assertar.Nil(vi.GetLowestAfter(e.ID()))
 			}
 
 			// check that events re-order doesn't change forklessCause result
@@ -740,9 +731,6 @@ func TestRandomForks(t *testing.T) {
 
 				vi.cache.ForklessCause.Purge() // disable cache
 				for _, a := range processedArr {
-					res := vi.MedianTime(a.ID(), dag.RawTimestamp(testTime/2))
-					assertar.Equal(medianTimeMap[a.ID()], res, "%s %d", a.ID().String(), reorderTry)
-
 					for _, b := range processedArr {
 						pair := kv{
 							a: a.ID(),

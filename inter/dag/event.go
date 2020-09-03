@@ -14,7 +14,6 @@ type Event interface {
 	IsRoot() bool
 	Creator() idx.ValidatorID
 	Lamport() idx.Lamport
-	RawTime() RawTimestamp
 
 	Parents() hash.Events
 	SelfParent() *hash.Event
@@ -33,7 +32,6 @@ type MutableEvent interface {
 	SetIsRoot(bool)
 	SetCreator(idx.ValidatorID)
 	SetLamport(idx.Lamport)
-	SetRawTime(RawTimestamp)
 
 	SetParents(hash.Events)
 
@@ -56,8 +54,6 @@ type BaseEvent struct {
 	parents hash.Events
 
 	lamport idx.Lamport
-
-	rawTime RawTimestamp
 
 	id hash.Event
 }
@@ -118,8 +114,6 @@ func (e *BaseEvent) Parents() hash.Events { return e.parents }
 
 func (e *BaseEvent) Lamport() idx.Lamport { return e.lamport }
 
-func (e *BaseEvent) RawTime() RawTimestamp { return e.rawTime }
-
 func (e *BaseEvent) ID() hash.Event { return e.id }
 
 func (e *MutableBaseEvent) SetEpoch(v idx.Epoch) { e.epoch = v }
@@ -135,8 +129,6 @@ func (e *MutableBaseEvent) SetCreator(v idx.ValidatorID) { e.creator = v }
 func (e *MutableBaseEvent) SetParents(v hash.Events) { e.parents = v }
 
 func (e *MutableBaseEvent) SetLamport(v idx.Lamport) { e.lamport = v }
-
-func (e *MutableBaseEvent) SetRawTime(v RawTimestamp) { e.rawTime = v }
 
 func (e *MutableBaseEvent) SetID(r_id [24]byte) {
 	copy(e.id[0:4], e.epoch.Bytes())

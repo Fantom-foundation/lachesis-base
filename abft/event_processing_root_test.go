@@ -256,7 +256,7 @@ func testSpecialNamedRoots(t *testing.T, scheme string) {
 	decode := func(name string) (frameN idx.Frame, isRoot bool) {
 		n, err := strconv.ParseUint(strings.Split(name, ".")[0][1:2], 10, 64)
 		if err != nil {
-			panic(err.Error() + ". Name event " + name + " properly: <UpperCaseForRoot><FrameN><Index>")
+			panic(err.Error() + ". Name event " + name + " properly: <UpperCaseForRoot><FrameN><Engine>")
 		}
 		frameN = idx.Frame(n)
 
@@ -317,7 +317,7 @@ func codegen4LachesisRandomRoot() {
 		frame := p.FrameOfEvent(e.ID())
 		_, isRoot := frame.Roots[e.Creator][e.ID()]
 		oldName := hash.GetEventName(e.ID())
-		newName := fmt.Sprintf("%s%d.%02d", oldName[0:1], frame.Index, e.Seq)
+		newName := fmt.Sprintf("%s%d.%02d", oldName[0:1], frame.Engine, e.Seq)
 		if isRoot {
 			newName = strings.ToUpper(newName[0:1]) + newName[1:]
 		}

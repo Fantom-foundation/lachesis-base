@@ -51,7 +51,7 @@ func (h *Event) Big() *big.Int {
 	return (*Hash)(h).Big()
 }
 
-// SetBytes converts bytes to event hash.
+// setBytes converts bytes to event hash.
 // If b is larger than len(h), b will be cropped from the left.
 func (h *Event) SetBytes(raw []byte) {
 	(*Hash)(h).SetBytes(raw)

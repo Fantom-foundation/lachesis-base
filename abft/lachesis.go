@@ -85,7 +85,7 @@ func (p *Lachesis) confirmEvents(frame idx.Frame, atropos hash.Event, onEventCon
 }
 
 func (p *Lachesis) applyAtropos(decidedFrame idx.Frame, atropos hash.Event) *pos.Validators {
-	atroposVecClock := p.dagIndexer.GetHighestBeforeSeq(atropos)
+	atroposVecClock := p.dagIndexer.GetMergedHighestBefore(atropos)
 
 	validators := p.store.GetValidators()
 	// cheaters are ordered deterministically

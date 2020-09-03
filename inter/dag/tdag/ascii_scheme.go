@@ -169,7 +169,6 @@ func ASCIIschemeForEach(
 			e.SetParents(parents)
 			e.SetLamport(maxLamport + 1)
 			e.SetLamport(maxLamport + 1)
-			e.SetRawTime(dag.RawTimestamp((maxLamport)))
 			e.Name = name
 			// buildEvent callback
 			if callback.Build != nil {

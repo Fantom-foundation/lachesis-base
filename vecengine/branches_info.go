@@ -1,19 +1,19 @@
-package vector
+package vecengine
 
 import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 )
 
-// branchesInfo contains information about global branches of each validator
-type branchesInfo struct {
+// BranchesInfo contains information about global branches of each validator
+type BranchesInfo struct {
 	BranchIDLastSeq     []idx.Event       // branchID -> highest e.Seq in the branch
 	BranchIDCreatorIdxs []idx.Validator   // branchID -> validator idx
 	BranchIDByCreators  [][]idx.Validator // validator idx -> list of branch IDs
 }
 
-// initBranchesInfo loads branchesInfo from store
-func (vi *Index) initBranchesInfo() {
+// InitBranchesInfo loads BranchesInfo from store
+func (vi *Engine) InitBranchesInfo() {
 	if vi.bi == nil {
 		// if not cached
 		vi.bi = vi.getBranchesInfo()
@@ -24,7 +24,7 @@ func (vi *Index) initBranchesInfo() {
 	}
 }
 
-func newInitialBranchesInfo(validators *pos.Validators) *branchesInfo {
+func newInitialBranchesInfo(validators *pos.Validators) *BranchesInfo {
 	branchIDCreators := validators.SortedIDs()
 	branchIDCreatorIdxs := make([]idx.Validator, len(branchIDCreators))
 	for i := range branchIDCreators {
@@ -37,13 +37,17 @@ func newInitialBranchesInfo(validators *pos.Validators) *branchesInfo {
 		branchIDByCreators[i] = make([]idx.Validator, 1, validators.Len()/2+1)
 		branchIDByCreators[i][0] = idx.Validator(i)
 	}
-	return &branchesInfo{
+	return &BranchesInfo{
 		BranchIDLastSeq:     branchIDLastSeq,
 		BranchIDCreatorIdxs: branchIDCreatorIdxs,
 		BranchIDByCreators:  branchIDByCreators,
 	}
 }
 
-func (vi *Index) atLeastOneFork() bool {
+func (vi *Engine) AtLeastOneFork() bool {
 	return len(vi.bi.BranchIDCreatorIdxs) > vi.validators.Len()
+}
+
+func (vi *Engine) BranchesInfo() *BranchesInfo {
+	return vi.bi
 }

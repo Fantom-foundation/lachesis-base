@@ -39,18 +39,18 @@ type eventScore struct {
 	vec   dagidx.HighestBeforeSeq
 }
 
-// Init must be called before using the strategy
+// InitBranchesInfo must be called before using the strategy
 func (st *CasualityStrategy) Init(selfParent *hash.Event) {
 	if selfParent != nil {
 		// we start searching by comparing with self-parent
-		st.template = st.dagi.GetHighestBeforeSeq(*selfParent)
+		st.template = st.dagi.GetMergedHighestBefore(*selfParent)
 	}
 }
 
 // Find chooses the hash from the specified options
 func (st *CasualityStrategy) Find(options hash.Events) hash.Event {
 	if st.template == nil { // nothing observes
-		st.template = st.dagi.GetHighestBeforeSeq(options[0])
+		st.template = st.dagi.GetMergedHighestBefore(options[0])
 	}
 	scores := make([]eventScore, 0, 50)
 
@@ -58,7 +58,7 @@ func (st *CasualityStrategy) Find(options hash.Events) hash.Event {
 	for _, id := range options {
 		score := eventScore{}
 		score.event = id
-		score.vec = st.dagi.GetHighestBeforeSeq(id)
+		score.vec = st.dagi.GetMergedHighestBefore(id)
 		for creatorIdx := idx.Validator(0); creatorIdx < idx.Validator(st.validators.Len()); creatorIdx++ {
 			my := st.template.Get(creatorIdx)
 			his := score.vec.Get(creatorIdx)

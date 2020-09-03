@@ -4,7 +4,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
@@ -21,8 +20,6 @@ type TestEventMarshaling struct {
 
 	Lamport idx.Lamport
 
-	RawTime dag.RawTimestamp
-
 	ID   hash.Event
 	Name string
 }
@@ -37,7 +34,6 @@ func (e *TestEvent) Bytes() []byte {
 		Creator: e.Creator(),
 		Parents: e.Parents(),
 		Lamport: e.Lamport(),
-		RawTime: e.RawTime(),
 		ID:      e.ID(),
 		Name:    e.Name,
 	})

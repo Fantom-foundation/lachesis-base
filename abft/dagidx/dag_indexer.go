@@ -37,7 +37,7 @@ type ForklessCause interface {
 }
 
 type VectorClock interface {
-	GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq
+	GetMergedHighestBefore(id hash.Event) HighestBeforeSeq
 }
 
 type DagIndexer interface {
