@@ -274,7 +274,7 @@ func testSpecialNamedRoots(t *testing.T, scheme string) {
 		Process: func(e dag.Event, name string) {
 			input.SetEvent(e)
 			assertar.NoError(
-				lch.ProcessEvent(e))
+				lch.Process(e))
 		},
 		Build: func(e dag.MutableEvent, name string) error {
 			e.SetEpoch(lch.store.GetEpoch())

@@ -16,7 +16,7 @@ type applyBlockFn func(block *lachesis.Block) *pos.Validators
 
 // TestLachesis extends Lachesis for tests.
 type TestLachesis struct {
-	*Lachesis
+	*IndexedLachesis
 
 	blocks map[idx.Block]*lachesis.Block
 
@@ -55,11 +55,11 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 	input := NewEventStore()
 
 	config := LiteConfig()
-	lch := NewLachesis(store, input, &adapters.VectorToDagIndexer{vecfc.NewIndex(crit, vecfc.LiteConfig())}, crit, config)
+	lch := NewIndexedLachesis(store, input, &adapters.VectorToDagIndexer{vecfc.NewIndex(crit, vecfc.LiteConfig())}, crit, config)
 
 	extended := &TestLachesis{
-		Lachesis: lch,
-		blocks:   map[idx.Block]*lachesis.Block{},
+		IndexedLachesis: lch,
+		blocks:          map[idx.Block]*lachesis.Block{},
 	}
 
 	blockIdx := idx.Block(0)

@@ -32,11 +32,11 @@ func (p *Orderer) Build(e dag.MutableEvent) error {
 	return nil
 }
 
-// ProcessEvent takes event into processing.
+// Process takes event into processing.
 // Event order matter: parents first.
 // All the event checkers must be launched.
-// ProcessEvent is not safe for concurrent use.
-func (p *Orderer) ProcessEvent(e dag.Event) (err error) {
+// Process is not safe for concurrent use.
+func (p *Orderer) Process(e dag.Event) (err error) {
 	err = p.checkAndSaveEvent(e)
 	if err != nil {
 		return err
