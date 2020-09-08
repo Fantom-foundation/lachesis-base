@@ -108,8 +108,6 @@ func (vi *Index) Reset(validators *pos.Validators, db kvdb.Store, getEvent func(
 	vi.validatorIdxs = validators.Idxs()
 	vi.cache.ForklessCause.Purge()
 	vi.onDropNotFlushed()
-
-	table.MigrateTables(&vi.table, vi.vecDb)
 }
 
 func (vi *Index) GetEngineCallbacks() vecengine.Callbacks {
@@ -139,6 +137,7 @@ func (vi *Index) GetEngineCallbacks() vecengine.Callbacks {
 
 func (vi *Index) onDbReset(db kvdb.Store) {
 	vi.vecDb = db
+	table.MigrateTables(&vi.table, vi.vecDb)
 }
 
 func (vi *Index) onDropNotFlushed() {
