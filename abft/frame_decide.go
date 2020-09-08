@@ -50,7 +50,7 @@ func (p *Orderer) sealEpoch(newValidators *pos.Validators) error {
 	}
 
 	if p.callback.EpochDBLoaded != nil {
-		p.callback.EpochDBLoaded()
+		p.callback.EpochDBLoaded(epochState.Epoch)
 	}
 	return nil
 }

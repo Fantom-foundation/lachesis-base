@@ -2,6 +2,7 @@ package ordering
 
 import (
 	"errors"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"math/rand"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ func TestEventBuffer(t *testing.T) {
 		},
 		Build: func(e dag.MutableEvent, name string) error {
 			e.SetEpoch(1)
-			e.SetRawTime(dag.RawTimestamp(e.Seq()))
+			e.SetFrame(idx.Frame(e.Seq()))
 			return nil
 		},
 	})
@@ -61,8 +62,8 @@ func TestEventBuffer(t *testing.T) {
 
 		Check: func(e dag.Event, parents dag.Events) error {
 			checked++
-			if e.RawTime() != dag.RawTimestamp(e.Seq()) {
-				return errors.New("malformed event time")
+			if e.Frame() != idx.Frame(e.Seq()) {
+				return errors.New("malformed event frame")
 			}
 			return nil
 		},

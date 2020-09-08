@@ -16,7 +16,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
 	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
-	"github.com/Fantom-foundation/lachesis-base/vector"
+	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 
 func TestRestart_1(t *testing.T) {
@@ -101,7 +101,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			Process: func(e dag.Event, name string) {
 				inputs[GENERATOR].SetEvent(e)
 				assertar.NoError(
-					lchs[GENERATOR].ProcessEvent(e))
+					lchs[GENERATOR].Process(e))
 
 				ordered = append(ordered, e)
 			},
@@ -145,10 +145,10 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 				return memorydb.New()
 			}
 
-			restored := NewLachesis(store, prev.input, &adapters.VectorToDagIndexer{vector.NewIndex(prev.crit, vector.LiteConfig())}, prev.crit, prev.config)
+			restored := NewIndexedLachesis(store, prev.input, &adapters.VectorToDagIndexer{vecfc.NewIndex(prev.crit, vecfc.LiteConfig())}, prev.crit, prev.config)
 			assertar.NoError(restored.Bootstrap(prev.callback))
 
-			lchs[RESTORED].Lachesis = restored
+			lchs[RESTORED].IndexedLachesis = restored
 		}
 
 		if !assertar.Equal(e.Epoch(), lchs[EXPECTED].store.GetEpoch()) {
@@ -156,11 +156,11 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		}
 		inputs[EXPECTED].SetEvent(e)
 		assertar.NoError(
-			lchs[EXPECTED].ProcessEvent(e))
+			lchs[EXPECTED].Process(e))
 
 		inputs[RESTORED].SetEvent(e)
 		assertar.NoError(
-			lchs[RESTORED].ProcessEvent(e))
+			lchs[RESTORED].Process(e))
 
 		compareStates(assertar, lchs[EXPECTED], lchs[RESTORED])
 		if t.Failed() {

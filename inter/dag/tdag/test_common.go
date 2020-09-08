@@ -100,7 +100,6 @@ func ForEachRandFork(
 			e.AddParent(parent.ID())
 			e.SetLamport(parent.Lamport() + 1)
 		}
-		e.SetRawTime(dag.RawTimestamp(e.Seq()))
 		// other parents are the lasts other's events
 		for _, other := range parents {
 			if ee := events[nodes[other]]; len(ee) > 0 {

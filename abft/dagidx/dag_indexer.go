@@ -2,10 +2,7 @@ package dagidx
 
 import (
 	"github.com/Fantom-foundation/lachesis-base/hash"
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
-	"github.com/Fantom-foundation/lachesis-base/inter/pos"
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 type Seq interface {
@@ -37,16 +34,5 @@ type ForklessCause interface {
 }
 
 type VectorClock interface {
-	GetHighestBeforeSeq(id hash.Event) HighestBeforeSeq
-}
-
-type DagIndexer interface {
-	VectorClock
-	ForklessCause
-
-	Add(dag.Event) error
-	Flush()
-	DropNotFlushed()
-
-	Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event)
+	GetMergedHighestBefore(id hash.Event) HighestBeforeSeq
 }

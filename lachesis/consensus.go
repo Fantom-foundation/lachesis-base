@@ -8,7 +8,7 @@ import (
 // Consensus is a consensus interface.
 type Consensus interface {
 	// PushEvent takes event for processing.
-	ProcessEvent(e dag.Event) error
+	Process(e dag.Event) error
 	// Build sets consensus fields. Returns an error if event should be dropped.
 	Build(e dag.MutableEvent) error
 }

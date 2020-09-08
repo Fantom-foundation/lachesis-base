@@ -1,10 +1,6 @@
 package abft
 
 import (
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -15,57 +11,30 @@ import (
 
 var _ lachesis.Consensus = (*Lachesis)(nil)
 
+type DagIndex interface {
+	dagidx.VectorClock
+	dagidx.ForklessCause
+}
+
 // Lachesis performs events ordering and detects cheaters
 // It's a wrapper around Orderer, which adds features which might potentially be application-specific:
-// confirmed events traversal, DAG index updates and cheaters detection.
+// confirmed events traversal, cheaters detection.
 // Use this structure if need a general-purpose consensus. Instead, use lower-level abft.Orderer.
 type Lachesis struct {
 	*Orderer
-	dagIndexer    dagidx.DagIndexer
+	dagIndex      DagIndex
 	uniqueDirtyID uniqueID
 	callback      lachesis.ConsensusCallbacks
 }
 
 // New creates Lachesis instance.
-func NewLachesis(store *Store, input EventSource, dagIndexer dagidx.DagIndexer, crit func(error), config Config) *Lachesis {
+func NewLachesis(store *Store, input EventSource, dagIndex DagIndex, crit func(error), config Config) *Lachesis {
 	p := &Lachesis{
-		Orderer:       NewOrderer(store, input, dagIndexer, crit, config),
-		dagIndexer:    dagIndexer,
-		uniqueDirtyID: uniqueID{new(big.Int)},
+		Orderer:  NewOrderer(store, input, dagIndex, crit, config),
+		dagIndex: dagIndex,
 	}
 
 	return p
-}
-
-// Build fills consensus-related fields: Frame, IsRoot
-// returns error if event should be dropped
-func (p *Lachesis) Build(e dag.MutableEvent) error {
-	e.SetID(p.uniqueDirtyID.sample())
-	defer p.dagIndexer.DropNotFlushed()
-	err := p.dagIndexer.Add(e)
-	if err != nil {
-		return err
-	}
-
-	return p.Orderer.Build(e)
-}
-
-// ProcessEvent takes event into processing.
-// Event order matter: parents first.
-// All the event checkers must be launched.
-// ProcessEvent is not safe for concurrent use.
-func (p *Lachesis) ProcessEvent(e dag.Event) (err error) {
-	defer p.dagIndexer.DropNotFlushed()
-	err = p.dagIndexer.Add(e)
-	if err != nil {
-		return err
-	}
-
-	err = p.Orderer.ProcessEvent(e)
-	if err == nil {
-		p.dagIndexer.Flush()
-	}
-	return err
 }
 
 func (p *Lachesis) confirmEvents(frame idx.Frame, atropos hash.Event, onEventConfirmed func(dag.Event)) error {
@@ -85,7 +54,7 @@ func (p *Lachesis) confirmEvents(frame idx.Frame, atropos hash.Event, onEventCon
 }
 
 func (p *Lachesis) applyAtropos(decidedFrame idx.Frame, atropos hash.Event) *pos.Validators {
-	atroposVecClock := p.dagIndexer.GetHighestBeforeSeq(atropos)
+	atroposVecClock := p.dagIndex.GetMergedHighestBefore(atropos)
 
 	validators := p.store.GetValidators()
 	// cheaters are ordered deterministically
@@ -117,12 +86,11 @@ func (p *Lachesis) applyAtropos(decidedFrame idx.Frame, atropos hash.Event) *pos
 }
 
 func (p *Lachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error {
-	err := p.Orderer.Bootstrap(OrdererCallbacks{
-		ApplyAtropos: p.applyAtropos,
-		EpochDBLoaded: func() {
-			p.dagIndexer.Reset(p.store.GetValidators(), p.store.epochTable.VectorIndex, p.input.GetEvent)
-		},
-	})
+	return p.BootstrapWithOrderer(callback, p.OrdererCallbacks())
+}
+
+func (p *Lachesis) BootstrapWithOrderer(callback lachesis.ConsensusCallbacks, ordererCallbacks OrdererCallbacks) error {
+	err := p.Orderer.Bootstrap(ordererCallbacks)
 	if err != nil {
 		return err
 	}
@@ -130,13 +98,8 @@ func (p *Lachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error {
 	return nil
 }
 
-type uniqueID struct {
-	counter *big.Int
-}
-
-func (u *uniqueID) sample() [24]byte {
-	u.counter = u.counter.Add(u.counter, common.Big1)
-	var id [24]byte
-	copy(id[:], u.counter.Bytes())
-	return id
+func (p *Lachesis) OrdererCallbacks() OrdererCallbacks {
+	return OrdererCallbacks{
+		ApplyAtropos: p.applyAtropos,
+	}
 }

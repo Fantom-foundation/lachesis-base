@@ -77,7 +77,7 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		Process: func(e dag.Event, name string) {
 			input.SetEvent(e)
 			assertar.NoError(
-				lch.ProcessEvent(e))
+				lch.Process(e))
 
 		},
 		Build: func(e dag.MutableEvent, name string) error {

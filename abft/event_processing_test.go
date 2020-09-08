@@ -82,7 +82,7 @@ func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
 
 			inputs[0].SetEvent(e)
 			assertar.NoError(
-				lchs[0].ProcessEvent(e))
+				lchs[0].Process(e))
 		},
 		Build: func(e dag.MutableEvent, name string) error {
 			e.SetEpoch(FirstEpoch)
@@ -98,7 +98,7 @@ func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			}
 			inputs[i].SetEvent(e)
 			assertar.NoError(
-				lchs[i].ProcessEvent(e))
+				lchs[i].Process(e))
 		}
 	}
 

@@ -16,7 +16,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/utils"
-	"github.com/Fantom-foundation/lachesis-base/vector"
+	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 
 func TestCasualityStrategy(t *testing.T) {
@@ -97,7 +97,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		panic(err)
 	}
 
-	vecClock := vector.NewIndex(crit, vector.LiteConfig())
+	vecClock := vecfc.NewIndex(crit, vecfc.LiteConfig())
 	vecClock.Reset(validators, memorydb.New(), getEvent)
 
 	// build vector index
