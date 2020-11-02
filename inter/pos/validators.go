@@ -2,6 +2,7 @@ package pos
 
 import (
 	"io"
+	"math"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -102,6 +103,9 @@ func (vv *Validators) calcCaches() cache {
 		if cache.totalWeight < totalWeightBefore {
 			panic("validators weight overflow")
 		}
+	}
+	if cache.totalWeight > math.MaxUint64/2 {
+		panic("validators weight overflow")
 	}
 
 	return cache
