@@ -57,8 +57,8 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 			var subjectHash *hash.Event
 			for _, observedRoot := range observedRoots {
 				vid := voteID{
+					fromRoot:     observedRoot,
 					forValidator: validatorSubject,
-					fromRoot:     observedRoot.ID,
 				}
 
 				if vote, ok := el.votes[vid]; ok {
@@ -102,7 +102,7 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 		}
 		// save vote for next rounds
 		vid := voteID{
-			fromRoot:     newRoot.ID,
+			fromRoot:     newRoot,
 			forValidator: validatorSubject,
 		}
 		el.votes[vid] = vote

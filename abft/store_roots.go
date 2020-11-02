@@ -20,10 +20,16 @@ func rootRecordKey(r *election.RootAndSlot) []byte {
 
 // AddRoot stores the new root
 // Not safe for concurrent use due to complex mutable cache!
-func (s *Store) AddRoot(root dag.Event) {
+func (s *Store) AddRoot(selfParentFrame idx.Frame, root dag.Event) {
+	for f := selfParentFrame + 1; f <= root.Frame(); f++ {
+		s.addRoot(root, f)
+	}
+}
+
+func (s *Store) addRoot(root dag.Event, frame idx.Frame) {
 	r := election.RootAndSlot{
 		Slot: election.Slot{
-			Frame:     root.Frame(),
+			Frame:     frame,
 			Validator: root.Creator(),
 		},
 		ID: root.ID(),
@@ -34,12 +40,9 @@ func (s *Store) AddRoot(root dag.Event) {
 	}
 
 	// Add to cache.
-	if s.cache.FrameRoots != nil {
-		if c, ok := s.cache.FrameRoots.Get(root.Frame()); ok {
-			if rr, ok := c.([]election.RootAndSlot); ok {
-				s.cache.FrameRoots.Add(root.Frame(), append(rr, r))
-			}
-		}
+	if c, ok := s.cache.FrameRoots.Get(frame); ok {
+		rr := c.([]election.RootAndSlot)
+		s.cache.FrameRoots.Add(frame, append(rr, r))
 	}
 }
 
@@ -53,12 +56,8 @@ const (
 // Not safe for concurrent use due to complex mutable cache!
 func (s *Store) GetFrameRoots(f idx.Frame) []election.RootAndSlot {
 	// get data from LRU cache first.
-	if s.cache.FrameRoots != nil {
-		if c, ok := s.cache.FrameRoots.Get(f); ok {
-			if rr, ok := c.([]election.RootAndSlot); ok {
-				return rr
-			}
-		}
+	if rr, ok := s.cache.FrameRoots.Get(f); ok {
+		return rr.([]election.RootAndSlot)
 	}
 	rr := make([]election.RootAndSlot, 0, 100)
 
@@ -87,9 +86,7 @@ func (s *Store) GetFrameRoots(f idx.Frame) []election.RootAndSlot {
 	}
 
 	// Add to cache.
-	if s.cache.FrameRoots != nil {
-		s.cache.FrameRoots.Add(f, rr)
-	}
+	s.cache.FrameRoots.Add(f, rr)
 
 	return rr
 }

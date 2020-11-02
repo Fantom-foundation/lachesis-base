@@ -11,8 +11,7 @@ type TestEventMarshaling struct {
 	Epoch idx.Epoch
 	Seq   idx.Event
 
-	Frame  idx.Frame
-	IsRoot bool
+	Frame idx.Frame
 
 	Creator idx.ValidatorID
 
@@ -30,7 +29,6 @@ func (e *TestEvent) Bytes() []byte {
 		Epoch:   e.Epoch(),
 		Seq:     e.Seq(),
 		Frame:   e.Frame(),
-		IsRoot:  e.IsRoot(),
 		Creator: e.Creator(),
 		Parents: e.Parents(),
 		Lamport: e.Lamport(),

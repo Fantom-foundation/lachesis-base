@@ -2,6 +2,7 @@ package election
 
 import (
 	"crypto/sha256"
+	"fmt"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
 )
@@ -16,7 +17,9 @@ func (el *Election) DebugStateHash() hash.Hash {
 	}
 
 	for vid, vote := range el.votes {
-		write(vid.fromRoot.Bytes())
+		write(vid.fromRoot.ID.Bytes())
+		write(vid.fromRoot.Slot.Frame.Bytes())
+		write(vid.fromRoot.Slot.Validator.Bytes())
 		write(vote.observedRoot.Bytes())
 	}
 	for validator, vote := range el.decidedRoots {
@@ -28,9 +31,9 @@ func (el *Election) DebugStateHash() hash.Hash {
 
 // @param (optional) voters is roots to print votes for. May be nil
 // @return election summary in a human readable format
-func (el *Election) String(voters []hash.Event) string {
+func (el *Election) String(voters []RootAndSlot) string {
 	if voters == nil {
-		votersM := make(map[hash.Event]bool)
+		votersM := make(map[RootAndSlot]bool)
 		for vid := range el.votes {
 			votersM[vid.fromRoot] = true
 		}
@@ -41,7 +44,7 @@ func (el *Election) String(voters []hash.Event) string {
 
 	info := "Every line contains votes from a root, for each subject. y is yes, n is no. Upper case means 'decided'. '-' means that subject was already decided when root was processed.\n"
 	for _, root := range voters { // voter
-		info += root.String() + ": "
+		info += fmt.Sprintf("%s-%d: ", root.ID.String(), root.Slot.Frame)
 		for _, forV := range el.validators.IDs() { // subject
 			vid := voteID{
 				fromRoot:     root,
