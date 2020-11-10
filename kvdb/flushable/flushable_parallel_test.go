@@ -132,6 +132,6 @@ func tmpDir() kvdb.DbProducer {
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory %s: %v", dir, err))
 	}
-	disk := leveldb.NewProducer(dir)
+	disk := leveldb.NewProducer(dir, cache16mb)
 	return disk
 }

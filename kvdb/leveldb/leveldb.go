@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	// minCache is the minimum amount of memory in megabytes to allocate to leveldb
+	// minCache is the minimum amount of memory in bytes to allocate to leveldb
 	// read and write caching, split half and half.
-	minCache = 16
+	minCache = opt.KiB
 
 	// minHandles is the minimum number of files handles to allocate to the open
 	// database files.
@@ -52,8 +52,8 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(path, &opt.Options{
 		OpenFilesCacheCapacity: handles,
-		BlockCacheCapacity:     cache / 2 * opt.MiB,
-		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
+		BlockCacheCapacity:     cache / 2,
+		WriteBuffer:            cache / 4, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
 	})
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {

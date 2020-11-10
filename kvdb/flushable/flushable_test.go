@@ -3,6 +3,7 @@ package flushable
 import (
 	"bytes"
 	"fmt"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -378,10 +379,14 @@ func benchmarkFlushable(db *Flushable, goroutines, recs, flushPeriod int) {
 	wg.Wait()
 }
 
+func cache16mb(string) int {
+	return 16 * opt.MiB
+}
+
 func dbProducer(name string) kvdb.DbProducer {
 	dir, err := ioutil.TempDir("", name)
 	if err != nil {
 		panic(err)
 	}
-	return leveldb.NewProducer(dir)
+	return leveldb.NewProducer(dir, cache16mb)
 }

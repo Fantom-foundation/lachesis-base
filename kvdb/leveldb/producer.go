@@ -10,13 +10,15 @@ import (
 )
 
 type producer struct {
-	datadir string
+	datadir  string
+	getCache func(string) int
 }
 
 // NewProducer of level db.
-func NewProducer(datadir string) kvdb.DbProducer {
+func NewProducer(datadir string, getCache func(string) int) kvdb.DbProducer {
 	return &producer{
-		datadir: datadir,
+		datadir:  datadir,
+		getCache: getCache,
 	}
 }
 
@@ -67,7 +69,7 @@ func (p *producer) OpenDb(name string) kvdb.DropableStore {
 
 	}
 
-	db, err := New(path, 64, 0, onClose, onDrop)
+	db, err := New(path, p.getCache(name), 0, onClose, onDrop)
 	if err != nil {
 		panic(err)
 	}
