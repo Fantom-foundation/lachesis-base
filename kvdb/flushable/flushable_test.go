@@ -3,7 +3,6 @@ package flushable
 import (
 	"bytes"
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 	"io/ioutil"
 	"math/big"
 	"math/rand"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
@@ -180,11 +180,11 @@ func TestFlushable(t *testing.T) {
 
 				var it kvdb.Iterator
 				if try%3 == 0 {
-					it = db.NewIterator()
+					it = db.NewIterator(nil, nil)
 				} else if try%3 == 1 {
-					it = db.NewIteratorWithPrefix(prefix)
+					it = db.NewIterator(prefix, nil)
 				} else {
-					it = db.NewIteratorWithStart(prefix)
+					it = db.NewIterator(nil, prefix)
 				}
 				defer it.Release()
 
@@ -303,7 +303,7 @@ func TestFlushableIterator(t *testing.T) {
 	flushable2.Put(veryFirstKey, []byte("first"))
 	flushable2.Put(veryLastKey, []byte("last"))
 
-	it := flushable1.NewIterator()
+	it := flushable1.NewIterator(nil, nil)
 	defer it.Release()
 
 	err := flushable2.Flush()

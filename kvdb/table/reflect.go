@@ -2,8 +2,9 @@ package table
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"reflect"
+
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 // MigrateTables sets target fields to database tables.

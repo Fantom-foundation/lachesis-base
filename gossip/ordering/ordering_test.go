@@ -2,7 +2,6 @@ package ordering
 
 import (
 	"errors"
-	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"math/rand"
 	"testing"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
 func TestEventBuffer(t *testing.T) {

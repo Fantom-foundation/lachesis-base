@@ -76,23 +76,11 @@ func (f *Fallible) NewBatch() kvdb.Batch {
 	return f.Underlying.NewBatch()
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the key-value database.
-func (f *Fallible) NewIterator() kvdb.Iterator {
-	return f.Underlying.NewIterator()
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (f *Fallible) NewIteratorWithStart(start []byte) kvdb.Iterator {
-	return f.Underlying.NewIteratorWithStart(start)
-}
-
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (f *Fallible) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
-	return f.Underlying.NewIteratorWithPrefix(prefix)
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (f *Fallible) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	return f.Underlying.NewIterator(prefix, start)
 }
 
 // Stat returns a particular internal stat of the database.

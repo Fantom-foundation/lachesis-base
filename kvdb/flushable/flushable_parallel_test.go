@@ -42,7 +42,7 @@ func TestFlushableParallel(t *testing.T) {
 		require := require.New(t)
 
 		// iterate over tableImmutable and check its content
-		it := tableImmutable.NewIterator()
+		it := tableImmutable.NewIterator(nil, nil)
 		defer it.Release()
 
 		_ = flushableDb.Flush() // !breaking flush
@@ -95,7 +95,7 @@ func TestFlushableParallel(t *testing.T) {
 			require := require.New(t)
 			for !stopped() {
 				// iterate over tableImmutable and check its content
-				it := tableImmutable.NewIterator()
+				it := tableImmutable.NewIterator(nil, nil)
 				defer it.Release()
 
 				i := uint64(0)

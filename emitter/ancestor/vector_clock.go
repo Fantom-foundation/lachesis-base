@@ -1,9 +1,9 @@
 package ancestor
 
 import (
-	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"sort"
 
+	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
