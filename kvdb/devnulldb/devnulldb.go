@@ -1,6 +1,8 @@
 package devnulldb
 
-import "github.com/Fantom-foundation/lachesis-base/kvdb"
+import (
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
+)
 
 // Database is an always empty database.
 type Database struct{}
@@ -46,22 +48,10 @@ func (db *Database) NewBatch() kvdb.Batch {
 	return &batch{}
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the memory database.
-func (db *Database) NewIterator() kvdb.Iterator {
-	return &iterator{}
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (db *Database) NewIteratorWithStart(start []byte) kvdb.Iterator {
-	return &iterator{}
-}
-
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (db *Database) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	return &iterator{}
 }
 

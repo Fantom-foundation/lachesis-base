@@ -1,6 +1,8 @@
 package abft
 
 import (
+	"math/big"
+
 	"github.com/Fantom-foundation/lachesis-base/abft/dagidx"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -9,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
 )
 
 var _ lachesis.Consensus = (*IndexedLachesis)(nil)

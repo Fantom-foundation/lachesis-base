@@ -13,6 +13,11 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
+const (
+	dirtyPrefix = 0xde
+	cleanPrefix = 0x00
+)
+
 type SyncedPool struct {
 	producer kvdb.DbProducer
 
@@ -129,7 +134,7 @@ func (p *SyncedPool) flush(id []byte) error {
 		}
 
 		marker := bytes.NewBuffer(nil)
-		marker.Write([]byte("dirty"))
+		marker.Write([]byte{dirtyPrefix})
 		marker.Write(prev)
 		marker.Write(id)
 		err = db.Put(key, marker.Bytes())
@@ -149,7 +154,7 @@ func (p *SyncedPool) flush(id []byte) error {
 	// write clean flags
 	for _, w := range p.wrappers {
 		db := w.InitUnderlyingDb()
-		err := db.Put(key, id)
+		err := db.Put(key, append([]byte{cleanPrefix}, id...))
 		if err != nil {
 			return err
 		}
@@ -200,7 +205,7 @@ func (p *SyncedPool) checkDbsSynced() error {
 		}
 		descrs = append(descrs, fmt.Sprintf("%s: %s", name, hexutils.BytesToHex(mark)))
 
-		if bytes.HasPrefix(mark, []byte("dirty")) {
+		if bytes.HasPrefix(mark, []byte{dirtyPrefix}) {
 			return fmt.Errorf("dirty state: %s", list())
 		}
 		if prevID == nil {

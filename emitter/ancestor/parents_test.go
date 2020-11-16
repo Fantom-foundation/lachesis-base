@@ -1,7 +1,6 @@
 package ancestor
 
 import (
-	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/utils"
+	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
 	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 

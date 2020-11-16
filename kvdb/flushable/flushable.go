@@ -389,50 +389,16 @@ func (it *iterator) Release() {
 	*it = iterator{}
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the memory database.
-func (w *Flushable) NewIterator() kvdb.Iterator {
-	w.lock.Lock()
-	defer w.lock.Unlock()
-
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (w *Flushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	it := &iterator{
 		lock:     w.lock,
 		tree:     w.modified,
-		parentIt: w.underlying.NewIterator(),
-	}
-	it.init()
-	return it
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (w *Flushable) NewIteratorWithStart(start []byte) kvdb.Iterator {
-	w.lock.Lock()
-	defer w.lock.Unlock()
-
-	it := &iterator{
-		lock:     w.lock,
-		tree:     w.modified,
-		start:    start,
-		parentIt: w.underlying.NewIteratorWithStart(start),
-	}
-	it.init()
-	return it
-}
-
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (w *Flushable) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
-	w.lock.Lock()
-	defer w.lock.Unlock()
-
-	it := &iterator{
-		lock:     w.lock,
-		tree:     w.modified,
-		start:    prefix,
+		start:    append(common.CopyBytes(prefix), start...),
 		prefix:   prefix,
-		parentIt: w.underlying.NewIteratorWithPrefix(prefix),
+		parentIt: w.underlying.NewIterator(prefix, start),
 	}
 	it.init()
 	return it

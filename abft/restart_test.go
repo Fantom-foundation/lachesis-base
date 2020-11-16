@@ -127,7 +127,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			store := NewMemStore()
 			// copy prev DB into new one
 			{
-				it := prev.store.mainDB.NewIterator()
+				it := prev.store.mainDB.NewIterator(nil, nil)
 				defer it.Release()
 				for it.Next() {
 					assertar.NoError(store.mainDB.Put(it.Key(), it.Value()))
@@ -135,7 +135,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			}
 			restartEpochDB := memorydb.New()
 			{
-				it := prev.store.epochDB.NewIterator()
+				it := prev.store.epochDB.NewIterator(nil, nil)
 				for it.Next() {
 					assertar.NoError(restartEpochDB.Put(it.Key(), it.Value()))
 				}

@@ -2,6 +2,7 @@ package nokeyiserr
 
 import (
 	"errors"
+
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 

@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	// minCache is the minimum amount of memory in megabytes to allocate to leveldb
+	// minCache is the minimum amount of memory in bytes to allocate to leveldb
 	// read and write caching, split half and half.
-	minCache = 16
+	minCache = opt.KiB
 
 	// minHandles is the minimum number of files handles to allocate to the open
 	// database files.
@@ -52,8 +52,8 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(path, &opt.Options{
 		OpenFilesCacheCapacity: handles,
-		BlockCacheCapacity:     cache / 2 * opt.MiB,
-		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
+		BlockCacheCapacity:     cache / 2,
+		WriteBuffer:            cache / 4, // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
 	})
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
@@ -142,23 +142,11 @@ func (db *Database) NewBatch() kvdb.Batch {
 	}
 }
 
-// NewIterator creates a binary-alphabetical iterator over the entire keyspace
-// contained within the leveldb database.
-func (db *Database) NewIterator() kvdb.Iterator {
-	return db.db.NewIterator(new(util.Range), nil)
-}
-
-// NewIteratorWithStart creates a binary-alphabetical iterator over a subset of
-// database content starting at a particular initial key (or after, if it does
-// not exist).
-func (db *Database) NewIteratorWithStart(start []byte) kvdb.Iterator {
-	return db.db.NewIterator(&util.Range{Start: start}, nil)
-}
-
-// NewIteratorWithPrefix creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix.
-func (db *Database) NewIteratorWithPrefix(prefix []byte) kvdb.Iterator {
-	return db.db.NewIterator(util.BytesPrefix(prefix), nil)
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	return db.db.NewIterator(bytesPrefixRange(prefix, start), nil)
 }
 
 // Stat returns a particular internal stat of the database.
@@ -247,4 +235,13 @@ func (r *replayer) Delete(key []byte) {
 		return
 	}
 	r.failure = r.writer.Delete(key)
+}
+
+// bytesPrefixRange returns key range that satisfy
+// - the given prefix, and
+// - the given seek position
+func bytesPrefixRange(prefix, start []byte) *util.Range {
+	r := util.BytesPrefix(prefix)
+	r.Start = append(r.Start, start...)
+	return r
 }

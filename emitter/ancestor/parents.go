@@ -15,7 +15,7 @@ type SearchStrategy interface {
 // FindBestParents returns estimated parents subset, according to provided strategy
 // max is max num of parents to link with (including self-parent)
 // returns set of parents to link, len(res) <= max
-func FindBestParents(max int, options hash.Events, selfParent *hash.Event, strategy SearchStrategy) (*hash.Event, hash.Events) {
+func FindBestParents(max uint32, options hash.Events, selfParent *hash.Event, strategy SearchStrategy) (*hash.Event, hash.Events) {
 	optionsSet := options.Set()
 	parents := make(hash.Events, 0, max)
 	if selfParent != nil {
@@ -25,7 +25,7 @@ func FindBestParents(max int, options hash.Events, selfParent *hash.Event, strat
 
 	strategy.Init(selfParent)
 
-	for len(parents) < max && len(optionsSet) > 0 {
+	for uint32(len(parents)) < max && len(optionsSet) > 0 {
 		best := strategy.Find(optionsSet.Slice())
 		parents = append(parents, best)
 		optionsSet.Erase(best)
