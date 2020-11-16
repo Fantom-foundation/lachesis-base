@@ -132,6 +132,8 @@ func maxBig(n uint) *big.Int {
 }
 
 func TestValidators_Big(t *testing.T) {
+	max := Weight(math.MaxUint64 >> 1)
+
 	b := NewBigBuilder()
 
 	b.Set(1, big.NewInt(1))
@@ -139,24 +141,24 @@ func TestValidators_Big(t *testing.T) {
 	assert.Equal(t, Weight(1), v.TotalWeight())
 	assert.Equal(t, Weight(1), v.Get(1))
 
-	b.Set(2, big.NewInt(math.MaxInt64-1))
+	b.Set(2, big.NewInt(int64(max)-1))
 	v = b.Build()
-	assert.Equal(t, Weight(math.MaxInt64), v.TotalWeight())
+	assert.Equal(t, Weight(max), v.TotalWeight())
 	assert.Equal(t, Weight(1), v.Get(1))
-	assert.Equal(t, Weight(math.MaxInt64-1), v.Get(2))
+	assert.Equal(t, Weight(max-1), v.Get(2))
 
 	b.Set(3, big.NewInt(1))
 	v = b.Build()
-	assert.Equal(t, Weight(math.MaxInt64/2), v.TotalWeight())
+	assert.Equal(t, Weight(max/2), v.TotalWeight())
 	assert.Equal(t, Weight(0), v.Get(1))
-	assert.Equal(t, Weight(math.MaxInt64/2), v.Get(2))
+	assert.Equal(t, Weight(max/2), v.Get(2))
 	assert.Equal(t, Weight(0), v.Get(3))
 
 	b.Set(4, big.NewInt(2))
 	v = b.Build()
-	assert.Equal(t, Weight(math.MaxInt64/2+1), v.TotalWeight())
+	assert.Equal(t, Weight(max/2+1), v.TotalWeight())
 	assert.Equal(t, Weight(0), v.Get(1))
-	assert.Equal(t, Weight(math.MaxInt64/2), v.Get(2))
+	assert.Equal(t, Weight(max/2), v.Get(2))
 	assert.Equal(t, Weight(0), v.Get(3))
 	assert.Equal(t, Weight(1), v.Get(4))
 
@@ -167,7 +169,7 @@ func TestValidators_Big(t *testing.T) {
 	assert.Equal(t, Weight(0x1fffffff), v.Get(2))
 	assert.Equal(t, Weight(0), v.Get(3))
 	assert.Equal(t, Weight(0), v.Get(4))
-	assert.Equal(t, Weight(math.MaxInt64/2), v.Get(5))
+	assert.Equal(t, Weight(max/2), v.Get(5))
 
 	b.Set(1, maxBig(501))
 	b.Set(2, maxBig(502))

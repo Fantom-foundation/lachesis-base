@@ -24,11 +24,15 @@ func TestRestart_1(t *testing.T) {
 }
 
 func TestRestart_big1(t *testing.T) {
-	testRestart(t, []pos.Weight{math.MaxUint64}, 0)
+	testRestart(t, []pos.Weight{math.MaxUint64 / 2}, 0)
 }
 
 func TestRestart_big2(t *testing.T) {
-	testRestart(t, []pos.Weight{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
+	testRestart(t, []pos.Weight{math.MaxUint64 / 4, math.MaxUint64 / 4}, 0)
+}
+
+func TestRestart_big3(t *testing.T) {
+	testRestart(t, []pos.Weight{math.MaxUint64 / 8, math.MaxUint64 / 8, math.MaxUint64 / 4}, 0)
 }
 
 func TestRestart_4(t *testing.T) {

@@ -22,11 +22,15 @@ func TestLachesisRandom_1(t *testing.T) {
 }
 
 func TestLachesisRandom_big1(t *testing.T) {
-	testLachesisRandom(t, []pos.Weight{math.MaxUint64}, 0)
+	testLachesisRandom(t, []pos.Weight{math.MaxUint64 / 2}, 0)
 }
 
 func TestLachesisRandom_big2(t *testing.T) {
-	testLachesisRandom(t, []pos.Weight{math.MaxUint64 / 2, math.MaxUint64 / 2}, 0)
+	testLachesisRandom(t, []pos.Weight{math.MaxUint64 / 4, math.MaxUint64 / 4}, 0)
+}
+
+func TestLachesisRandom_big3(t *testing.T) {
+	testLachesisRandom(t, []pos.Weight{math.MaxUint64 / 8, math.MaxUint64 / 8, math.MaxUint64 / 4}, 0)
 }
 
 func TestLachesisRandom_4(t *testing.T) {

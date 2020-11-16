@@ -285,8 +285,12 @@ func testSpecialNamedRoots(t *testing.T, scheme string) {
 	// check each
 	for name, event := range names {
 		mustBeFrame, mustBeRoot := decode(name)
+		var selfParentFrame idx.Frame
+		if event.SelfParent() != nil {
+			selfParentFrame = input.GetEvent(*event.SelfParent()).Frame()
+		}
 		// check root
-		if !assertar.Equal(mustBeRoot, event.IsRoot(), name+" is root") {
+		if !assertar.Equal(mustBeRoot, event.Frame() != selfParentFrame, name+" is root") {
 			break
 		}
 		// check frame

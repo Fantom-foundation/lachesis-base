@@ -43,7 +43,7 @@ type (
 )
 
 type voteID struct {
-	fromRoot     hash.Event
+	fromRoot     RootAndSlot
 	forValidator idx.ValidatorID
 }
 type voteValue struct {

@@ -4,14 +4,12 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/Fantom-foundation/lachesis-base/abft/election"
-	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
 var (
-	ErrWrongFrame  = errors.New("claimed frame mismatched with calculated")
-	ErrWrongIsRoot = errors.New("claimed isRoot mismatched with calculated")
+	ErrWrongFrame = errors.New("claimed frame mismatched with calculated")
 )
 
 // Build fills consensus-related fields: Frame, IsRoot
@@ -25,9 +23,8 @@ func (p *Orderer) Build(e dag.MutableEvent) error {
 		p.crit(errors.New("event wasn't created by an existing validator"))
 	}
 
-	frame, isRoot := p.calcFrameIdx(e, false)
+	_, frame := p.calcFrameIdx(e, false)
 	e.SetFrame(frame)
-	e.SetIsRoot(isRoot)
 
 	return nil
 }
@@ -37,12 +34,12 @@ func (p *Orderer) Build(e dag.MutableEvent) error {
 // All the event checkers must be launched.
 // Process is not safe for concurrent use.
 func (p *Orderer) Process(e dag.Event) (err error) {
-	err = p.checkAndSaveEvent(e)
+	err, selfParentFrame := p.checkAndSaveEvent(e)
 	if err != nil {
 		return err
 	}
 
-	err = p.handleElection(e)
+	err = p.handleElection(selfParentFrame, e)
 	if err != nil {
 		// election doesn't fail under normal circumstances
 		// storage is in an inconsistent state
@@ -52,48 +49,50 @@ func (p *Orderer) Process(e dag.Event) (err error) {
 }
 
 // checkAndSaveEvent checks consensus-related fields: Frame, IsRoot
-func (p *Orderer) checkAndSaveEvent(e dag.Event) error {
+func (p *Orderer) checkAndSaveEvent(e dag.Event) (error, idx.Frame) {
 	// check frame & isRoot
-	frameIdx, isRoot := p.calcFrameIdx(e, true)
-	if e.IsRoot() != isRoot {
-		return ErrWrongIsRoot
-	}
+	selfParentFrame, frameIdx := p.calcFrameIdx(e, true)
 	if e.Frame() != frameIdx {
-		return ErrWrongFrame
+		return ErrWrongFrame, 0
 	}
 
-	if e.IsRoot() {
-		p.store.AddRoot(e)
+	if selfParentFrame != frameIdx {
+		p.store.AddRoot(selfParentFrame, e)
 	}
-	return nil
+	return nil, selfParentFrame
 }
 
 // calculates Atropos election for the root, calls p.onFrameDecided if election was decided
-func (p *Orderer) handleElection(root dag.Event) error {
-	if !root.IsRoot() {
-		return nil
-	}
+func (p *Orderer) handleElection(selfParentFrame idx.Frame, root dag.Event) error {
+	for f := selfParentFrame + 1; f <= root.Frame(); f++ {
+		decided, err := p.election.ProcessRoot(election.RootAndSlot{
+			ID: root.ID(),
+			Slot: election.Slot{
+				Frame:     f,
+				Validator: root.Creator(),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if decided == nil {
+			continue
+		}
 
-	decided, err := p.processRoot(root.Frame(), root.Creator(), root.ID())
-	if err != nil {
-		return err
+		// if we’re here, then this root has observed that lowest not decided frame is decided now
+		sealed, err := p.onFrameDecided(decided.Frame, decided.Atropos)
+		if err != nil {
+			return err
+		}
+		if sealed {
+			break
+		}
+		err = p.bootstrapElection()
+		if err != nil {
+			return err
+		}
 	}
-	if decided == nil {
-		return nil
-	}
-
-	// if we’re here, then this root has observed that lowest not decided frame is decided now
-	sealed, err := p.onFrameDecided(decided.Frame, decided.Atropos)
-	if err != nil {
-		return err
-	}
-	if sealed {
-		return nil
-	}
-
-	// then call processKnownRoots until it returns nil -
-	// it’s needed because new elections may already have enough votes, because we process elections from lowest to highest
-	return p.bootstrapElection()
+	return nil
 }
 
 // bootstrapElection calls processKnownRoots until it returns nil
@@ -118,16 +117,6 @@ func (p *Orderer) bootstrapElection() error {
 	return nil
 }
 
-func (p *Orderer) processRoot(f idx.Frame, from idx.ValidatorID, id hash.Event) (*election.Res, error) {
-	return p.election.ProcessRoot(election.RootAndSlot{
-		ID: id,
-		Slot: election.Slot{
-			Frame:     f,
-			Validator: from,
-		},
-	})
-}
-
 // The function is similar to processRoot, but it fully re-processes the current voting.
 // This routine should be called after node startup, and after each decided frame.
 func (p *Orderer) processKnownRoots() (*election.Res, error) {
@@ -138,7 +127,7 @@ func (p *Orderer) processKnownRoots() (*election.Res, error) {
 		frameRoots := p.store.GetFrameRoots(f)
 		for _, it := range frameRoots {
 			var err error
-			decided, err = p.processRoot(it.Slot.Frame, it.Slot.Validator, it.ID)
+			decided, err = p.election.ProcessRoot(it)
 			if err != nil {
 				return nil, err
 			}
@@ -171,55 +160,27 @@ func (p *Orderer) forklessCausedByQuorumOn(e dag.Event, f idx.Frame) bool {
 // calcFrameIdx checks root-conditions for new event
 // and returns event's frame.
 // It is not safe for concurrent use.
-func (p *Orderer) calcFrameIdx(e dag.Event, checkOnly bool) (frame idx.Frame, isRoot bool) {
-	if len(e.Parents()) == 0 {
-		// special case for very first events in the epoch
-		return 1, true
+func (p *Orderer) calcFrameIdx(e dag.Event, checkOnly bool) (selfParentFrame, frame idx.Frame) {
+	selfParentFrame = idx.Frame(0)
+	if e.SelfParent() != nil {
+		selfParentFrame = p.input.GetEvent(*e.SelfParent()).Frame()
 	}
 
-	// calc maxParentsFrame, i.e. max(parent's frame height)
-	maxParentsFrame := idx.Frame(0)
-	selfParentFrame := idx.Frame(0)
+	// Note: we cannot "skip" frames and also we must check that event is caused by 2/3W+1 roots at F, even if one
+	// of the parents has a frame >= F+1
+	// The reason of those checks is that "forkless caused" relation isn't transitive in a case if there's at least one
+	// cheater
 
-	for _, parent := range e.Parents() {
-		pFrame := p.input.GetEvent(parent).Frame()
-		if maxParentsFrame == 0 || pFrame > maxParentsFrame {
-			maxParentsFrame = pFrame
-		}
-
-		if e.IsSelfParent(parent) {
-			selfParentFrame = pFrame
-		}
-	}
-
+	maxFrameToCheck := selfParentFrame + 100
 	if checkOnly {
-		// check frame & isRoot
-		frame = e.Frame()
-		if !e.IsRoot() {
-			// don't check forklessCausedByQuorumOn if not claimed as root
-			// if not root, then not allowed to move frame
-			return selfParentFrame, false
-		}
-		// every root must be greater than prev. self-root. Instead, election will be faulty
-		// roots aren't allowed to "jump" to higher frame than selfParentFrame+1, even if they are forkless caused
-		// by 2/3W+1 there. It's because of liveness with forks, when up to 1/3W of roots on any frame may become "invisible"
-		// for forklessCause relation (so if we skip frames, there's may be deadlock when frames cannot advance because there's
-		// less than 2/3W visible roots)
-		isRoot = frame == selfParentFrame+1 && (e.Frame() <= 1 || p.forklessCausedByQuorumOn(e, e.Frame()-1))
-		return selfParentFrame + 1, isRoot
+		maxFrameToCheck = e.Frame()
 	}
 
-	// calculate frame & isRoot
-	if e.SelfParent() == nil {
-		return 1, true
+	var f idx.Frame
+	for f = selfParentFrame; f < maxFrameToCheck && p.forklessCausedByQuorumOn(e, f); f++ {
 	}
-	if p.forklessCausedByQuorumOn(e, selfParentFrame) {
-		return selfParentFrame + 1, true
+	if f == 0 {
+		f = 1
 	}
-	// Note: if we assign maxParentsFrame, it'll break the liveness for a case with forks, because there may be less
-	// than 2/3W possible roots at maxParentsFrame, even if 1 validator is cheater and 1/3W were offline for some time
-	// and didn't create roots at maxParentsFrame - they won't be able to create roots at maxParentsFrame because
-	// every frame must be greater than previous
-	return selfParentFrame, false
-
+	return selfParentFrame, f
 }
