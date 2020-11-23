@@ -266,7 +266,7 @@ func DAGtoASCIIscheme(events dag.Events) (string, error) {
 		if len(r.Name) < 1 {
 			r.Name = hash.GetNodeName(e.Creator())
 			if len(r.Name) < 1 {
-				r.Name = string('a' + r.Self)
+				r.Name = string('a' + rune(r.Self))
 			}
 			r.Name = fmt.Sprintf("%s%03d", r.Name, e.Seq())
 		}

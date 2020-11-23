@@ -3,7 +3,6 @@ package abft
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 )
@@ -12,7 +11,6 @@ import (
 type Genesis struct {
 	Epoch      idx.Epoch
 	Validators *pos.Validators
-	Atropos    hash.Event
 }
 
 // ApplyGenesis writes initial state.
@@ -32,7 +30,6 @@ func (s *Store) ApplyGenesis(g *Genesis) error {
 
 	es.Validators = g.Validators
 	es.Epoch = g.Epoch
-	ds.LastAtropos = g.Atropos
 	ds.LastDecidedFrame = FirstFrame - 1
 
 	s.SetEpochState(es)

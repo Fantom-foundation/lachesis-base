@@ -183,11 +183,11 @@ func compareStates(assertar *assert.Assertions, expected, restored *TestLachesis
 		*(expected.store.GetLastDecidedState()), *(restored.store.GetLastDecidedState()))
 	assertar.Equal(
 		*(expected.store.GetEpochState()), *(restored.store.GetEpochState()))
-	// check LastAtropos and Head() method
+	// check last Atropos
 	if len(expected.blocks) != 0 {
 		assertar.Equal(
 			expected.blocks[idx.Block(len(expected.blocks))].Atropos,
-			restored.store.GetLastDecidedState().LastAtropos,
+			restored.blocks[idx.Block(len(restored.blocks))].Atropos,
 			"block atropos doesn't match")
 	}
 }

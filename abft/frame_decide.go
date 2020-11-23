@@ -16,7 +16,6 @@ func (p *Orderer) onFrameDecided(frame idx.Frame, atropos hash.Event) (bool, err
 	}
 
 	lastDecidedState := *p.store.GetLastDecidedState()
-	lastDecidedState.LastAtropos = atropos
 	if newValidators != nil {
 		lastDecidedState.LastDecidedFrame = FirstFrame - 1
 		err := p.sealEpoch(newValidators)
