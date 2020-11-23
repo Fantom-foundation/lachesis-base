@@ -3,7 +3,6 @@ package abft
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -46,7 +45,6 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 
 	err := store.ApplyGenesis(&Genesis{
 		Validators: validators.Build(),
-		Atropos:    hash.ZeroEvent,
 		Epoch:      FirstEpoch,
 	})
 	if err != nil {

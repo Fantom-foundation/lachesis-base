@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/Fantom-foundation/lachesis-base/abft/election"
-	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 )
@@ -18,7 +17,6 @@ const (
 type LastDecidedState struct {
 	// fields can change only after a frame is decided
 	LastDecidedFrame idx.Frame
-	LastAtropos      hash.Event
 }
 
 type EpochState struct {
