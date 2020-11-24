@@ -10,7 +10,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
-	"github.com/Fantom-foundation/lachesis-base/utils/wlru"
+	"github.com/Fantom-foundation/lachesis-base/utils/simplewlru"
 )
 
 // Store is a abft persistent storage working over parent key-value database.
@@ -28,7 +28,7 @@ type Store struct {
 	cache struct {
 		LastDecidedState *LastDecidedState
 		EpochState       *EpochState
-		FrameRoots       *wlru.Cache `cache:"-"` // store by pointer
+		FrameRoots       *simplewlru.Cache `cache:"-"` // store by pointer
 	}
 
 	epochDB    kvdb.DropableStore
@@ -167,8 +167,8 @@ func (s *Store) has(table kvdb.Store, key []byte) bool {
 	return res
 }
 
-func (s *Store) makeCache(weight uint, size int) *wlru.Cache {
-	cache, err := wlru.New(weight, size)
+func (s *Store) makeCache(weight uint, size int) *simplewlru.Cache {
+	cache, err := simplewlru.New(weight, size)
 	if err != nil {
 		s.crit(err)
 	}
