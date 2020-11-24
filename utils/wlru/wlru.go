@@ -8,7 +8,7 @@ import (
 
 // Cache is a thread-safe fixed size LRU cache.
 type Cache struct {
-	lru  *simplewlru.WeightedLRU
+	lru  *simplewlru.Cache
 	lock sync.RWMutex
 }
 
@@ -20,7 +20,7 @@ func New(maxWeight uint, maxSize int) (*Cache, error) {
 // NewWithEvict constructs a fixed weight/size cache with the given eviction
 // callback.
 func NewWithEvict(maxWeight uint, maxSize int, onEvicted func(key interface{}, value interface{})) (*Cache, error) {
-	lru, err := simplewlru.NewWeightedLRU(maxWeight, maxSize, onEvicted)
+	lru, err := simplewlru.NewWithEvict(maxWeight, maxSize, onEvicted)
 	if err != nil {
 		return nil, err
 	}
