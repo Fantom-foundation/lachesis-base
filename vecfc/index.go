@@ -53,8 +53,8 @@ func DefaultConfig() IndexConfig {
 	return IndexConfig{
 		Caches: IndexCacheConfig{
 			ForklessCausePairs:   20000,
-			HighestBeforeSeqSize: 160000,
-			LowestAfterSeqSize:   160000,
+			HighestBeforeSeqSize: 160 * 1024,
+			LowestAfterSeqSize:   160 * 1024,
 		},
 	}
 }
@@ -64,8 +64,8 @@ func LiteConfig() IndexConfig {
 	return IndexConfig{
 		Caches: IndexCacheConfig{
 			ForklessCausePairs:   500,
-			HighestBeforeSeqSize: 4000,
-			LowestAfterSeqSize:   4000,
+			HighestBeforeSeqSize: 4 * 1024,
+			LowestAfterSeqSize:   4 * 1024,
 		},
 	}
 }
