@@ -42,7 +42,8 @@ func (s *Store) addRoot(root dag.Event, frame idx.Frame) {
 	// Add to cache.
 	if c, ok := s.cache.FrameRoots.Get(frame); ok {
 		rr := c.([]election.RootAndSlot)
-		s.cache.FrameRoots.Add(frame, append(rr, r))
+		rr = append(rr, r)
+		s.cache.FrameRoots.Add(frame, rr, uint(len(rr)))
 	}
 }
 
@@ -86,7 +87,7 @@ func (s *Store) GetFrameRoots(f idx.Frame) []election.RootAndSlot {
 	}
 
 	// Add to cache.
-	s.cache.FrameRoots.Add(f, rr)
+	s.cache.FrameRoots.Add(f, rr, uint(len(rr)))
 
 	return rr
 }
