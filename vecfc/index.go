@@ -1,27 +1,26 @@
 package vecfc
 
 import (
-	lru "github.com/hashicorp/golang-lru"
-
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
+	"github.com/Fantom-foundation/lachesis-base/utils/simplewlru"
 	"github.com/Fantom-foundation/lachesis-base/vecengine"
 )
 
 // IndexCacheConfig - config for cache sizes of Engine
 type IndexCacheConfig struct {
-	ForklessCause    int `json:"forklessCause"`
-	HighestBeforeSeq int `json:"highestBeforeSeq"`
-	LowestAfterSeq   int `json:"lowestAfterSeq"`
+	ForklessCausePairs   int
+	HighestBeforeSeqSize uint
+	LowestAfterSeqSize   uint
 }
 
 // IndexConfig - Engine config (cache sizes)
 type IndexConfig struct {
-	Caches IndexCacheConfig `json:"cacheSizes"`
+	Caches IndexCacheConfig
 }
 
 // Engine is a data to detect forkless-cause condition, calculate median timestamp, detect forks.
@@ -41,9 +40,9 @@ type Index struct {
 	}
 
 	cache struct {
-		HighestBeforeSeq *lru.Cache
-		LowestAfterSeq   *lru.Cache
-		ForklessCause    *lru.Cache
+		HighestBeforeSeq *simplewlru.Cache
+		LowestAfterSeq   *simplewlru.Cache
+		ForklessCause    *simplewlru.Cache
 	}
 
 	cfg IndexConfig
@@ -53,9 +52,9 @@ type Index struct {
 func DefaultConfig() IndexConfig {
 	return IndexConfig{
 		Caches: IndexCacheConfig{
-			ForklessCause:    2500,
-			HighestBeforeSeq: 500,
-			LowestAfterSeq:   500,
+			ForklessCausePairs:   20000,
+			HighestBeforeSeqSize: 160000,
+			LowestAfterSeqSize:   160000,
 		},
 	}
 }
@@ -64,9 +63,9 @@ func DefaultConfig() IndexConfig {
 func LiteConfig() IndexConfig {
 	return IndexConfig{
 		Caches: IndexCacheConfig{
-			ForklessCause:    100,
-			HighestBeforeSeq: 20,
-			LowestAfterSeq:   20,
+			ForklessCausePairs:   500,
+			HighestBeforeSeqSize: 4000,
+			LowestAfterSeqSize:   4000,
 		},
 	}
 }
@@ -95,9 +94,9 @@ func NewIndexWithEngine(crit func(error), config IndexConfig, engine *vecengine.
 }
 
 func (vi *Index) initCaches() {
-	vi.cache.ForklessCause, _ = lru.New(vi.cfg.Caches.ForklessCause)
-	vi.cache.HighestBeforeSeq, _ = lru.New(vi.cfg.Caches.HighestBeforeSeq)
-	vi.cache.LowestAfterSeq, _ = lru.New(vi.cfg.Caches.LowestAfterSeq)
+	vi.cache.ForklessCause, _ = simplewlru.New(uint(vi.cfg.Caches.ForklessCausePairs), vi.cfg.Caches.ForklessCausePairs)
+	vi.cache.HighestBeforeSeq, _ = simplewlru.New(vi.cfg.Caches.HighestBeforeSeqSize, int(vi.cfg.Caches.HighestBeforeSeqSize))
+	vi.cache.LowestAfterSeq, _ = simplewlru.New(vi.cfg.Caches.LowestAfterSeqSize, int(vi.cfg.Caches.HighestBeforeSeqSize))
 }
 
 // Reset resets buffers.

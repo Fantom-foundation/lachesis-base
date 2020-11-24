@@ -32,7 +32,7 @@ func (vi *Index) GetLowestAfter(id hash.Event) *LowestAfterSeq {
 	if b == nil {
 		return nil
 	}
-	vi.cache.LowestAfterSeq.Add(id, &b)
+	vi.cache.LowestAfterSeq.Add(id, &b, uint(len(b)))
 	return &b
 }
 
@@ -46,7 +46,7 @@ func (vi *Index) GetHighestBefore(id hash.Event) *HighestBeforeSeq {
 	if b == nil {
 		return nil
 	}
-	vi.cache.HighestBeforeSeq.Add(id, &b)
+	vi.cache.HighestBeforeSeq.Add(id, &b, uint(len(b)))
 	return &b
 }
 
@@ -54,12 +54,12 @@ func (vi *Index) GetHighestBefore(id hash.Event) *HighestBeforeSeq {
 func (vi *Index) SetLowestAfter(id hash.Event, seq *LowestAfterSeq) {
 	vi.setBytes(vi.table.LowestAfterSeq, id, *seq)
 
-	vi.cache.LowestAfterSeq.Add(id, seq)
+	vi.cache.LowestAfterSeq.Add(id, seq, uint(len(*seq)))
 }
 
 // SetHighestBefore stores the vectors into DB
 func (vi *Index) SetHighestBefore(id hash.Event, seq *HighestBeforeSeq) {
 	vi.setBytes(vi.table.HighestBeforeSeq, id, *seq)
 
-	vi.cache.HighestBeforeSeq.Add(id, seq)
+	vi.cache.HighestBeforeSeq.Add(id, seq, uint(len(*seq)))
 }
