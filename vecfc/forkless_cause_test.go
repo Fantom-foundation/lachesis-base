@@ -759,7 +759,7 @@ func codegen4ForklessCausedStability() {
 	vi := NewIndex(validators, memorydb.New())
 
 	processed := make(map[hash.Event]*inter.Event)
-	orderThenProcess := ordering.EventBuffer(ordering.Callback{
+	orderThenProcess := ordering.EventsBuffer(ordering.Callback{
 
 		Process: func(e *inter.Event) {
 			processed[e.ID()] = e

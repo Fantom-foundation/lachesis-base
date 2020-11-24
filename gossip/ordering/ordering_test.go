@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
-func TestEventBuffer(t *testing.T) {
+func TestEventsBuffer(t *testing.T) {
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events

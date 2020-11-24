@@ -16,7 +16,7 @@ type (
 		peer string
 	}
 
-	// Callback is a set of EventBuffer()'s args.
+	// Callback is a set of EventsBuffer()'s args.
 	Callback struct {
 		Process func(e dag.Event) error
 		Drop    func(e dag.Event, peer string, err error)
@@ -26,20 +26,20 @@ type (
 	}
 )
 
-type EventBuffer struct {
+type EventsBuffer struct {
 	incompletes *wlru.Cache // event hash -> event
 	callback    Callback
 }
 
-func New(maxEventsSize uint, maxEventsNum int, callback Callback) *EventBuffer {
+func New(maxEventsSize uint, maxEventsNum int, callback Callback) *EventsBuffer {
 	incompletes, _ := wlru.New(maxEventsSize, maxEventsNum)
-	return &EventBuffer{
+	return &EventsBuffer{
 		incompletes: incompletes,
 		callback:    callback,
 	}
 }
 
-func (buf *EventBuffer) PushEvent(e dag.Event, size uint, peer string) {
+func (buf *EventsBuffer) PushEvent(e dag.Event, size uint, peer string) {
 	w := &event{
 		Event: e,
 		peer:  peer,
@@ -49,7 +49,7 @@ func (buf *EventBuffer) PushEvent(e dag.Event, size uint, peer string) {
 	buf.pushEvent(w, buf.getIncompleteEventsList(), true)
 }
 
-func (buf *EventBuffer) getIncompleteEventsList() []*event {
+func (buf *EventsBuffer) getIncompleteEventsList() []*event {
 	res := make([]*event, 0, buf.incompletes.Len())
 	for _, childID := range buf.incompletes.Keys() {
 		child, _ := buf.incompletes.Peek(childID)
@@ -61,7 +61,7 @@ func (buf *EventBuffer) getIncompleteEventsList() []*event {
 	return res
 }
 
-func (buf *EventBuffer) pushEvent(e *event, incompleteEventsList []*event, strict bool) {
+func (buf *EventsBuffer) pushEvent(e *event, incompleteEventsList []*event, strict bool) {
 	// LRU is thread-safe, no need in mutex
 	if buf.callback.Exists(e.ID()) {
 		if strict {
@@ -109,10 +109,10 @@ func (buf *EventBuffer) pushEvent(e *event, incompleteEventsList []*event, stric
 	}
 }
 
-func (buf *EventBuffer) IsBuffered(id hash.Event) bool {
+func (buf *EventsBuffer) IsBuffered(id hash.Event) bool {
 	return buf.incompletes.Contains(id) // LRU is thread-safe, no need in mutex
 }
 
-func (buf *EventBuffer) Clear() {
+func (buf *EventsBuffer) Clear() {
 	buf.incompletes.Purge() // LRU is thread-safe, no need in mutex
 }

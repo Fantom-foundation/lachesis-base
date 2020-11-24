@@ -119,7 +119,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		})
 	}
 
-	// use pre-ordered events, call consensus(e) directly, to avoid issues with restoring state of EventBuffer
+	// use pre-ordered events, call consensus(es) directly
 	for n, e := range ordered {
 		if r.Intn(10) == 0 || n%20 == 0 {
 			prev := lchs[RESTORED]
