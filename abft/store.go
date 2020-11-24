@@ -62,7 +62,7 @@ func NewStore(mainDB kvdb.Store, getDB EpochDBProducer, crit func(error), cfg St
 }
 
 func (s *Store) initCache() {
-	s.cache.FrameRoots = s.makeCache(s.cfg.RootsNum, s.cfg.RootsFrames)
+	s.cache.FrameRoots = s.makeCache(s.cfg.Cache.RootsNum, s.cfg.Cache.RootsFrames)
 }
 
 // NewMemStore creates store over memory map.
