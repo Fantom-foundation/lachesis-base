@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
-func TestEventBuffer(t *testing.T) {
+func TestEventsBuffer(t *testing.T) {
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
@@ -31,7 +31,7 @@ func TestEventBuffer(t *testing.T) {
 	checked := 0
 
 	processed := make(map[hash.Event]dag.Event)
-	buffer := New(len(nodes)*10, Callback{
+	buffer := New(uint(len(nodes)*10*5), len(nodes)*10, Callback{
 
 		Process: func(e dag.Event) error {
 			if _, ok := processed[e.ID()]; ok {
@@ -71,7 +71,7 @@ func TestEventBuffer(t *testing.T) {
 
 	for _, rnd := range rand.Perm(len(ordered)) {
 		e := ordered[rnd]
-		buffer.PushEvent(e, "")
+		buffer.PushEvent(e, 5, "")
 	}
 
 	// everything is processed

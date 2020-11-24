@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/rlp"
-	lru "github.com/hashicorp/golang-lru"
 
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
+	"github.com/Fantom-foundation/lachesis-base/utils/simplewlru"
 )
 
 // Store is a abft persistent storage working over parent key-value database.
@@ -28,7 +28,7 @@ type Store struct {
 	cache struct {
 		LastDecidedState *LastDecidedState
 		EpochState       *EpochState
-		FrameRoots       *lru.Cache `cache:"-"` // store by pointer
+		FrameRoots       *simplewlru.Cache `cache:"-"` // store by pointer
 	}
 
 	epochDB    kvdb.DropableStore
@@ -62,7 +62,7 @@ func NewStore(mainDB kvdb.Store, getDB EpochDBProducer, crit func(error), cfg St
 }
 
 func (s *Store) initCache() {
-	s.cache.FrameRoots = s.makeCache(s.cfg.Roots)
+	s.cache.FrameRoots = s.makeCache(s.cfg.Cache.RootsNum, s.cfg.Cache.RootsFrames)
 }
 
 // NewMemStore creates store over memory map.
@@ -119,9 +119,7 @@ func (s *Store) dropEpochDB() error {
 // openEpochDB makes new epoch DB
 func (s *Store) openEpochDB(n idx.Epoch) error {
 	// Clear full LRU cache.
-	if s.cache.FrameRoots != nil {
-		s.cache.FrameRoots.Purge()
-	}
+	s.cache.FrameRoots.Purge()
 
 	s.epochDB = s.getEpochDB(n)
 	table.MigrateTables(&s.epochTable, s.epochDB)
@@ -169,12 +167,8 @@ func (s *Store) has(table kvdb.Store, key []byte) bool {
 	return res
 }
 
-func (s *Store) makeCache(size int) *lru.Cache {
-	if size <= 0 {
-		return nil
-	}
-
-	cache, err := lru.New(size)
+func (s *Store) makeCache(weight uint, size int) *simplewlru.Cache {
+	cache, err := simplewlru.New(weight, size)
 	if err != nil {
 		s.crit(err)
 	}

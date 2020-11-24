@@ -33,7 +33,7 @@ func (vi *Index) ForklessCause(aID, bID hash.Event) bool {
 	vi.Engine.InitBranchesInfo()
 	res := vi.forklessCause(aID, bID)
 
-	vi.cache.ForklessCause.Add(kv{aID, bID}, res)
+	vi.cache.ForklessCause.Add(kv{aID, bID}, res, 1)
 	return res
 }
 

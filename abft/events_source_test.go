@@ -3,14 +3,11 @@ package abft
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/rlp"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 // EventStore is a abft event storage for test purpose.
@@ -79,56 +76,4 @@ func TestEventStore(t *testing.T) {
 	})
 
 	store.Close()
-}
-
-/*
- * Utils:
- */
-
-func (s *EventStore) set(table kvdb.Store, key []byte, val interface{}) {
-	buf, err := rlp.EncodeToBytes(val)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := table.Put(key, buf); err != nil {
-		panic(err)
-	}
-}
-
-func (s *EventStore) get(table kvdb.Store, key []byte, to interface{}) interface{} {
-	buf, err := table.Get(key)
-	if err != nil {
-		panic(err)
-	}
-	if buf == nil {
-		return nil
-	}
-
-	err = rlp.DecodeBytes(buf, to)
-	if err != nil {
-		panic(err)
-	}
-	return to
-}
-
-func (s *EventStore) has(table kvdb.Store, key []byte) bool {
-	res, err := table.Has(key)
-	if err != nil {
-		panic(err)
-	}
-	return res
-}
-
-func (s *EventStore) makeCache(size int) *lru.Cache {
-	if size <= 0 {
-		return nil
-	}
-
-	cache, err := lru.New(size)
-	if err != nil {
-		panic(err)
-		return nil
-	}
-	return cache
 }
