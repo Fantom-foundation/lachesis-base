@@ -156,3 +156,11 @@ func (c *Cache) Weight() uint {
 	c.lock.RUnlock()
 	return w
 }
+
+// Total returns the total weight and number of items in the cache.
+func (c *Cache) Total() (weight uint, num int) {
+	c.lock.RLock()
+	weight, num = c.lru.Total()
+	c.lock.RUnlock()
+	return weight, num
+}

@@ -3,6 +3,8 @@ package dagordering
 import (
 	"errors"
 	"math/rand"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,10 +15,16 @@ import (
 )
 
 func TestEventsBuffer(t *testing.T) {
+	for try := int64(0); try < 1000; try++ {
+		testEventsBuffer(t, try)
+	}
+}
+
+func testEventsBuffer(t *testing.T, try int64) {
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
-	r := rand.New(rand.NewSource(time.Now().Unix()))
+	r := rand.New(rand.NewSource(try))
 	_ = tdag.ForEachRandEvent(nodes, 10, 3, r, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
@@ -31,7 +39,11 @@ func TestEventsBuffer(t *testing.T) {
 	checked := 0
 
 	processed := make(map[hash.Event]dag.Event)
-	buffer := New(uint(len(nodes)*10*5), len(nodes)*10, Callback{
+	limit := dag.Metric{
+		Num:  idx.Event(len(ordered)),
+		Size: uint64(ordered.Metric().Size),
+	}
+	buffer := New(limit, Callback{
 
 		Process: func(e dag.Event) error {
 			if _, ok := processed[e.ID()]; ok {
@@ -48,8 +60,10 @@ func TestEventsBuffer(t *testing.T) {
 			return nil
 		},
 
-		Drop: func(e dag.Event, peer string, err error) {
-			t.Fatalf("%s unexpectedly dropped with %s", e.String(), err)
+		Released: func(e dag.Event, peer string, err error) {
+			if err != nil {
+				t.Fatalf("%s unexpectedly dropped with '%s'", e.String(), err)
+			}
 		},
 
 		Exists: func(e hash.Event) bool {
@@ -69,9 +83,10 @@ func TestEventsBuffer(t *testing.T) {
 		},
 	})
 
-	for _, rnd := range rand.Perm(len(ordered)) {
+	// shuffle events
+	for _, rnd := range r.Perm(len(ordered)) {
 		e := ordered[rnd]
-		buffer.PushEvent(e, 5, "")
+		buffer.PushEvent(e, "")
 	}
 
 	// everything is processed
@@ -82,5 +97,112 @@ func TestEventsBuffer(t *testing.T) {
 	}
 	if checked != len(processed) {
 		t.Fatal("not all the events were checked")
+	}
+}
+
+func TestEventsBufferReleasing(t *testing.T) {
+	for try := int64(0); try < 100; try++ {
+		testEventsBufferReleasing(t, 200, try)
+	}
+}
+
+func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
+	r := rand.New(rand.NewSource(try))
+	nodes := tdag.GenNodes(5)
+	eventsPerNode := 1 + r.Intn(maxEvents)/5
+
+	var ordered dag.Events
+	_ = tdag.ForEachRandEvent(nodes, eventsPerNode, 3, r, tdag.ForEachEvent{
+		Process: func(e dag.Event, name string) {
+			ordered = append(ordered, e)
+		},
+		Build: func(e dag.MutableEvent, name string) error {
+			e.SetEpoch(1)
+			e.SetFrame(idx.Frame(e.Seq()))
+			return nil
+		},
+	})
+
+	released := uint32(0)
+
+	processed := make(map[hash.Event]dag.Event)
+	var mutex sync.Mutex
+	limit := dag.Metric{
+		Num:  idx.Event(r.Intn(maxEvents)),
+		Size: uint64(r.Intn(maxEvents * 100)),
+	}
+	buffer := New(limit, Callback{
+		Process: func(e dag.Event) error {
+			mutex.Lock()
+			defer mutex.Unlock()
+			if _, ok := processed[e.ID()]; ok {
+				t.Fatalf("%s already processed", e.String())
+				return nil
+			}
+			for _, p := range e.Parents() {
+				if _, ok := processed[p]; !ok {
+					t.Fatalf("got %s before parent %s", e.String(), p.String())
+					return nil
+				}
+			}
+			if r.Intn(10) == 0 {
+				return errors.New("testing error")
+			}
+			if r.Intn(10) == 0 {
+				time.Sleep(time.Microsecond * 100)
+			}
+			processed[e.ID()] = e
+			return nil
+		},
+
+		Released: func(e dag.Event, peer string, err error) {
+			mutex.Lock()
+			defer mutex.Unlock()
+			atomic.AddUint32(&released, 1)
+		},
+
+		Exists: func(e hash.Event) bool {
+			mutex.Lock()
+			defer mutex.Unlock()
+			return processed[e] != nil
+		},
+
+		Get: func(e hash.Event) dag.Event {
+			mutex.Lock()
+			defer mutex.Unlock()
+			return processed[e]
+		},
+
+		Check: func(e dag.Event, parents dag.Events) error {
+			mutex.Lock()
+			defer mutex.Unlock()
+			if r.Intn(10) == 0 {
+				return errors.New("testing error")
+			}
+			if r.Intn(10) == 0 {
+				time.Sleep(time.Microsecond * 100)
+			}
+			return nil
+		},
+	})
+
+	// duplicate some events
+	ordered = append(ordered, ordered[:r.Intn(len(ordered))]...)
+	// shuffle events
+	wg := sync.WaitGroup{}
+	for _, rnd := range r.Perm(len(ordered)) {
+		e := ordered[rnd]
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			buffer.PushEvent(e, "")
+		}()
+	}
+	wg.Wait()
+	buffer.Clear()
+
+	// everything is released
+	if uint32(len(ordered)) != released {
+		t.Fatal("not all the events were released", len(ordered), released)
 	}
 }
