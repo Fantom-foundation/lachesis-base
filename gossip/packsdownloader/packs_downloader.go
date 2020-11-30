@@ -19,7 +19,7 @@ import (
 type PacksDownloader struct {
 	// Callbacks
 	peerMisbehaviour PeerMisbehaviourFn
-	fetcher          *fetcher.Fetcher
+	fetcher          *dagfetcher.Fetcher
 	onlyNotConnected OnlyNotConnectedFn
 
 	config Config
@@ -46,7 +46,7 @@ func LiteConfig() Config {
 }
 
 // New creates a packs fetcher to retrieve events based on pack announcements.
-func New(fetcher *fetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn, config Config) *PacksDownloader {
+func New(fetcher *dagfetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn, config Config) *PacksDownloader {
 	return &PacksDownloader{
 		config:           config,
 		fetcher:          fetcher,

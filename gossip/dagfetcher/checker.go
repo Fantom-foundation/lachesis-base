@@ -1,4 +1,4 @@
-package fetcher
+package dagfetcher
 
 import "github.com/Fantom-foundation/lachesis-base/inter/dag"
 

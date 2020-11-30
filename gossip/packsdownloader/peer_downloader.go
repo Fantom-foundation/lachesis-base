@@ -67,7 +67,7 @@ type packData struct {
 	ids   hash.Events // Event hashes which form the pack
 	time  time.Time   // Timestamp of the announcement
 
-	fetchEvents fetcher.EventsRequesterFn
+	fetchEvents dagfetcher.EventsRequesterFn
 }
 
 // PeerPacksDownloader is responsible for accumulating pack announcements from various peers
@@ -82,7 +82,7 @@ type PeerPacksDownloader struct {
 
 	// Callbacks
 	peerMisbehaviour PeerMisbehaviourFn
-	fetcher          *fetcher.Fetcher
+	fetcher          *dagfetcher.Fetcher
 	onlyNotConnected OnlyNotConnectedFn
 
 	// Announce states
@@ -97,7 +97,7 @@ type PeerPacksDownloader struct {
 }
 
 // New creates a packs fetcher to retrieve events based on pack announcements. Works only with 1 peer.
-func newPeer(peer Peer, myEpoch idx.Epoch, fetcher *fetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn) *PeerPacksDownloader {
+func newPeer(peer Peer, myEpoch idx.Epoch, fetcher *dagfetcher.Fetcher, onlyNotConnected OnlyNotConnectedFn, peerMisbehaviour PeerMisbehaviourFn) *PeerPacksDownloader {
 	return &PeerPacksDownloader{
 		notifyInfo:       make(chan *packInfoData, maxQueuedInfos),
 		notifyPacksNum:   make(chan *packsNumData, maxQueuedInfos),
@@ -165,7 +165,7 @@ func (d *PeerPacksDownloader) NotifyPacksNum(epoch idx.Epoch, packsNum idx.Pack)
 }
 
 // NotifyPack injects new packs from a peer
-func (d *PeerPacksDownloader) NotifyPack(epoch idx.Epoch, index idx.Pack, ids hash.Events, time time.Time, fetchEvents fetcher.EventsRequesterFn) error {
+func (d *PeerPacksDownloader) NotifyPack(epoch idx.Epoch, index idx.Pack, ids hash.Events, time time.Time, fetchEvents dagfetcher.EventsRequesterFn) error {
 	if d.myEpoch != epoch {
 		return nil // Short circuit if from another epoch
 	}

@@ -1,4 +1,4 @@
-package ordering
+package dagordering
 
 import (
 	"errors"

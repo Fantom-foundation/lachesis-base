@@ -1,4 +1,4 @@
-package ordering
+package dagordering
 
 import (
 	"github.com/Fantom-foundation/lachesis-base/eventcheck"
