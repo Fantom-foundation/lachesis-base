@@ -2,6 +2,8 @@ package dag
 
 import (
 	"strings"
+
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
 // Events is a ordered slice of events.
@@ -14,4 +16,12 @@ func (ee Events) String() string {
 		ss[i] = ee[i].String()
 	}
 	return strings.Join(ss, " ")
+}
+
+func (ee Events) Metric() (metric Metric) {
+	metric.Num = idx.Event(len(ee))
+	for _, e := range ee {
+		metric.Size += uint64(e.Size())
+	}
+	return metric
 }

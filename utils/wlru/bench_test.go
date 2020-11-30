@@ -12,7 +12,7 @@ func BenchmarkWeightedCache_Add(b *testing.B) {
 	b.ResetTimer()
 	for i := 1; i < b.N; i += len(data) {
 		for j, d := range data {
-			cache.Add(i * j, d, 5)
+			cache.Add(i*j, d, 5)
 		}
 	}
 }
@@ -23,7 +23,7 @@ func BenchmarkCache_Add(b *testing.B) {
 	b.ResetTimer()
 	for i := 1; i < b.N; i += len(data) {
 		for j, d := range data {
-			cache.Add(i * j, d)
+			cache.Add(i*j, d)
 		}
 	}
 }

@@ -21,6 +21,8 @@ type Event interface {
 	ID() hash.Event
 
 	String() string
+
+	Size() int
 }
 
 type MutableEvent interface {
@@ -110,6 +112,8 @@ func (e *BaseEvent) Parents() hash.Events { return e.parents }
 func (e *BaseEvent) Lamport() idx.Lamport { return e.lamport }
 
 func (e *BaseEvent) ID() hash.Event { return e.id }
+
+func (e *BaseEvent) Size() int { return 4 + 4 + 4 + 4 + len(e.parents)*32 + 4 + 32 }
 
 func (e *MutableBaseEvent) SetEpoch(v idx.Epoch) { e.epoch = v }
 

@@ -164,6 +164,11 @@ func (c *Cache) Weight() uint {
 	return c.weight
 }
 
+// Total returns the total weight and number of items in the cache.
+func (c *Cache) Total() (weight uint, num int) {
+	return c.Weight(), c.Len()
+}
+
 // Resize changes the cache size.
 func (c *Cache) Resize(maxWeight uint, maxSize int) (evicted int) {
 	c.maxWeight = maxWeight
