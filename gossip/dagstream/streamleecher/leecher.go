@@ -256,7 +256,7 @@ func (d *Leecher) Stop() {
 	d.wg.Wait()
 }
 
-func (d *Leecher) NotifyChunkReceived(sessionID uint32, last hash.Event, total dag.Metric, done bool) error {
+func (d *Leecher) NotifyChunkReceived(sessionID uint32, last hash.Event, done bool) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.session.agent == nil {
@@ -271,5 +271,5 @@ func (d *Leecher) NotifyChunkReceived(sessionID uint32, last hash.Event, total d
 		d.terminateSession()
 		return nil
 	}
-	return d.session.agent.NotifyChunkReceived(last, total)
+	return d.session.agent.NotifyChunkReceived(last)
 }

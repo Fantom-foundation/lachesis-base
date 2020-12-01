@@ -18,8 +18,7 @@ var (
 type OnlyNotConnectedFn func(ids hash.Events) hash.Events
 
 type receivedChunk struct {
-	last  hash.Event
-	total dag.Metric
+	last hash.Event
 }
 
 type EpochDownloaderCallbacks struct {
@@ -37,8 +36,8 @@ type EpochDownloaderCallbacks struct {
 type PeerLeecher struct {
 	cfg EpochDownloaderConfig
 
-	totalRequested dag.Metric
-	totalProcessed dag.Metric
+	totalRequested int
+	totalProcessed int
 
 	processingChunks []receivedChunk
 
@@ -51,7 +50,7 @@ type PeerLeecher struct {
 
 	wg *sync.WaitGroup
 
-	parallelTasks chan func()
+	parallelTasks *workers.Workers
 
 	// Callbacks
 	callback EpochDownloaderCallbacks
@@ -103,10 +102,9 @@ func (d *PeerLeecher) Stopped() bool {
 }
 
 // NotifyPackInfo injects new pack infos from a peer
-func (d *PeerLeecher) NotifyChunkReceived(last hash.Event, total dag.Metric) error {
+func (d *PeerLeecher) NotifyChunkReceived(last hash.Event) error {
 	op := &receivedChunk{
-		last:  last,
-		total: total,
+		last: last,
 	}
 	select {
 	case d.notifyReceivedChunk <- op:
@@ -160,8 +158,7 @@ func (d *PeerLeecher) sweepProcessedChunks() []receivedChunk {
 		if len(d.callback.OnlyNotConnected(hash.Events{op.last})) != 0 {
 			notProcessed = append(notProcessed, op)
 		} else {
-			d.totalProcessed.Num += op.total.Num
-			d.totalProcessed.Size += op.total.Size
+			d.totalProcessed++
 		}
 	}
 	return notProcessed
@@ -174,32 +171,9 @@ func (d *PeerLeecher) tryToSync() {
 
 	requestsToSend := make([]dag.Metric, 0, d.cfg.ParallelChunksDownload)
 
-	for i := 0; i < d.cfg.ParallelChunksDownload; i++ {
-		want := dag.Metric{
-			Num:  idx.Event(d.cfg.ParallelChunksDownload)*d.cfg.DefaultChunkSize.Num + d.totalProcessed.Num,
-			Size: uint64(d.cfg.ParallelChunksDownload)*d.cfg.DefaultChunkSize.Size + d.totalProcessed.Size,
-		}
-		got := d.totalRequested
-		toRequest := dag.Metric{}
-		if want.Num > got.Num {
-			toRequest.Num = want.Num - got.Num
-		}
-		if want.Size > got.Size {
-			toRequest.Size = want.Size - got.Size
-		}
-		if toRequest.Num > d.cfg.DefaultChunkSize.Num {
-			toRequest.Num = d.cfg.DefaultChunkSize.Num
-		}
-		if toRequest.Size > d.cfg.DefaultChunkSize.Size {
-			toRequest.Size = d.cfg.DefaultChunkSize.Size
-		}
-		if toRequest.Num == 0 || toRequest.Size == 0 {
-			break
-		}
-
-		d.totalRequested.Num += toRequest.Num
-		d.totalRequested.Size += toRequest.Size
-		requestsToSend = append(requestsToSend, toRequest)
+	for d.totalRequested < d.totalProcessed+d.cfg.ParallelChunksDownload {
+		requestsToSend = append(requestsToSend, d.cfg.DefaultChunkSize)
+		d.totalRequested++
 	}
 	for _, r := range requestsToSend {
 		request := r
