@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/gossip/dagstream"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/utils/workers"
 )
 
 var (
@@ -29,7 +30,7 @@ type Seeder struct {
 	notifyReceivedRequest  chan *requestAndPeer
 	quit                   chan struct{}
 
-	parallelTasks chan func()
+	parallelTasks *workers.Workers
 
 	cfg Config
 
@@ -37,16 +38,17 @@ type Seeder struct {
 }
 
 func New(cfg Config, callbacks Callbacks) *Seeder {
-	return &Seeder{
+	s := &Seeder{
 		callback:               callbacks,
 		peerSessions:           make(map[string][]uint32),
 		sessions:               make(map[sessionIDAndPeer]sessionState),
 		notifyUnregisteredPeer: make(chan string, 128),
 		notifyReceivedRequest:  make(chan *requestAndPeer, 16),
-		parallelTasks:          make(chan func(), cfg.SenderThreads*2),
 		quit:                   make(chan struct{}),
 		cfg:                    cfg,
 	}
+	s.parallelTasks = workers.New(&s.wg, s.quit, cfg.SenderThreads*2)
+	return s
 }
 
 type Callbacks struct {
@@ -78,13 +80,7 @@ type sessionState struct {
 }
 
 func (s *Seeder) Start() {
-	for i := 0; i < s.cfg.SenderThreads; i++ {
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			worker(s.parallelTasks, s.quit)
-		}()
-	}
+	s.parallelTasks.Start(s.cfg.SenderThreads)
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -187,15 +183,14 @@ func (s *Seeder) loop() {
 					allConsumed = false
 					return false
 				}
-				if op.request.Type == dagstream.RequestIDs {
+				if op.request.Type == dagstream.RequestEvents {
 					resp.Events = append(resp.Events, event)
 					ids = append(ids, id)
-					size += eventSize
 				} else {
 					resp.IDs = append(resp.IDs, id)
 					ids = resp.IDs
-					size += uint64(len(id))
 				}
+				size += eventSize
 				last = id
 				return true
 			})
@@ -209,20 +204,9 @@ func (s *Seeder) loop() {
 			resp.Done = allConsumed
 			resp.SessionID = op.request.Session.ID
 
-			s.parallelTasks <- func() {
+			_ = s.parallelTasks.Enqueue(func() {
 				_ = session.sendChunk(resp, ids)
-			}
-		}
-	}
-}
-
-func worker(tasksC <-chan func(), quit <-chan struct{}) {
-	for {
-		select {
-		case <-quit:
-			return
-		case job := <-tasksC:
-			job()
+			})
 		}
 	}
 }

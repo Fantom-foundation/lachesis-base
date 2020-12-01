@@ -11,6 +11,6 @@ type Metric struct {
 	Size uint64
 }
 
-func (m *Metric) String() string {
+func (m Metric) String() string {
 	return fmt.Sprintf("{Num=%d,Size=%d}", m.Num, m.Size)
 }
