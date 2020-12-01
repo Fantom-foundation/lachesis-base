@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
-	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/utils/workers"
 )
 
 var (
@@ -59,11 +59,12 @@ type PeerLeecher struct {
 
 // New creates a packs fetcher to retrieve events based on pack announcements. Works only with 1 peer.
 func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloaderCallbacks) *PeerLeecher {
+	quit := make(chan struct{})
 	return &PeerLeecher{
 		processingChunks:    make([]receivedChunk, 0, cfg.ParallelChunksDownload+1),
-		parallelTasks:       make(chan func(), cfg.ParallelChunksDownload+1),
+		parallelTasks:       workers.New(wg, quit, cfg.ParallelChunksDownload+1),
 		notifyReceivedChunk: make(chan *receivedChunk, cfg.ParallelChunksDownload+1),
-		quit:                make(chan struct{}),
+		quit:                quit,
 		cfg:                 cfg,
 		callback:            callback,
 		wg:                  wg,
@@ -73,13 +74,7 @@ func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloader
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and event fetches until termination requested.
 func (d *PeerLeecher) Start() {
-	for i := 0; i < d.cfg.ParallelChunksDownload; i++ {
-		d.wg.Add(1)
-		go func() {
-			defer d.wg.Done()
-			worker(d.parallelTasks, d.quit)
-		}()
-	}
+	d.parallelTasks.Start(d.cfg.ParallelChunksDownload)
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -208,19 +203,8 @@ func (d *PeerLeecher) tryToSync() {
 	}
 	for _, r := range requestsToSend {
 		request := r
-		d.parallelTasks <- func() {
+		_ = d.parallelTasks.Enqueue(func() {
 			_ = d.callback.RequestChunk(request)
-		}
-	}
-}
-
-func worker(tasksC <-chan func(), quit <-chan struct{}) {
-	for {
-		select {
-		case <-quit:
-			return
-		case job := <-tasksC:
-			job()
-		}
+		})
 	}
 }
