@@ -11,8 +11,6 @@ type DataSemaphore struct {
 	processing    dag.Metric
 	maxProcessing dag.Metric
 
-	terminated bool
-
 	mu   sync.Mutex
 	cond *sync.Cond
 
@@ -28,12 +26,12 @@ func New(maxProcessing dag.Metric, warning func(received dag.Metric, processing 
 	return s
 }
 
-func (s *DataSemaphore) Acquire(events dag.Metric, timeout time.Duration) bool {
+func (s *DataSemaphore) Acquire(weight dag.Metric, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for !s.tryAcquire(events) {
-		if s.terminated || time.Now().After(deadline) {
+	for !s.tryAcquire(weight) {
+		if weight.Size > s.maxProcessing.Size || weight.Num > s.maxProcessing.Num || time.Now().After(deadline) {
 			return false
 		}
 		s.cond.Wait()
@@ -41,10 +39,10 @@ func (s *DataSemaphore) Acquire(events dag.Metric, timeout time.Duration) bool {
 	return true
 }
 
-func (s *DataSemaphore) TryAcquire(events dag.Metric) bool {
+func (s *DataSemaphore) TryAcquire(weight dag.Metric) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.tryAcquire(events)
+	return s.tryAcquire(weight)
 }
 
 func (s *DataSemaphore) tryAcquire(metric dag.Metric) bool {
@@ -58,17 +56,17 @@ func (s *DataSemaphore) tryAcquire(metric dag.Metric) bool {
 	return true
 }
 
-func (s *DataSemaphore) Release(events dag.Metric) {
+func (s *DataSemaphore) Release(weight dag.Metric) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.processing.Num < events.Num || s.processing.Size < events.Size {
+	if s.processing.Num < weight.Num || s.processing.Size < weight.Size {
 		if s.warning != nil {
-			s.warning(s.processing, s.processing, events)
+			s.warning(s.processing, s.processing, weight)
 		}
 		s.processing = dag.Metric{}
 	} else {
-		s.processing.Num -= events.Num
-		s.processing.Size -= events.Size
+		s.processing.Num -= weight.Num
+		s.processing.Size -= weight.Size
 	}
 	s.cond.Broadcast()
 }
@@ -77,7 +75,6 @@ func (s *DataSemaphore) Terminate() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.maxProcessing = dag.Metric{}
-	s.terminated = true
 	s.cond.Broadcast()
 }
 
