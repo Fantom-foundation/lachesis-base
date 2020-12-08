@@ -3,6 +3,7 @@ package dag
 import (
 	"strings"
 
+	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 )
 
@@ -24,4 +25,12 @@ func (ee Events) Metric() (metric Metric) {
 		metric.Size += uint64(e.Size())
 	}
 	return metric
+}
+
+func (ee Events) IDs() hash.Events {
+	ids := make(hash.Events, len(ee))
+	for i, e := range ee {
+		ids[i] = e.ID()
+	}
+	return ids
 }
