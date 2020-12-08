@@ -32,6 +32,7 @@ type SyncedPool struct {
 	flushIDKey []byte
 
 	sync.Mutex
+	flushing sync.RWMutex
 }
 
 func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
@@ -103,7 +104,7 @@ func (p *SyncedPool) GetReadonly(name string) (kvdb.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	wrapper.Readonly = WrapWithReadonly(db)
+	wrapper.Readonly = WrapWithReadonly(db, &p.flushing)
 	p.wrappers[name] = wrapper
 
 	return wrapper.Readonly, nil
@@ -125,6 +126,9 @@ func (p *SyncedPool) getDb(name string) *LazyFlushable {
 func (p *SyncedPool) Flush(id []byte) error {
 	p.Lock()
 	defer p.Unlock()
+
+	p.flushing.Lock()
+	defer p.flushing.Unlock()
 
 	return p.flush(id)
 }
