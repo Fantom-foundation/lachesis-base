@@ -50,7 +50,7 @@ func New(limit dag.Metric, callback Callback) *EventsBuffer {
 	return buf
 }
 
-func (buf *EventsBuffer) PushEvent(de dag.Event, peer string) {
+func (buf *EventsBuffer) PushEvent(de dag.Event, peer string) (complete bool) {
 	e := &event{
 		event: de,
 		peer:  peer,
@@ -63,27 +63,28 @@ func (buf *EventsBuffer) PushEvent(de dag.Event, peer string) {
 		// duplicate
 		buf.dropEvent(e, eventcheck.ErrDuplicateEvent)
 		buf.releaseEvent(e)
-		return
+		return false
 	}
-	buf.pushEvent(e, buf.getIncompleteEventsList(), false)
+	complete = buf.pushEvent(e, buf.getIncompleteEventsList(), false)
 	buf.spillIncompletes(buf.limit)
+	return complete
 }
 
-func (buf *EventsBuffer) pushEvent(e *event, incompleteEventsList []*event, recheck bool) {
+func (buf *EventsBuffer) pushEvent(e *event, incompleteEventsList []*event, recheck bool) bool {
 	if buf.callback.Exists(e.event.ID()) {
 		buf.incompletes.Remove(e.event.ID())
 		if !recheck {
 			buf.dropEvent(e, eventcheck.ErrAlreadyConnectedEvent)
 		}
 		buf.releaseEvent(e)
-		return
+		return false
 	}
 	parents := buf.completeEventParents(e)
 	if parents == nil {
 		if !recheck {
 			buf.incompletes.Add(e.event.ID(), e, uint(e.event.Size()))
 		}
-		return
+		return false
 	}
 
 	ok := buf.processCompleteEvent(e, parents)
@@ -101,6 +102,7 @@ func (buf *EventsBuffer) pushEvent(e *event, incompleteEventsList []*event, rech
 		}
 	}
 	buf.incompletes.Remove(e.event.ID())
+	return ok
 }
 
 func (buf *EventsBuffer) getIncompleteEventsList() []*event {

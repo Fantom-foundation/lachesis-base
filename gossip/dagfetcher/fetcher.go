@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
-	"github.com/Fantom-foundation/lachesis-base/utils"
+	"github.com/Fantom-foundation/lachesis-base/utils/wlru"
+	"github.com/Fantom-foundation/lachesis-base/utils/workers"
 )
 
 /*
@@ -28,31 +28,20 @@ type PeerMisbehaviourFn func(peer string, err error) bool
 // EventsRequesterFn is a callback type for sending a event retrieval request.
 type EventsRequesterFn func(hash.Events) error
 
-// inject represents a schedules import operation.
-type inject struct {
-	events dag.Events // Incoming events
-	time   time.Time  // Timestamp when received
-
-	peer string // Identifier of the peer which sent events
-
+type announceData struct {
+	time        time.Time // Timestamp of the announcement
+	peer        string    // Identifier of the peer originating the notification
 	fetchEvents EventsRequesterFn
 }
 
-// announces is the hash notification of the availability of new events in the
-// network.
 type announcesBatch struct {
-	hashes hash.Events // Hashes of the events being announced
-	time   time.Time   // Timestamp of the announcement
-
-	peer string // Identifier of the peer originating the notification
-
-	fetchEvents EventsRequesterFn
-
-	internal bool
+	announceData
+	ids hash.Events // Hashes of the events being announced
 }
-type oneAnnounce struct {
-	batch *announcesBatch
-	i     int
+
+type fetchingEvent struct {
+	announce     announceData
+	fetchingTime time.Time
 }
 
 // Fetcher is responsible for accumulating event announcements from various peers
@@ -61,109 +50,87 @@ type Fetcher struct {
 	cfg Config
 
 	// Various event channels
-	notifications chan *announcesBatch
-	inject        chan *inject
-	quit          chan struct{}
+	notifications  chan announcesBatch
+	receivedEvents chan hash.Events
+	quit           chan struct{}
 
 	// Callbacks
 	callback Callback
 
 	// Announce states
-	stateMu   utils.SpinLock                // Protects announces and announced
-	announces map[string]int                // Per peer announce counts to prevent memory exhaustion
-	announced map[hash.Event][]*oneAnnounce // Announced events, scheduled for fetching
+	announces *wlru.Cache // Announced events, scheduled for fetching
 
-	fetching     map[hash.Event]*oneAnnounce // Announced events, currently fetching
-	fetchingTime map[hash.Event]time.Time
-	wg           sync.WaitGroup
+	fetching map[hash.Event]fetchingEvent // Announced events, currently fetching
+	wg       sync.WaitGroup
+
+	parallelTasks *workers.Workers
 }
 
 type Callback struct {
-	// PushEvent is a callback type to connect a received event
-	PushEvent func(e dag.Event, peer string)
 	// FilterInterested returns only event which may be requested.
 	OnlyInterested func(ids hash.Events) hash.Events
 	// PeerMisbehaviour is a callback type for dropping a peer detected as malicious.
 	PeerMisbehaviour func(peer string, err error) bool
-
-	ReleasedEvent func(e dag.Event, peer string, err error)
 }
 
 // New creates a event fetcher to retrieve events based on hash announcements.
 func New(cfg Config, callback Callback) *Fetcher {
-	return &Fetcher{
-		cfg:           cfg,
-		notifications: make(chan *announcesBatch, cfg.MaxQueuedHashesBatches),
-		inject:        make(chan *inject, cfg.MaxQueuedEventsBatches),
-		quit:          make(chan struct{}),
-		announces:     make(map[string]int),
-		announced:     make(map[hash.Event][]*oneAnnounce),
-		fetching:      make(map[hash.Event]*oneAnnounce),
-		fetchingTime:  make(map[hash.Event]time.Time),
-		callback:      callback,
+	f := &Fetcher{
+		cfg:            cfg,
+		notifications:  make(chan announcesBatch, cfg.MaxQueuedBatches),
+		receivedEvents: make(chan hash.Events, cfg.MaxQueuedBatches),
+		quit:           make(chan struct{}),
+		fetching:       make(map[hash.Event]fetchingEvent),
+		callback:       callback,
 	}
+	f.announces, _ = wlru.NewWithEvict(uint(cfg.HashLimit), cfg.HashLimit, func(key interface{}, _ interface{}) {
+		delete(f.fetching, key.(hash.Event))
+	})
+	f.parallelTasks = workers.New(&f.wg, f.quit, f.cfg.MaxParallelRequests*2)
+	return f
 }
 
-// Start boots up the announcement based synchroniser, accepting and processing
-// hash notifications and event fetches until termination requested.
+// Start boots up the events fetcher.
 func (f *Fetcher) Start() {
+	f.parallelTasks.Start(f.cfg.MaxParallelRequests)
 	f.wg.Add(1)
-	go f.loop()
+	go func() {
+		defer f.wg.Done()
+		f.loop()
+	}()
 }
 
-// Stop terminates the announcement based synchroniser, canceling all pending
-// operations.
+// Stop interrupts the fetcher, canceling all the pending operations.
+// Stop waits until all the internal goroutines have finished.
 func (f *Fetcher) Stop() {
 	close(f.quit)
+	f.parallelTasks.Drain()
 	f.wg.Wait()
 }
 
-// Overloaded returns true if too much events are being processed or requested
+// Overloaded returns true if too much events are being requested
 func (f *Fetcher) Overloaded() bool {
-	f.stateMu.Lock()
-	defer f.stateMu.Unlock()
-	return f.overloaded()
+	return len(f.receivedEvents) > f.cfg.MaxQueuedBatches*3/4 ||
+		len(f.notifications) > f.cfg.MaxQueuedBatches*3/4 ||
+		f.announces.Len() > f.cfg.HashLimit*3/4
 }
 
-func (f *Fetcher) overloaded() bool {
-	return len(f.inject) > f.cfg.MaxQueuedEventsBatches*3/4 ||
-		len(f.notifications) > f.cfg.MaxQueuedHashesBatches*3/4 ||
-		len(f.announced) > f.cfg.HashLimit // protected by stateMu
-}
-
-// OverloadedPeer returns true if too much events are being processed or requested from the peer
-func (f *Fetcher) OverloadedPeer(peer string) bool {
-	f.stateMu.Lock()
-	defer f.stateMu.Unlock()
-	return f.overloaded() || f.announces[peer] > f.cfg.HashLimit/2 // protected by stateMu
-}
-
-func (f *Fetcher) setAnnounces(peer string, num int) {
-	f.stateMu.Lock()
-	defer f.stateMu.Unlock()
-	f.announces[peer] = num
-}
-
-func (f *Fetcher) setAnnounced(id hash.Event, announces []*oneAnnounce) {
-	f.stateMu.Lock()
-	defer f.stateMu.Unlock()
-	f.announced[id] = announces
-}
-
-// Notify announces the fetcher of the potential availability of a new event in
+// NotifyAnnounces announces the fetcher of the potential availability of a new event in
 // the network.
-func (f *Fetcher) Notify(peer string, hashes hash.Events, time time.Time, fetchEvents EventsRequesterFn) error {
+func (f *Fetcher) NotifyAnnounces(peer string, ids hash.Events, time time.Time, fetchEvents EventsRequesterFn) error {
 	// divide big batch into smaller ones
-	for start := 0; start < len(hashes); start += f.cfg.MaxHashesBatch {
-		end := len(hashes)
-		if end > start+f.cfg.MaxHashesBatch {
-			end = start + f.cfg.MaxHashesBatch
+	for start := 0; start < len(ids); start += f.cfg.MaxBatch {
+		end := len(ids)
+		if end > start+f.cfg.MaxBatch {
+			end = start + f.cfg.MaxBatch
 		}
-		op := &announcesBatch{
-			hashes:      hashes[start:end],
-			time:        time,
-			peer:        peer,
-			fetchEvents: fetchEvents,
+		op := announcesBatch{
+			announceData: announceData{
+				time:        time,
+				peer:        peer,
+				fetchEvents: fetchEvents,
+			},
+			ids: ids[start:end],
 		}
 		select {
 		case <-f.quit:
@@ -175,72 +142,63 @@ func (f *Fetcher) Notify(peer string, hashes hash.Events, time time.Time, fetchE
 	return nil
 }
 
-func (f *Fetcher) Enqueue(peer string, events dag.Events, time time.Time, fetchEvents EventsRequesterFn) error {
+func (f *Fetcher) NotifyReceived(ids hash.Events) error {
 	// divide big batch into smaller ones
-	for start := 0; start < len(events); start += f.cfg.MaxEventsBatch {
-		end := len(events)
-		if end > start+f.cfg.MaxEventsBatch {
-			end = start + f.cfg.MaxEventsBatch
-		}
-		op := &inject{
-			events:      events[start:end],
-			time:        time,
-			peer:        peer,
-			fetchEvents: fetchEvents,
+	for start := 0; start < len(ids); start += f.cfg.MaxBatch {
+		end := len(ids)
+		if end > start+f.cfg.MaxBatch {
+			end = start + f.cfg.MaxBatch
 		}
 		select {
 		case <-f.quit:
-			for _, e := range op.events {
-				f.callback.ReleasedEvent(e, peer, errTerminated)
-			}
 			return errTerminated
-		case f.inject <- op:
+		case f.receivedEvents <- ids[start:end]:
 			continue
 		}
 	}
 	return nil
 }
 
-func (f *Fetcher) processNotification(notification *announcesBatch, fetchTimer *time.Timer) {
-	count := f.announces[notification.peer]
-	if !notification.internal {
-		if count+len(notification.hashes) > f.cfg.HashLimit {
-			if f.callback.PeerMisbehaviour(notification.peer, ErrTooManyAnnounces) {
-				return
-			}
-		}
+func (f *Fetcher) getAnnounces(id hash.Event) []announceData {
+	announces, ok := f.announces.Get(id)
+	if !ok {
+		return []announceData{}
 	}
+	return announces.([]announceData)
+}
 
+func (f *Fetcher) processNotification(notification announcesBatch, fetchTimer *time.Timer) {
 	first := len(f.fetching) == 0
 
 	// filter only not known
-	notification.hashes = f.callback.OnlyInterested(notification.hashes)
-	if len(notification.hashes) == 0 {
+	notification.ids = f.callback.OnlyInterested(notification.ids)
+	if len(notification.ids) == 0 {
 		return
 	}
 
-	toFetch := make(hash.Events, 0, len(notification.hashes))
-	for i, id := range notification.hashes {
+	toFetch := make(hash.Events, 0, len(notification.ids))
+	now := time.Now()
+	for _, id := range notification.ids {
 		// add new announcement. other peers may already have announced it, so it's an array
-		ann := &oneAnnounce{
-			batch: notification,
-			i:     i,
-		}
-		f.setAnnounced(id, append(f.announced[id], ann))
-		count++ // f.announced and f.announces must be synced!
+		anns := f.getAnnounces(id)
+		anns = append(anns, notification.announceData)
+		f.announces.Add(id, append(anns, notification.announceData), uint(len(anns)))
 		// if it wasn't announced before, then schedule for fetching this time
 		if _, ok := f.fetching[id]; !ok {
-			f.fetching[id] = ann
-			f.fetchingTime[id] = notification.time
+			f.fetching[id] = fetchingEvent{
+				announce:     notification.announceData,
+				fetchingTime: now,
+			}
 			toFetch.Add(id)
 		}
 	}
-	if !notification.internal {
-		f.setAnnounces(notification.peer, count)
-	}
 
 	if len(toFetch) != 0 {
-		_ = notification.fetchEvents(toFetch)
+		// Create a closure of the fetch and schedule in on a new thread
+		fetchEvents, hashes := notification.fetchEvents, toFetch
+		_ = f.parallelTasks.Enqueue(func() {
+			_ = fetchEvents(hashes)
+		})
 	}
 
 	if first && len(f.fetching) != 0 {
@@ -248,48 +206,12 @@ func (f *Fetcher) processNotification(notification *announcesBatch, fetchTimer *
 	}
 }
 
-func (f *Fetcher) processInjection(op *inject, fetchTimer *time.Timer) {
-	// A direct event insertion was requested, try and fill any pending gaps
-	parents := make(hash.Events, 0, len(op.events))
-	for _, e := range op.events {
-		// fetch unknown parents
-		for _, p := range e.Parents() {
-			if _, ok := f.fetching[p]; ok {
-				continue
-			}
-			parents.Add(p)
-		}
-
-		f.callback.PushEvent(e, op.peer)
-		f.forgetHash(e.ID())
-		f.callback.ReleasedEvent(e, op.peer, nil)
-	}
-
-	parents = f.callback.OnlyInterested(parents)
-	if len(parents) != 0 {
-		f.processNotification(&announcesBatch{
-			hashes:      parents,
-			time:        op.time,
-			peer:        op.peer,
-			fetchEvents: op.fetchEvents,
-			internal:    true,
-		}, fetchTimer)
-	}
-}
-
 // Loop is the main fetcher loop, checking and processing various notifications
 func (f *Fetcher) loop() {
-	defer f.wg.Done()
 	// Iterate the event fetching until a quit is requested
 	fetchTimer := time.NewTimer(0)
 
 	for {
-		// Clean up any expired event fetches
-		for id, announce := range f.fetching {
-			if time.Since(announce.batch.time) > f.cfg.FetchTimeout {
-				f.forgetHash(id)
-			}
-		}
 		// Wait for an outside event to occur
 		select {
 		case <-f.quit:
@@ -299,34 +221,44 @@ func (f *Fetcher) loop() {
 		case notification := <-f.notifications:
 			f.processNotification(notification, fetchTimer)
 
-		case op := <-f.inject:
-			f.processInjection(op, fetchTimer)
+		case ids := <-f.receivedEvents:
+			for _, id := range ids {
+				f.forgetHash(id)
+			}
 
-		case now := <-fetchTimer.C:
+		case <-fetchTimer.C:
+			now := time.Now()
 			// At least one event's timer ran out, check for needing retrieval
 			request := make(map[string]hash.Events)
+			requestFns := make(map[string]EventsRequesterFn)
 
-			// Find not not arrived events
-			all := make(hash.Events, 0, len(f.announced))
-			for e := range f.announced {
-				all.Add(e)
+			// Find not arrived events
+			all := make(hash.Events, 0, f.announces.Len())
+			for _, e := range f.announces.Keys() {
+				all.Add(e.(hash.Event))
 			}
 			notArrived := f.callback.OnlyInterested(all)
 
 			for _, e := range notArrived {
 				// Re-fetch not arrived events
-				announces := f.announced[e]
+				announces := f.getAnnounces(e)
+				if len(announces) == 0 {
+					continue
+				}
 
 				oldest := announces[0] // first is the oldest
-				if time.Since(oldest.batch.time) > f.cfg.ForgetTimeout {
+				if time.Since(oldest.time) > f.cfg.ForgetTimeout {
 					// Forget too old announces
 					f.forgetHash(e)
-				} else if time.Since(f.fetchingTime[e]) > f.cfg.ArriveTimeout-f.cfg.GatherSlack {
+				} else if time.Since(f.fetching[e].fetchingTime) > f.cfg.ArriveTimeout-f.cfg.GatherSlack {
 					// The event still didn't arrive, queue for fetching from a random peer
 					announce := announces[rand.Intn(len(announces))]
-					request[announce.batch.peer] = append(request[announce.batch.peer], e)
-					f.fetching[e] = announce
-					f.fetchingTime[e] = now
+					request[announce.peer] = append(request[announce.peer], e)
+					requestFns[announce.peer] = announce.fetchEvents
+					f.fetching[e] = fetchingEvent{
+						announce:     announce,
+						fetchingTime: now,
+					}
 				}
 			}
 
@@ -341,12 +273,12 @@ func (f *Fetcher) loop() {
 			}
 
 			// Send out all event requests
-			for peer, hashes := range request {
+			for peer, req := range request {
 				// Create a closure of the fetch and schedule in on a new thread
-				fetchEvents, hashes := f.fetching[hashes[0]].batch.fetchEvents, hashes
-				go func(peer string) {
+				fetchEvents, hashes := requestFns[peer], req
+				_ = f.parallelTasks.Enqueue(func() {
 					_ = fetchEvents(hashes)
-				}(peer)
+				})
 			}
 			// Schedule the next fetch if events are still pending
 			f.rescheduleFetch(fetchTimer)
@@ -357,14 +289,14 @@ func (f *Fetcher) loop() {
 // rescheduleFetch resets the specified fetch timer to the next announce timeout.
 func (f *Fetcher) rescheduleFetch(fetch *time.Timer) {
 	// Short circuit if no events are announced
-	if len(f.announced) == 0 {
+	if f.announces.Len() == 0 {
 		return
 	}
 	// Otherwise find the earliest expiring announcement
 	earliest := time.Now()
-	for _, t := range f.fetchingTime {
-		if earliest.After(t) {
-			earliest = t
+	for _, fetch := range f.fetching {
+		if earliest.After(fetch.fetchingTime) {
+			earliest = fetch.fetchingTime
 		}
 	}
 	fetch.Reset(f.cfg.ArriveTimeout - time.Since(earliest))
@@ -372,21 +304,6 @@ func (f *Fetcher) rescheduleFetch(fetch *time.Timer) {
 
 // forgetHash removes all traces of a event announcement from the fetcher's
 // internal state.
-func (f *Fetcher) forgetHash(hash hash.Event) {
-	f.stateMu.Lock()
-	defer f.stateMu.Unlock()
-
-	// Remove all pending announces and decrement DOS counters
-	for _, announce := range f.announced[hash] {
-		if announce.batch.internal {
-			continue
-		}
-		f.announces[announce.batch.peer]--
-		if f.announces[announce.batch.peer] <= 0 {
-			delete(f.announces, announce.batch.peer)
-		}
-	}
-	delete(f.announced, hash)
-	delete(f.fetching, hash)
-	delete(f.fetchingTime, hash)
+func (f *Fetcher) forgetHash(id hash.Event) {
+	f.announces.Remove(id) // f.fetching is deleted inside the evict callback
 }

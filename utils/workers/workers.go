@@ -42,6 +42,21 @@ func (w *Workers) Enqueue(fn func()) error {
 	}
 }
 
+func (w *Workers) Drain() {
+	for {
+		select {
+		case <-w.tasks:
+			continue
+		default:
+			return
+		}
+	}
+}
+
+func (w *Workers) TasksCount() int {
+	return len(w.tasks)
+}
+
 func worker(tasksC <-chan func(), quit <-chan struct{}) {
 	for {
 		select {

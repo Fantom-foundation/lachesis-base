@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -29,12 +31,15 @@ type Seeder struct {
 	notifyUnregisteredPeer chan string
 	notifyReceivedRequest  chan *requestAndPeer
 	quit                   chan struct{}
-
-	parallelTasks *workers.Workers
+	done                   bool
 
 	cfg Config
 
 	wg sync.WaitGroup
+
+	senders              []*workers.Workers
+	pendingResponsesSize int32
+	sessionsCounter      uint32
 }
 
 func New(cfg Config, callbacks Callbacks) *Seeder {
@@ -44,10 +49,13 @@ func New(cfg Config, callbacks Callbacks) *Seeder {
 		sessions:               make(map[sessionIDAndPeer]sessionState),
 		notifyUnregisteredPeer: make(chan string, 128),
 		notifyReceivedRequest:  make(chan *requestAndPeer, 16),
+		senders:                make([]*workers.Workers, cfg.SenderThreads),
 		quit:                   make(chan struct{}),
 		cfg:                    cfg,
 	}
-	s.parallelTasks = workers.New(&s.wg, s.quit, cfg.SenderThreads*2)
+	for i := 0; i < cfg.SenderThreads; i++ {
+		s.senders[i] = workers.New(&s.wg, s.quit, s.cfg.MaxMaxSenderTasks)
+	}
 	return s
 }
 
@@ -76,15 +84,18 @@ type sessionState struct {
 	next         []byte
 	stop         []byte
 	done         bool
+	senderI      int
 	sendChunk    func(dagstream.Response, hash.Events) error
 }
 
 func (s *Seeder) Start() {
-	s.parallelTasks.Start(s.cfg.SenderThreads)
+	for i := 0; i < s.cfg.SenderThreads; i++ {
+		s.senders[i].Start(1)
+	}
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		go s.loop()
+		go s.readerLoop()
 	}()
 }
 
@@ -92,6 +103,10 @@ func (s *Seeder) Start() {
 // Stop waits until all the internal goroutines have finished.
 func (s *Seeder) Stop() {
 	close(s.quit)
+	s.done = true
+	for i := 0; i < s.cfg.SenderThreads; i++ {
+		s.senders[i].Drain()
+	}
 	s.wg.Wait()
 }
 
@@ -123,7 +138,7 @@ func (s *Seeder) UnregisterPeer(peer string) error {
 	}
 }
 
-func (s *Seeder) loop() {
+func (s *Seeder) readerLoop() {
 	for {
 		// Wait for an outside event to occur
 		select {
@@ -139,6 +154,15 @@ func (s *Seeder) loop() {
 			delete(s.peerSessions, peerID)
 
 		case op := <-s.notifyReceivedRequest:
+			for atomic.LoadInt32(&s.pendingResponsesSize) >= s.cfg.MaxPendingResponsesSize {
+				if s.done {
+					// terminating, abort all operations
+					return
+				}
+				// we shouldn't get there normally, so it's fine to use a spin lock instead of a conditional variable
+				time.Sleep(10 * time.Millisecond)
+			}
+
 			// prune oldest session
 			sessions := s.peerSessions[op.peer.ID]
 			if len(sessions) > 2 {
@@ -154,8 +178,10 @@ func (s *Seeder) loop() {
 				session.next = op.request.Session.Start
 				session.stop = op.request.Session.Stop
 				session.sendChunk = op.peer.SendChunk
+				session.senderI = int(s.sessionsCounter % uint32(s.cfg.SenderThreads))
 				sessions = append(sessions, op.request.Session.ID)
 				s.peerSessions[op.peer.ID] = sessions
+				s.sessionsCounter++
 			}
 
 			// sanity check (cannot change session parameters after it's created)
@@ -204,8 +230,14 @@ func (s *Seeder) loop() {
 			resp.Done = allConsumed
 			resp.SessionID = op.request.Session.ID
 
-			_ = s.parallelTasks.Enqueue(func() {
+			memSize := int32(size)
+			if op.request.Type != dagstream.RequestEvents {
+				memSize = int32(len(resp.IDs) * 128)
+			}
+			atomic.AddInt32(&s.pendingResponsesSize, memSize)
+			_ = s.senders[session.senderI].Enqueue(func() {
 				_ = session.sendChunk(resp, ids)
+				atomic.AddInt32(&s.pendingResponsesSize, -memSize)
 			})
 		}
 	}
