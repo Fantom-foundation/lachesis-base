@@ -95,7 +95,7 @@ func (w *Flushable) Has(key []byte) (bool, error) {
 	return w.underlying.Has(key)
 }
 
-// get returns key-value pair by key. Looks in cache first, then - in DB.
+// Get returns key-value pair by key. Looks in cache first, then - in DB.
 func (w *Flushable) Get(key []byte) ([]byte, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
