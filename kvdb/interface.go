@@ -96,6 +96,6 @@ type FlushableKVStore interface {
 type DbProducer interface {
 	// Names of existing databases.
 	Names() []string
-	// OpenDb or create db with name.
-	OpenDb(name string) DropableStore
+	// OpenDB or create db with name.
+	OpenDB(name string) (DropableStore, error)
 }

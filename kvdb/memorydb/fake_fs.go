@@ -44,7 +44,7 @@ func uniqNamespace() string {
 	return hash.FakeHash(rand.Int63()).Hex()
 }
 
-func (fs *fakeFS) ListFakeDB() []string {
+func (fs *fakeFS) ListFakeDBs() []string {
 	var ls []string
 
 	fs.RLock()

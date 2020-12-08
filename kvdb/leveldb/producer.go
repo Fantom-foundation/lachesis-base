@@ -4,26 +4,25 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
-type producer struct {
+type Producer struct {
 	datadir  string
 	getCache func(string) int
 }
 
 // NewProducer of level db.
 func NewProducer(datadir string, getCache func(string) int) kvdb.DbProducer {
-	return &producer{
+	return &Producer{
 		datadir:  datadir,
 		getCache: getCache,
 	}
 }
 
 // Names of existing databases.
-func (p *producer) Names() []string {
+func (p *Producer) Names() []string {
 	var names []string
 
 	files, err := ioutil.ReadDir(p.datadir)
@@ -35,47 +34,32 @@ func (p *producer) Names() []string {
 		if !f.IsDir() {
 			continue
 		}
-		dirname := f.Name()
-		if strings.HasSuffix(dirname, "-ldb") {
-			name := strings.TrimSuffix(dirname, "-ldb")
-			names = append(names, name)
-		}
+		names = append(names, f.Name())
 	}
 	return names
 }
 
-// OpenDb or create db with name.
-func (p *producer) OpenDb(name string) kvdb.DropableStore {
-	dir := name + "-ldb"
-	path := filepath.Join(p.datadir, dir)
+// OpenDB or create db with name.
+func (p *Producer) OpenDB(name string) (kvdb.DropableStore, error) {
+	path := p.resolvePath(name)
 
 	err := os.MkdirAll(path, 0700)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	var stopWatcher func()
-	onClose := func() error {
-		if stopWatcher != nil {
-			stopWatcher()
-		}
-		return nil
-	}
 	onDrop := func() {
-		err := os.RemoveAll(path)
-		if err != nil {
-			panic(err)
-		}
-
+		_ = os.RemoveAll(path)
 	}
 
-	db, err := New(path, p.getCache(name), 0, onClose, onDrop)
+	db, err := New(path, p.getCache(name), 0, nil, onDrop)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	// TODO: dir watcher instead of file watcher needed.
-	//stopWatcher = metrics.StartFileWatcher(name+"_db_file_size", f)
+	return db, nil
+}
 
-	return db
+func (p *Producer) resolvePath(name string) string {
+	return filepath.Join(p.datadir, name)
 }

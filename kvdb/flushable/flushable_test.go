@@ -29,11 +29,11 @@ func TestFlushable(t *testing.T) {
 	disk := dbProducer("TestFlushable")
 
 	// open raw databases
-	leveldb1 := disk.OpenDb("1")
+	leveldb1, _ := disk.OpenDB("1")
 	defer leveldb1.Drop()
 	defer leveldb1.Close()
 
-	leveldb2 := disk.OpenDb("2")
+	leveldb2, _ := disk.OpenDB("2")
 	defer leveldb2.Drop()
 	defer leveldb2.Close()
 
@@ -267,7 +267,7 @@ func TestFlushableIterator(t *testing.T) {
 
 	disk := dbProducer("TestFlushableIterator")
 
-	leveldb := disk.OpenDb("1")
+	leveldb, _ := disk.OpenDB("1")
 	defer leveldb.Drop()
 	defer leveldb.Close()
 
@@ -322,7 +322,7 @@ func TestFlushableIterator(t *testing.T) {
 func BenchmarkFlushable(b *testing.B) {
 	disk := dbProducer("BenchmarkFlushable")
 
-	leveldb := disk.OpenDb("1")
+	leveldb, _ := disk.OpenDB("1")
 	defer leveldb.Drop()
 	defer leveldb.Close()
 

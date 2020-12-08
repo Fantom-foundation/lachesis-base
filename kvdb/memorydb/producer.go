@@ -6,31 +6,31 @@ import (
 
 type Mod func(kvdb.DropableStore) kvdb.DropableStore
 
-type producer struct {
+type Producer struct {
 	fs   *fakeFS
 	mods []Mod
 }
 
 // NewProducer of memory db.
 func NewProducer(namespace string, mods ...Mod) kvdb.DbProducer {
-	return &producer{
+	return &Producer{
 		fs:   newFakeFS(namespace),
 		mods: mods,
 	}
 }
 
 // Names of existing databases.
-func (p *producer) Names() []string {
-	return p.fs.ListFakeDB()
+func (p *Producer) Names() []string {
+	return p.fs.ListFakeDBs()
 }
 
-// OpenDb or create db with name.
-func (p *producer) OpenDb(name string) kvdb.DropableStore {
+// OpenDB or create db with name.
+func (p *Producer) OpenDB(name string) (kvdb.DropableStore, error) {
 	db := p.fs.OpenFakeDB(name)
 
 	for _, mod := range p.mods {
 		db = mod(db)
 	}
 
-	return db
+	return db, nil
 }
