@@ -60,9 +60,9 @@ type PeerLeecher struct {
 func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloaderCallbacks) *PeerLeecher {
 	quit := make(chan struct{})
 	return &PeerLeecher{
-		processingChunks:    make([]receivedChunk, 0, cfg.ParallelChunksDownload+1),
-		parallelTasks:       workers.New(wg, quit, cfg.ParallelChunksDownload+1),
-		notifyReceivedChunk: make(chan *receivedChunk, cfg.ParallelChunksDownload+1),
+		processingChunks:    make([]receivedChunk, 0, cfg.ParallelChunksDownload*2),
+		parallelTasks:       workers.New(wg, quit, cfg.ParallelChunksDownload*2),
+		notifyReceivedChunk: make(chan *receivedChunk, cfg.ParallelChunksDownload*2),
 		quit:                quit,
 		cfg:                 cfg,
 		callback:            callback,
@@ -93,6 +93,7 @@ func (d *PeerLeecher) Terminate() {
 	defer d.quitMu.Unlock()
 	if !d.done {
 		close(d.quit)
+		d.parallelTasks.Drain()
 		d.done = true
 	}
 }
