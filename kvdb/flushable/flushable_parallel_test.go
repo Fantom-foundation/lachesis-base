@@ -23,7 +23,7 @@ func TestFlushableParallel(t *testing.T) {
 	t.Run("Exactly flush", func(t *testing.T) {
 		disk := tmpDir()
 		// open raw databases
-		ldb := disk.OpenDb("1")
+		ldb, _ := disk.OpenDB("1")
 		defer ldb.Drop()
 		defer ldb.Close()
 
@@ -60,7 +60,7 @@ func TestFlushableParallel(t *testing.T) {
 	t.Run("Random flush", func(t *testing.T) {
 		disk := tmpDir()
 		// open raw databases
-		ldb := disk.OpenDb("1")
+		ldb, _ := disk.OpenDB("1")
 		defer ldb.Drop()
 		defer ldb.Close()
 
@@ -127,7 +127,7 @@ func TestFlushableParallel(t *testing.T) {
 	})
 }
 
-func tmpDir() kvdb.DbProducer {
+func tmpDir() kvdb.DBProducer {
 	dir, err := ioutil.TempDir("", "test-flushable")
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory %s: %v", dir, err))

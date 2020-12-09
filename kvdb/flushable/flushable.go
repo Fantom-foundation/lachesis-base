@@ -5,9 +5,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 var (
@@ -73,7 +74,7 @@ func (w *Flushable) put(key []byte, value []byte) error {
 	}
 
 	w.modified.Put(string(key), common.CopyBytes(value))
-	*w.sizeEstimation += len(key) + len(value)
+	*w.sizeEstimation += len(key) + len(value) + 128
 	return nil
 }
 
@@ -123,7 +124,7 @@ func (w *Flushable) Delete(key []byte) error {
 
 func (w *Flushable) delete(key []byte) error {
 	w.modified.Put(string(key), nil)
-	*w.sizeEstimation += len(key) // it should be (len(key) - len(old value)), but we'd need to read old value
+	*w.sizeEstimation += len(key) + 128 // it should be (len(key) - len(old value)), but we'd need to read old value
 	return nil
 }
 

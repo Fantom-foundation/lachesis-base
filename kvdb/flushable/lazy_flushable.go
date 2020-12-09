@@ -8,7 +8,7 @@ import (
 // LazyFlushable is a Flushable with delayed DB producer
 type LazyFlushable struct {
 	*Flushable
-	producer func() kvdb.DropableStore
+	producer func() (kvdb.DropableStore, error)
 }
 
 var (
@@ -18,7 +18,7 @@ var (
 // NewLazy makes flushable with real db producer.
 // Real db won't be produced until first .Flush() is called.
 // All the writes into the cache won't be written in parent until .Flush() is called.
-func NewLazy(producer func() kvdb.DropableStore, drop func()) *LazyFlushable {
+func NewLazy(producer func() (kvdb.DropableStore, error), drop func()) *LazyFlushable {
 	if producer == nil {
 		panic("nil producer")
 	}
@@ -31,29 +31,36 @@ func NewLazy(producer func() kvdb.DropableStore, drop func()) *LazyFlushable {
 }
 
 // InitUnderlyingDb is UnderlyingDb getter. Makes underlying in lazy case.
-func (w *LazyFlushable) InitUnderlyingDb() kvdb.Store {
+func (w *LazyFlushable) InitUnderlyingDb() (kvdb.Store, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
 	return w.initUnderlyingDb()
 }
 
-func (w *LazyFlushable) initUnderlyingDb() kvdb.Store {
+func (w *LazyFlushable) initUnderlyingDb() (kvdb.Store, error) {
+	var err error
 	if w.underlying == devnull && w.producer != nil {
-		w.underlying = w.producer()
+		w.underlying, err = w.producer()
+		if err != nil {
+			return nil, err
+		}
 		w.producer = nil // need once
 	}
 
-	return w.underlying
+	return w.underlying, nil
 }
 
 // Flush current cache into parent DB.
 // Real db won't be produced until first .Flush() is called.
-func (w *LazyFlushable) Flush() error {
+func (w *LazyFlushable) Flush() (err error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
-	w.underlying = w.initUnderlyingDb()
+	w.underlying, err = w.initUnderlyingDb()
+	if err != nil {
+		return err
+	}
 
 	return w.flush()
 }

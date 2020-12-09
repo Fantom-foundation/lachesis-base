@@ -92,10 +92,20 @@ type FlushableKVStore interface {
 	DropNotFlushed()
 }
 
-// DbProducer represents real db producer.
-type DbProducer interface {
+// DBProducer represents real db producer.
+type DBProducer interface {
+	// OpenDB or create db with name.
+	OpenDB(name string) (DropableStore, error)
+}
+
+type IterableDBProducer interface {
+	DBProducer
 	// Names of existing databases.
 	Names() []string
-	// OpenDb or create db with name.
-	OpenDb(name string) DropableStore
+}
+
+type FlushableDBProducer interface {
+	DBProducer
+	NotFlushedSizeEst() int
+	Flush(id []byte) error
 }

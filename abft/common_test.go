@@ -1,8 +1,6 @@
 package abft
 
 import (
-	"fmt"
-
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -34,14 +32,13 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 		}
 	}
 
-	mems := memorydb.NewProducer("", mods...)
 	openEDB := func(epoch idx.Epoch) kvdb.DropableStore {
-		return mems.OpenDb(fmt.Sprintf("test%d", epoch))
+		return memorydb.New()
 	}
 	crit := func(err error) {
 		panic(err)
 	}
-	store := NewStore(mems.OpenDb("test"), openEDB, crit, LiteStoreConfig())
+	store := NewStore(memorydb.New(), openEDB, crit, LiteStoreConfig())
 
 	err := store.ApplyGenesis(&Genesis{
 		Validators: validators.Build(),

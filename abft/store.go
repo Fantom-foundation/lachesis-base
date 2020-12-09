@@ -2,7 +2,6 @@ package abft
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -68,16 +67,14 @@ func (s *Store) initCache() {
 // NewMemStore creates store over memory map.
 // Store is always blank.
 func NewMemStore() *Store {
-	mems := memorydb.NewProducer("")
 	getDb := func(epoch idx.Epoch) kvdb.DropableStore {
-		return mems.OpenDb(fmt.Sprintf("consensus-mem-%d", epoch))
+		return memorydb.New()
 	}
 	cfg := LiteStoreConfig()
 	crit := func(err error) {
 		panic(err)
 	}
-
-	return NewStore(mems.OpenDb("consensus-mem"), getDb, crit, cfg)
+	return NewStore(memorydb.New(), getDb, crit, cfg)
 }
 
 // Close leaves underlying database.
