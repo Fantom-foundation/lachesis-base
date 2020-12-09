@@ -14,7 +14,7 @@ type Producer struct {
 }
 
 // NewProducer of level db.
-func NewProducer(datadir string, getCache func(string) int) kvdb.DbProducer {
+func NewProducer(datadir string, getCache func(string) int) kvdb.IterableDBProducer {
 	return &Producer{
 		datadir:  datadir,
 		getCache: getCache,

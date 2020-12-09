@@ -12,7 +12,7 @@ type Producer struct {
 }
 
 // NewProducer of memory db.
-func NewProducer(namespace string, mods ...Mod) kvdb.DbProducer {
+func NewProducer(namespace string, mods ...Mod) kvdb.IterableDBProducer {
 	return &Producer{
 		fs:   newFakeFS(namespace),
 		mods: mods,

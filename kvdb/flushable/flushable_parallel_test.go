@@ -127,7 +127,7 @@ func TestFlushableParallel(t *testing.T) {
 	})
 }
 
-func tmpDir() kvdb.DbProducer {
+func tmpDir() kvdb.DBProducer {
 	dir, err := ioutil.TempDir("", "test-flushable")
 	if err != nil {
 		panic(fmt.Sprintf("can't create temporary directory %s: %v", dir, err))

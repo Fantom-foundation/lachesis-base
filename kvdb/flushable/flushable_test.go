@@ -383,7 +383,7 @@ func cache16mb(string) int {
 	return 16 * opt.MiB
 }
 
-func dbProducer(name string) kvdb.DbProducer {
+func dbProducer(name string) kvdb.DBProducer {
 	dir, err := ioutil.TempDir("", name)
 	if err != nil {
 		panic(err)

@@ -11,13 +11,15 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
+var _ kvdb.FlushableDBProducer = (*SyncedPool)(nil)
+
 const (
 	DirtyPrefix = 0xde
 	CleanPrefix = 0x00
 )
 
 type SyncedPool struct {
-	producer kvdb.DbProducer
+	producer kvdb.DBProducer
 
 	wrappers    map[string]*LazyFlushable
 	queuedDrops map[string]struct{}
@@ -27,7 +29,7 @@ type SyncedPool struct {
 	sync.Mutex
 }
 
-func NewSyncedPool(producer kvdb.DbProducer, flushIDKey []byte) *SyncedPool {
+func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
 	if producer == nil {
 		panic("nil producer")
 	}
@@ -75,11 +77,11 @@ func (p *SyncedPool) dropDb(name string) {
 	p.queuedDrops[name] = struct{}{}
 }
 
-func (p *SyncedPool) GetDb(name string) kvdb.DropableStore {
+func (p *SyncedPool) OpenDB(name string) (kvdb.DropableStore, error) {
 	p.Lock()
 	defer p.Unlock()
 
-	return p.getDb(name)
+	return p.getDb(name), nil
 }
 
 func (p *SyncedPool) getDb(name string) kvdb.DropableStore {
