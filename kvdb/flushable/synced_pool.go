@@ -21,7 +21,7 @@ const (
 
 type wrappers struct {
 	*LazyFlushable
-	*synced.ReadonlyStore
+	kvdb.ReadonlyStore
 }
 
 type SyncedPool struct {

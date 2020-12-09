@@ -6,15 +6,15 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
-// ReadonlyStore wrapper around any Database.
-type ReadonlyStore struct {
+// readonlyStore wrapper around any kvdb.ReadonlyStore.
+type readonlyStore struct {
 	mu         *sync.RWMutex
 	underlying kvdb.ReadonlyStore
 }
 
 // WrapReadonlyStore underlying db to make its methods synced with mu.
-func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) *ReadonlyStore {
-	ro := &ReadonlyStore{
+func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) kvdb.ReadonlyStore {
+	ro := &readonlyStore{
 		mu:         mu,
 		underlying: parent,
 	}
@@ -23,7 +23,7 @@ func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) *ReadonlySto
 }
 
 // Has checks if key is in the exists.
-func (ro *ReadonlyStore) Has(key []byte) (bool, error) {
+func (ro *readonlyStore) Has(key []byte) (bool, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
@@ -31,7 +31,7 @@ func (ro *ReadonlyStore) Has(key []byte) (bool, error) {
 }
 
 // Get returns key-value pair by key.
-func (ro *ReadonlyStore) Get(key []byte) ([]byte, error) {
+func (ro *readonlyStore) Get(key []byte) ([]byte, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
@@ -39,7 +39,7 @@ func (ro *ReadonlyStore) Get(key []byte) ([]byte, error) {
 }
 
 // Stat returns a particular internal stat of the database.
-func (ro *ReadonlyStore) Stat(property string) (string, error) {
+func (ro *readonlyStore) Stat(property string) (string, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
@@ -49,7 +49,7 @@ func (ro *ReadonlyStore) Stat(property string) (string, error) {
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
-func (ro *ReadonlyStore) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+func (ro *readonlyStore) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
