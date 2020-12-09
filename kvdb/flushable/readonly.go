@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
-// Readonly kvdb.Store wrapper around any Database.
+// Readonly kvdb.ReadonlyStore wrapper around any Database.
 type Readonly struct {
 	mu         *sync.RWMutex
 	underlying kvdb.Store
@@ -63,28 +63,4 @@ func (ro *Readonly) Compact(start []byte, limit []byte) error {
 	defer ro.mu.RUnlock()
 
 	return ro.underlying.Compact(start, limit)
-}
-
-// Put puts key-value pair into the cache.
-func (ro *Readonly) Put(key []byte, value []byte) error {
-	panic("is not allowed, readonly")
-	return ro.underlying.Put(key, value)
-}
-
-// NewBatch creates new batch.
-func (ro *Readonly) NewBatch() kvdb.Batch {
-	panic("is not allowed, readonly")
-	return ro.underlying.NewBatch()
-}
-
-// Delete removes key-value pair by key.
-func (ro *Readonly) Delete(key []byte) error {
-	panic("is not allowed, readonly")
-	return ro.underlying.Delete(key)
-}
-
-// Close leaves underlying database.
-func (ro *Readonly) Close() error {
-	panic("is not allowed, readonly")
-	return ro.underlying.Close()
 }

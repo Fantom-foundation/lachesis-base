@@ -90,7 +90,7 @@ func (p *SyncedPool) OpenDB(name string) (kvdb.DropableStore, error) {
 	return p.getDb(name), nil
 }
 
-func (p *SyncedPool) GetReadonly(name string) (kvdb.Store, error) {
+func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
 	p.Lock()
 	defer p.Unlock()
 
