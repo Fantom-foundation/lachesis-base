@@ -9,6 +9,7 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/synced"
 )
 
 var _ kvdb.FlushableDBProducer = (*SyncedPool)(nil)
@@ -20,7 +21,7 @@ const (
 
 type wrappers struct {
 	*LazyFlushable
-	*Readonly
+	*synced.ReadonlyStore
 }
 
 type SyncedPool struct {
@@ -95,8 +96,8 @@ func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
 	defer p.Unlock()
 
 	wrapper := p.wrappers[name]
-	if wrapper.Readonly != nil {
-		return wrapper.Readonly, nil
+	if wrapper.ReadonlyStore != nil {
+		return wrapper.ReadonlyStore, nil
 	}
 
 	wrapper.LazyFlushable = p.getDb(name)
@@ -104,10 +105,10 @@ func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	wrapper.Readonly = WrapWithReadonly(db, &p.flushing)
+	wrapper.ReadonlyStore = synced.WrapReadonlyStore(db, &p.flushing)
 	p.wrappers[name] = wrapper
 
-	return wrapper.Readonly, nil
+	return wrapper.ReadonlyStore, nil
 }
 
 func (p *SyncedPool) getDb(name string) *LazyFlushable {

@@ -74,6 +74,7 @@ type Store interface {
 type ReadonlyStore interface {
 	Reader
 	Iteratee
+	ethdb.Stater
 }
 
 // Droper is able to delete the DB.
