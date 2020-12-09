@@ -18,7 +18,7 @@ const (
 	CleanPrefix = 0x00
 )
 
-type wrapperSet struct {
+type wrappers struct {
 	*LazyFlushable
 	*Readonly
 }
@@ -26,7 +26,7 @@ type wrapperSet struct {
 type SyncedPool struct {
 	producer kvdb.DBProducer
 
-	wrappers    map[string]wrapperSet
+	wrappers    map[string]wrappers
 	queuedDrops map[string]struct{}
 
 	flushIDKey []byte
@@ -42,7 +42,7 @@ func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
 
 	p := &SyncedPool{
 		producer:    producer,
-		wrappers:    make(map[string]wrapperSet),
+		wrappers:    make(map[string]wrappers),
 		queuedDrops: make(map[string]struct{}),
 		flushIDKey:  flushIDKey,
 	}
