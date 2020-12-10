@@ -39,6 +39,11 @@ func New(db kvdb.Store, prefix []byte) *Table {
 	return &Table{db, prefix}
 }
 
+func NewReadonly(rodb kvdb.ReadonlyStore, prefix []byte) *Table {
+	db := &readonly{rodb}
+	return &Table{db, prefix}
+}
+
 func (t *Table) NewTable(prefix []byte) *Table {
 	return New(t, prefix)
 }
