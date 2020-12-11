@@ -397,6 +397,9 @@ func (it *flushableIterator) Release() {
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
 func (w *Flushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
 	it := &flushableIterator{
 		lock:     w.lock,
 		tree:     w.modified,
