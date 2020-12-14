@@ -61,7 +61,7 @@ func (c *Cache) Purge() {
 	c.evictList.Init()
 }
 
-// Add adds a value to the cache.  Returns true if an eviction occurred.
+// Add adds a value to the cache. Returns count of evictions occurred.
 func (c *Cache) Add(key, value interface{}, weight uint) (evicted int) {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
