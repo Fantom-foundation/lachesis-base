@@ -4,10 +4,10 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
-// Table wraps the underling DB, so all the table's data is stored with a prefix in underling DB
+// Table wraper the underling DB, so all the table's data is stored with a prefix in underling DB
 type Table struct {
-	db     kvdb.Store
-	prefix []byte
+	Readonly
+	underlying kvdb.Store
 }
 
 var (
@@ -36,7 +36,13 @@ func noPrefix(key, prefix []byte) []byte {
  */
 
 func New(db kvdb.Store, prefix []byte) *Table {
-	return &Table{db, prefix}
+	return &Table{
+		Readonly: Readonly{
+			prefix: prefix,
+			underlying:     db,
+		},
+		underlying: db,
+	}
 }
 
 func (t *Table) NewTable(prefix []byte) *Table {
@@ -50,66 +56,20 @@ func (t *Table) Close() error {
 // Drop the whole database.
 func (t *Table) Drop() {}
 
-func (t *Table) Has(key []byte) (bool, error) {
-	return t.db.Has(prefixed(key, t.prefix))
-}
-
-func (t *Table) Get(key []byte) ([]byte, error) {
-	return t.db.Get(prefixed(key, t.prefix))
-}
-
 func (t *Table) Put(key []byte, value []byte) error {
-	return t.db.Put(prefixed(key, t.prefix), value)
+	return t.underlying.Put(prefixed(key, t.prefix), value)
 }
 
 func (t *Table) Delete(key []byte) error {
-	return t.db.Delete(prefixed(key, t.prefix))
+	return t.underlying.Delete(prefixed(key, t.prefix))
 }
 
 func (t *Table) NewBatch() kvdb.Batch {
-	return &batch{t.db.NewBatch(), t.prefix}
-}
-
-func (t *Table) Stat(property string) (string, error) {
-	return t.db.Stat(property)
+	return &batch{t.underlying.NewBatch(), t.prefix}
 }
 
 func (t *Table) Compact(start []byte, limit []byte) error {
-	return t.db.Compact(start, limit)
-}
-
-/*
- * Iterator
- */
-
-type iterator struct {
-	it     kvdb.Iterator
-	prefix []byte
-}
-
-func (it *iterator) Next() bool {
-	return it.it.Next()
-}
-
-func (it *iterator) Error() error {
-	return it.it.Error()
-}
-
-func (it *iterator) Key() []byte {
-	return noPrefix(it.it.Key(), it.prefix)
-}
-
-func (it *iterator) Value() []byte {
-	return it.it.Value()
-}
-
-func (it *iterator) Release() {
-	it.it.Release()
-	*it = iterator{}
-}
-
-func (t *Table) NewIterator(itPrefix []byte, start []byte) kvdb.Iterator {
-	return &iterator{t.db.NewIterator(prefixed(itPrefix, t.prefix), start), t.prefix}
+	return t.underlying.Compact(start, limit)
 }
 
 /*

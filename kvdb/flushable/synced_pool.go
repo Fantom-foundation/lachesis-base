@@ -9,6 +9,7 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/synced"
 )
 
 var _ kvdb.FlushableDBProducer = (*SyncedPool)(nil)
@@ -18,15 +19,21 @@ const (
 	CleanPrefix = 0x00
 )
 
+type wrappers struct {
+	*LazyFlushable
+	kvdb.ReadonlyStore
+}
+
 type SyncedPool struct {
 	producer kvdb.DBProducer
 
-	wrappers    map[string]*LazyFlushable
+	wrappers    map[string]wrappers
 	queuedDrops map[string]struct{}
 
 	flushIDKey []byte
 
 	sync.Mutex
+	flushing sync.RWMutex
 }
 
 func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
@@ -36,7 +43,7 @@ func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
 
 	p := &SyncedPool{
 		producer:    producer,
-		wrappers:    make(map[string]*LazyFlushable),
+		wrappers:    make(map[string]wrappers),
 		queuedDrops: make(map[string]struct{}),
 		flushIDKey:  flushIDKey,
 	}
@@ -47,7 +54,7 @@ func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
 func (p *SyncedPool) Initialize(dbNames []string) error {
 	for _, name := range dbNames {
 		wrapper := p.getDb(name)
-		_, err := wrapper.(*LazyFlushable).InitUnderlyingDb()
+		_, err := wrapper.InitUnderlyingDb()
 		if err != nil {
 			return err
 		}
@@ -84,22 +91,45 @@ func (p *SyncedPool) OpenDB(name string) (kvdb.DropableStore, error) {
 	return p.getDb(name), nil
 }
 
-func (p *SyncedPool) getDb(name string) kvdb.DropableStore {
+func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	wrapper := p.wrappers[name]
-	if wrapper != nil {
-		return wrapper
+	if wrapper.ReadonlyStore != nil {
+		return wrapper.ReadonlyStore, nil
+	}
+
+	wrapper.LazyFlushable = p.getDb(name)
+	db, err := wrapper.LazyFlushable.initUnderlyingDb()
+	if err != nil {
+		return nil, err
+	}
+	wrapper.ReadonlyStore = synced.WrapReadonlyStore(db, &p.flushing)
+	p.wrappers[name] = wrapper
+
+	return wrapper.ReadonlyStore, nil
+}
+
+func (p *SyncedPool) getDb(name string) *LazyFlushable {
+	wrapper := p.wrappers[name]
+	if wrapper.LazyFlushable != nil {
+		return wrapper.LazyFlushable
 	}
 
 	open, drop := p.callbacks(name)
-	wrapper = NewLazy(open, drop)
+	wrapper.LazyFlushable = NewLazy(open, drop)
 	p.wrappers[name] = wrapper
 
-	return wrapper
+	return wrapper.LazyFlushable
 }
 
 func (p *SyncedPool) Flush(id []byte) error {
 	p.Lock()
 	defer p.Unlock()
+
+	p.flushing.Lock()
+	defer p.flushing.Unlock()
 
 	return p.flush(id)
 }
@@ -109,10 +139,10 @@ func (p *SyncedPool) flush(id []byte) error {
 	for name := range p.queuedDrops {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
-		if w == nil {
+		if w.LazyFlushable == nil {
 			continue
 		}
-		db := w.underlying
+		db := w.LazyFlushable.underlying
 		if db == nil {
 			continue
 		}

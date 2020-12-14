@@ -70,6 +70,13 @@ type Store interface {
 	io.Closer
 }
 
+// ReadonlyStore contains only reading methods of Store.
+type ReadonlyStore interface {
+	Reader
+	Iteratee
+	ethdb.Stater
+}
+
 // Droper is able to delete the DB.
 type Droper interface {
 	Drop()

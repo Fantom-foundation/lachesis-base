@@ -95,7 +95,7 @@ func (w *Flushable) Has(key []byte) (bool, error) {
 	return w.underlying.Has(key)
 }
 
-// get returns key-value pair by key. Looks in cache first, then - in DB.
+// Get returns key-value pair by key. Looks in cache first, then - in DB.
 func (w *Flushable) Get(key []byte) ([]byte, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
@@ -232,7 +232,7 @@ func (w *Flushable) Compact(start []byte, limit []byte) error {
  * Iterator
  */
 
-type iterator struct {
+type flushableIterator struct {
 	lock *sync.Mutex
 
 	tree *rbt.Tree
@@ -287,7 +287,7 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 }
 
 // init should be called once under lock
-func (it *iterator) init() {
+func (it *flushableIterator) init() {
 	it.parentOk = it.parentIt.Next()
 	if it.start != nil {
 		it.treeNode, it.treeOk = it.tree.Ceiling(string(it.start)) // not strict >=
@@ -297,8 +297,9 @@ func (it *iterator) init() {
 	}
 }
 
-// Next scans key-value pair by key in lexicographic order. Looks in cache first, then - in DB.
-func (it *iterator) Next() bool {
+// Next scans key-value pair by key in lexicographic order. Looks in cache first,
+// then - in DB.
+func (it *flushableIterator) Next() bool {
 	it.lock.Lock()
 	defer it.lock.Unlock()
 
@@ -365,36 +366,38 @@ func (it *iterator) Next() bool {
 
 // Error returns any accumulated error. Exhausting all the key/value pairs
 // is not considered to be an error. A memory iterator cannot encounter errors.
-func (it *iterator) Error() error {
+func (it *flushableIterator) Error() error {
 	return it.parentIt.Error()
 }
 
 // Key returns the key of the current key/value pair, or nil if done. The caller
 // should not modify the contents of the returned slice, and its contents may
 // change on the next call to Next.
-func (it *iterator) Key() []byte {
+func (it *flushableIterator) Key() []byte {
 	return it.key
 }
 
 // Value returns the value of the current key/value pair, or nil if done. The
 // caller should not modify the contents of the returned slice, and its contents
 // may change on the next call to Next.
-func (it *iterator) Value() []byte {
+func (it *flushableIterator) Value() []byte {
 	return it.val
 }
 
 // Release releases associated resources. Release should always succeed and can
 // be called multiple times without causing error.
-func (it *iterator) Release() {
+func (it *flushableIterator) Release() {
 	it.parentIt.Release()
-	*it = iterator{}
+	*it = flushableIterator{
+		parentIt: it.parentIt,
+	}
 }
 
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
 func (w *Flushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
-	it := &iterator{
+	it := &flushableIterator{
 		lock:     w.lock,
 		tree:     w.modified,
 		start:    append(common.CopyBytes(prefix), start...),
