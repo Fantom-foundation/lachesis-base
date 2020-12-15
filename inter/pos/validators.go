@@ -104,7 +104,7 @@ func (vv *Validators) calcCaches() cache {
 			panic("validators weight overflow")
 		}
 	}
-	if cache.totalWeight > math.MaxUint64/2 {
+	if cache.totalWeight > math.MaxUint32/2 {
 		panic("validators weight overflow")
 	}
 

@@ -37,8 +37,8 @@ func (vv ValidatorsBigBuilder) Build() *Validators {
 	totalBits := vv.TotalWeight().BitLen()
 	// use downscaling by a 2^n ratio, instead of n for simplicity and performance reasons
 	shift := uint(0)
-	if totalBits > 63 {
-		shift = uint(totalBits - 63)
+	if totalBits > 31 {
+		shift = uint(totalBits - 31)
 	}
 
 	builder := NewBuilder()

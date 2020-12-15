@@ -1,7 +1,6 @@
 package pos
 
 import (
-	"math"
 	"math/big"
 	"testing"
 	"unsafe"
@@ -132,7 +131,7 @@ func maxBig(n uint) *big.Int {
 }
 
 func TestValidators_Big(t *testing.T) {
-	max := Weight(math.MaxUint64 >> 1)
+	max := Weight(math.MaxUint32 >> 1)
 
 	b := NewBigBuilder()
 
@@ -162,11 +161,11 @@ func TestValidators_Big(t *testing.T) {
 	assert.Equal(t, Weight(0), v.Get(3))
 	assert.Equal(t, Weight(1), v.Get(4))
 
-	b.Set(5, maxBig(96))
+	b.Set(5, maxBig(60))
 	v = b.Build()
-	assert.Equal(t, Weight(0x400000001ffffffe), v.TotalWeight())
+	assert.Equal(t, Weight(0x40000000), v.TotalWeight())
 	assert.Equal(t, Weight(0), v.Get(1))
-	assert.Equal(t, Weight(0x1fffffff), v.Get(2))
+	assert.Equal(t, Weight(0x1), v.Get(2))
 	assert.Equal(t, Weight(0), v.Get(3))
 	assert.Equal(t, Weight(0), v.Get(4))
 	assert.Equal(t, Weight(max/2), v.Get(5))
@@ -177,22 +176,22 @@ func TestValidators_Big(t *testing.T) {
 	b.Set(4, maxBig(504))
 	b.Set(5, maxBig(515))
 	v = b.Build()
-	assert.Equal(t, Weight(0x400efffffffffffb), v.TotalWeight())
-	assert.Equal(t, Weight(0xffffffffffff), v.Get(1))
-	assert.Equal(t, Weight(0x1ffffffffffff), v.Get(2))
-	assert.Equal(t, Weight(0x3ffffffffffff), v.Get(3))
-	assert.Equal(t, Weight(0x7ffffffffffff), v.Get(4))
-	assert.Equal(t, Weight(0x3fffffffffffffff), v.Get(5))
+	assert.Equal(t, Weight(0x400efffb), v.TotalWeight())
+	assert.Equal(t, Weight(0xffff), v.Get(1))
+	assert.Equal(t, Weight(0x1ffff), v.Get(2))
+	assert.Equal(t, Weight(0x3ffff), v.Get(3))
+	assert.Equal(t, Weight(0x7ffff), v.Get(4))
+	assert.Equal(t, Weight(0x3fffffff), v.Get(5))
 
-	for v := idx.ValidatorID(1); v < 5000; v++ {
+	for v := idx.ValidatorID(1); v <= 5000; v++ {
 		b.Set(v, new(big.Int).Mul(big.NewInt(int64(v)), maxBig(400)))
 	}
 	v = b.Build()
-	assert.Equal(t, Weight(0x5f592dffffffec79), v.TotalWeight())
-	assert.Equal(t, Weight(549755813887), v.Get(1))
-	assert.Equal(t, Weight(1099511627775), v.Get(2))
-	assert.Equal(t, Weight(1649267441663), v.Get(3))
-	assert.Equal(t, Weight(1374389534719999), v.Get(2500))
-	assert.Equal(t, Weight(2747679557812223), v.Get(4998))
-	assert.Equal(t, Weight(2748229313626111), v.Get(4999))
+	assert.Equal(t, Weight(0x5f62de78), v.TotalWeight())
+	assert.Equal(t, Weight(0x7f), v.Get(1))
+	assert.Equal(t, Weight(0xff), v.Get(2))
+	assert.Equal(t, Weight(0x17f), v.Get(3))
+	assert.Equal(t, Weight(0x4e1ff), v.Get(2500))
+	assert.Equal(t, Weight(0x9c37f), v.Get(4999))
+	assert.Equal(t, Weight(0x9c3ff), v.Get(5000))
 }

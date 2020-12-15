@@ -6,7 +6,7 @@ import (
 
 type (
 	// Weight amount.
-	Weight uint64
+	Weight uint32
 )
 
 type (
