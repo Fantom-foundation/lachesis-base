@@ -89,37 +89,41 @@ func TestFlushableParallel(t *testing.T) {
 		}
 
 		work := sync.WaitGroup{}
-		work.Add(2)
-		go func() {
-			defer work.Done()
-			require := require.New(t)
-			for !stopped() {
-				// iterate over tableImmutable and check its content
-				it := tableImmutable.NewIterator(nil, nil)
-				defer it.Release()
+		work.Add(4)
+		for g := 0; g < 2; g++ {
+			go func() {
+				defer work.Done()
+				require := require.New(t)
+				for !stopped() {
+					// iterate over tableImmutable and check its content
+					it := tableImmutable.NewIterator(nil, nil)
+					defer it.Release()
 
-				i := uint64(0)
-				for ; it.Next(); i++ {
-					require.NoError(it.Error(), i)
-					require.Equal(bigendian.Uint64ToBytes(i), it.Key(), i)
-					require.Equal(bigendian.Uint64ToBytes(i), it.Value(), i)
+					i := uint64(0)
+					for ; it.Next(); i++ {
+						require.NoError(it.Error(), i)
+						require.Equal(bigendian.Uint64ToBytes(i), it.Key(), i)
+						require.Equal(bigendian.Uint64ToBytes(i), it.Value(), i)
+					}
+					require.Equal(testPairsNum, i)
 				}
-				require.Equal(testPairsNum, i)
-			}
-		}()
+			}()
+		}
 
-		go func() {
-			defer work.Done()
-			r := rand.New(rand.NewSource(0))
-			for !stopped() {
-				// try to spoil data in tableImmutable by updating other tables
-				_ = tableMutable1.Put(bigendian.Uint64ToBytes(r.Uint64()%testPairsNum), bigendian.Uint64ToBytes(r.Uint64()))
-				_ = tableMutable2.Put(bigendian.Uint64ToBytes(r.Uint64() % testPairsNum)[:7], bigendian.Uint64ToBytes(r.Uint64()))
-				if r.Int63n(100) == 0 {
-					_ = flushableDb.Flush() // flush with 1% chance
+		for g := 0; g < 2; g++ {
+			go func() {
+				defer work.Done()
+				r := rand.New(rand.NewSource(0))
+				for !stopped() {
+					// try to spoil data in tableImmutable by updating other tables
+					_ = tableMutable1.Put(bigendian.Uint64ToBytes(r.Uint64()%testPairsNum), bigendian.Uint64ToBytes(r.Uint64()))
+					_ = tableMutable2.Put(bigendian.Uint64ToBytes(r.Uint64() % testPairsNum)[:7], bigendian.Uint64ToBytes(r.Uint64()))
+					if r.Int63n(100) == 0 {
+						_ = flushableDb.Flush() // flush with 1% chance
+					}
 				}
-			}
-		}()
+			}()
+		}
 
 		time.Sleep(testDuration)
 		close(stop)

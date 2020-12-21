@@ -25,7 +25,7 @@ type Flushable struct {
 	modified       *rbt.Tree // modified, comparing to parent, pairs. deleted values are nil
 	sizeEstimation *int
 
-	lock *sync.Mutex // we have no guarantees that rbt.Tree works with concurrent reads, so we can't use MutexRW
+	lock sync.RWMutex
 }
 
 // Wrap underlying db.
@@ -48,7 +48,6 @@ func WrapWithDrop(parent kvdb.Store, drop func()) *Flushable {
 		underlying:     parent,
 		onDrop:         drop,
 		modified:       rbt.NewWithStringComparator(),
-		lock:           new(sync.Mutex),
 		sizeEstimation: new(int),
 	}
 }
@@ -80,8 +79,8 @@ func (w *Flushable) put(key []byte, value []byte) error {
 
 // Has checks if key is in the exists. Looks in cache first, then - in DB.
 func (w *Flushable) Has(key []byte) (bool, error) {
-	w.lock.Lock()
-	defer w.lock.Unlock()
+	w.lock.RLock()
+	defer w.lock.RUnlock()
 
 	if w.modified == nil {
 		return false, errClosed
@@ -97,8 +96,8 @@ func (w *Flushable) Has(key []byte) (bool, error) {
 
 // Get returns key-value pair by key. Looks in cache first, then - in DB.
 func (w *Flushable) Get(key []byte) ([]byte, error) {
-	w.lock.Lock()
-	defer w.lock.Unlock()
+	w.lock.RLock()
+	defer w.lock.RUnlock()
 
 	if w.modified == nil {
 		return nil, errClosed
@@ -147,6 +146,9 @@ func (w *Flushable) Close() error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
+	if w.modified == nil {
+		return errClosed
+	}
 	w.dropNotFlushed()
 	w.modified = nil
 
@@ -191,6 +193,7 @@ func (w *Flushable) flush() error {
 	}
 
 	batch := w.underlying.NewBatch()
+	defer batch.Reset()
 	for it := w.modified.Iterator(); it.Next(); {
 		var err error
 
@@ -233,7 +236,7 @@ func (w *Flushable) Compact(start []byte, limit []byte) error {
  */
 
 type flushableIterator struct {
-	lock *sync.Mutex
+	lock *sync.RWMutex
 
 	tree *rbt.Tree
 
@@ -300,8 +303,8 @@ func (it *flushableIterator) init() {
 // Next scans key-value pair by key in lexicographic order. Looks in cache first,
 // then - in DB.
 func (it *flushableIterator) Next() bool {
-	it.lock.Lock()
-	defer it.lock.Unlock()
+	it.lock.RLock()
+	defer it.lock.RUnlock()
 
 	if it.Error() != nil {
 		return false
@@ -387,9 +390,9 @@ func (it *flushableIterator) Value() []byte {
 // Release releases associated resources. Release should always succeed and can
 // be called multiple times without causing error.
 func (it *flushableIterator) Release() {
-	it.parentIt.Release()
-	*it = flushableIterator{
-		parentIt: it.parentIt,
+	if it.parentIt != nil {
+		it.parentIt.Release()
+		*it = flushableIterator{}
 	}
 }
 
@@ -397,11 +400,11 @@ func (it *flushableIterator) Release() {
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
 func (w *Flushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
-	w.lock.Lock()
-	defer w.lock.Unlock()
+	w.lock.RLock()
+	defer w.lock.RUnlock()
 
 	it := &flushableIterator{
-		lock:     w.lock,
+		lock:     &w.lock,
 		tree:     w.modified,
 		start:    append(common.CopyBytes(prefix), start...),
 		prefix:   prefix,
