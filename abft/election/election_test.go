@@ -1,6 +1,7 @@
 package election
 
 import (
+	"math"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -119,7 +120,7 @@ a2_2══╬═════╣     ║
 				DecisiveRoots:  map[string]bool{"b2_2": true},
 			},
 			weights{
-				"nodeA": 1000000000000000000,
+				"nodeA": math.MaxUint32/2 - 3,
 				"nodeB": 1,
 				"nodeC": 1,
 				"nodeD": 1,

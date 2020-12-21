@@ -21,42 +21,56 @@ import (
 
 func TestCasualityStrategy(t *testing.T) {
 	testSpecialNamedParents(t, `
-a1.0   b1.0   c1.0   d1.0   e1.0
+a1.1   b1.2   c1.2   d1.2   e1.2
 ║      ║      ║      ║      ║
-║      ╠──────╫───── d2.0   ║
+║      ╠──────╫───── d2.2   ║
 ║      ║      ║      ║      ║
-║      b2.1 ──╫──────╣      e2.1
+║      b2.3 ──╫──────╣      e2.3
 ║      ║      ║      ║      ║
-║      ╠──────╫───── d3.1   ║
-a2.1 ──╣      ║      ║      ║
+║      ╠──────╫───── d3.3   ║
+a2.3 ──╣      ║      ║      ║
 ║      ║      ║      ║      ║
-║      b3.2 ──╣      ║      ║
+║      b3.4 ──╣      ║      ║
 ║      ║      ║      ║      ║
-║      ╠──────╫───── d4.2   ║
+║      ╠──────╫───── d4.4   ║
 ║      ║      ║      ║      ║
-║      ╠───── c2.2   ║      e3.2
+║      ╠───── c2.4   ║      e3.4
 ║      ║      ║      ║      ║
 `, map[int]map[string]string{
 		0: {
-			"nodeA": "[a1.0, c1.0, d2.0, e1.0]",
-			"nodeB": "[b1.0, a1.0, c1.0, d2.0, e1.0]",
-			"nodeC": "[c1.0, a1.0, d2.0, e1.0]",
-			"nodeD": "[d2.0, a1.0, c1.0, e1.0]",
-			"nodeE": "[e1.0, a1.0, c1.0, d2.0]",
+			"nodeA": "[]",
+			"nodeB": "[]",
+			"nodeC": "[]",
+			"nodeD": "[]",
+			"nodeE": "[]",
 		},
 		1: {
-			"nodeA": "[a2.1, c1.0, d3.1, e2.1]",
-			"nodeB": "[b2.1, a2.1, c1.0, d3.1, e2.1]",
-			"nodeC": "[c1.0, a2.1, d3.1, e2.1]",
-			"nodeD": "[d3.1, a2.1, c1.0, e2.1]",
-			"nodeE": "[e2.1, a2.1, c1.0, d3.1]",
+			"nodeA": "[a1.1]",
+			"nodeB": "[a1.1]",
+			"nodeC": "[a1.1]",
+			"nodeD": "[a1.1]",
+			"nodeE": "[a1.1]",
 		},
 		2: {
-			"nodeA": "[a2.1, c2.2, d4.2, e3.2]",
-			"nodeB": "[b3.2, a2.1, c2.2, d4.2, e3.2]",
-			"nodeC": "[c2.2, a2.1, d4.2, e3.2]",
-			"nodeD": "[d4.2, a2.1, c2.2, e3.2]",
-			"nodeE": "[e3.2, a2.1, c2.2, d4.2]",
+			"nodeA": "[a1.1, d2.2, e1.2]",
+			"nodeB": "[b1.2, d2.2, e1.2]",
+			"nodeC": "[c1.2, d2.2, e1.2]",
+			"nodeD": "[d2.2, c1.2, e1.2]",
+			"nodeE": "[e1.2, c1.2, d2.2]",
+		},
+		3: {
+			"nodeA": "[a2.3, c1.2, e2.3]",
+			"nodeB": "[b2.3, a2.3, e2.3]",
+			"nodeC": "[c1.2, a2.3, d3.3]",
+			"nodeD": "[d3.3, a2.3, e2.3]",
+			"nodeE": "[e2.3, a2.3, d3.3]",
+		},
+		4: {
+			"nodeA": "[a2.3, c2.4, d4.4]",
+			"nodeB": "[b3.4, d4.4, e3.4]",
+			"nodeC": "[c2.4, d4.4, e3.4]",
+			"nodeD": "[d4.4, a2.3, e3.4]",
+			"nodeE": "[e3.4, c2.4, d4.4]",
 		},
 	})
 }
@@ -86,7 +100,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		},
 	})
 
-	validators := pos.EqualWeightValidators(nodes, 1)
+	validators := pos.ArrayToValidators(nodes, []pos.Weight{5, 6, 7, 8, 9})
 
 	events := make(map[hash.Event]dag.Event)
 	getEvent := func(id hash.Event) dag.Event {
@@ -100,13 +114,32 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	vecClock := vecfc.NewIndex(crit, vecfc.LiteConfig())
 	vecClock.Reset(validators, memorydb.New(), getEvent)
 
+	capFn := func(diff idx.Event, weight pos.Weight) Metric {
+		if diff > 2 {
+			return Metric(2 * weight)
+		}
+		return Metric(diff) * Metric(weight)
+	}
+	diffMetricFn := func(median, current, update idx.Event, validatorIdx idx.Validator) Metric {
+		if update <= median || update <= current {
+			return 0
+		}
+		if median < current {
+			return capFn(update-median, validators.GetWeightByIdx(validatorIdx)) - capFn(current-median, validators.GetWeightByIdx(validatorIdx))
+		}
+		return capFn(update-median, validators.GetWeightByIdx(validatorIdx))
+	}
+	quorumIndexers := make([]*QuorumIndexer, validators.Len())
+	for i, _ := range validators.IDs() {
+		quorumIndexers[i] = NewQuorumIndexer(validators, &adapters.VectorToDagIndexer{vecClock}, diffMetricFn)
+	}
 	// build vector index
 	for _, e := range ordered {
 		events[e.ID()] = e
 		_ = vecClock.Add(e)
 	}
 
-	// divide events by stage
+	// divide events by stages
 	var stages []dag.Events
 	for _, e := range ordered {
 		name := e.(*tdag.TestEvent).Name
@@ -123,7 +156,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	for stage, ee := range stages {
 		t.Logf("Stage %d:", stage)
 
-		// build heads/tips
+		// build heads/tips and quorum indexers
 		for _, e := range ee {
 			for _, p := range e.Parents() {
 				if heads.Contains(p) {
@@ -133,26 +166,34 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 			heads.Add(e.ID())
 			id := e.ID()
 			tips[e.Creator()] = &id
+
+			for i, id := range validators.IDs() {
+				quorumIndexers[i].ProcessEvent(e, e.Creator() == id)
+			}
 		}
 
-		for _, node := range nodes {
-			selfParent := tips[node]
+		for _, validatorID := range nodes {
+			selfParent := tips[validatorID]
 
-			strategy := NewCasualityStrategy(&adapters.VectorToDagIndexer{vecClock}, validators)
+			var strategies []SearchStrategy
+			for len(strategies) < 2 {
+				strategies = append(strategies, quorumIndexers[validators.GetIdx(validatorID)].SearchStrategy())
+			}
 
-			selfParentResult, parents := FindBestParents(5, heads.Slice(), selfParent, strategy)
+			var existingParents hash.Events
+			if selfParent != nil {
+				existingParents = append(existingParents, *selfParent)
+			}
+			parents := ChooseParents(existingParents, heads.Slice(), strategies)
 
 			if selfParent != nil {
 				assertar.Equal(parents[0], *selfParent)
-				assertar.Equal(*selfParentResult, *selfParent)
-			} else {
-				assertar.Nil(selfParentResult)
 			}
 			//t.Logf("\"%s\": \"%s\",", node.String(), parentsToString(parents))
 			if !assertar.Equal(
-				exp[stage][utils.NameOf(node)],
+				exp[stage][utils.NameOf(validatorID)],
 				parentsToString(parents),
-				"stage %d, %s", stage, utils.NameOf(node),
+				"stage %d, %s", stage, utils.NameOf(validatorID),
 			) {
 				return
 			}

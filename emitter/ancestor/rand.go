@@ -25,9 +25,7 @@ func NewRandomStrategy(r *rand.Rand) *RandomStrategy {
 	}
 }
 
-func (st *RandomStrategy) Init(myLast *hash.Event) {}
-
-// Find chooses the hash from the specified options
-func (st *RandomStrategy) Find(heads hash.Events) hash.Event {
-	return heads[st.r.Intn(len(heads))]
+// Choose chooses the hash from the specified options
+func (st *RandomStrategy) Choose(_ hash.Events, options hash.Events) int {
+	return st.r.Intn(len(options))
 }

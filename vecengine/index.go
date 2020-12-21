@@ -107,7 +107,7 @@ func (vi *Engine) fillGlobalBranchID(e dag.Event, meIdx idx.Validator) (idx.Vali
 	if len(vi.bi.BranchIDCreatorIdxs) != len(vi.bi.BranchIDLastSeq) {
 		return 0, errors.New("inconsistent BranchIDCreators len (inconsistent DB)")
 	}
-	if len(vi.bi.BranchIDCreatorIdxs) < vi.validators.Len() {
+	if idx.Validator(len(vi.bi.BranchIDCreatorIdxs)) < vi.validators.Len() {
 		return 0, errors.New("inconsistent BranchIDCreators len (inconsistent DB)")
 	}
 
@@ -238,7 +238,7 @@ func (vi *Engine) GetMergedHighestBefore(id hash.Event) HighestBeforeI {
 	if vi.AtLeastOneFork() {
 		scatteredBefore := vi.callback.GetHighestBefore(id)
 
-		mergedBefore := vi.callback.NewHighestBefore(idx.Validator(vi.validators.Len()))
+		mergedBefore := vi.callback.NewHighestBefore(vi.validators.Len())
 
 		for creatorIdx, branches := range vi.bi.BranchIDByCreators {
 			mergedBefore.GatherFrom(idx.Validator(creatorIdx), scatteredBefore, branches)

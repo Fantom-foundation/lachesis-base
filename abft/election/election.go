@@ -92,7 +92,7 @@ func (el *Election) notDecidedRoots() []idx.ValidatorID {
 			notDecidedRoots = append(notDecidedRoots, validator)
 		}
 	}
-	if len(notDecidedRoots)+len(el.decidedRoots) != el.validators.Len() { // sanity check
+	if idx.Validator(len(notDecidedRoots)+len(el.decidedRoots)) != el.validators.Len() { // sanity check
 		panic("Mismatch of roots")
 	}
 	return notDecidedRoots

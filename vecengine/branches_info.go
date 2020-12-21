@@ -45,7 +45,7 @@ func newInitialBranchesInfo(validators *pos.Validators) *BranchesInfo {
 }
 
 func (vi *Engine) AtLeastOneFork() bool {
-	return len(vi.bi.BranchIDCreatorIdxs) > vi.validators.Len()
+	return idx.Validator(len(vi.bi.BranchIDCreatorIdxs)) > vi.validators.Len()
 }
 
 func (vi *Engine) BranchesInfo() *BranchesInfo {
