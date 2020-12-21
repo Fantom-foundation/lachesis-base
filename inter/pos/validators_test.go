@@ -1,6 +1,7 @@
 package pos
 
 import (
+	"math"
 	"math/big"
 	"testing"
 	"unsafe"
@@ -17,7 +18,7 @@ func TestNewValidators(t *testing.T) {
 	assert.NotNil(t, b)
 	assert.NotNil(t, b.Build())
 
-	assert.Equal(t, 0, b.Build().Len())
+	assert.Equal(t, idx.Validator(0), b.Build().Len())
 }
 
 func TestValidators_Set(t *testing.T) {
@@ -31,7 +32,7 @@ func TestValidators_Set(t *testing.T) {
 
 	v := b.Build()
 
-	assert.Equal(t, 5, v.Len())
+	assert.Equal(t, idx.Validator(5), v.Len())
 	assert.Equal(t, Weight(15), v.TotalWeight())
 
 	b.Set(1, 10)
@@ -39,7 +40,7 @@ func TestValidators_Set(t *testing.T) {
 
 	v = b.Build()
 
-	assert.Equal(t, 5, v.Len())
+	assert.Equal(t, idx.Validator(5), v.Len())
 	assert.Equal(t, Weight(51), v.TotalWeight())
 
 	b.Set(2, 0)
@@ -47,7 +48,7 @@ func TestValidators_Set(t *testing.T) {
 
 	v = b.Build()
 
-	assert.Equal(t, 3, v.Len())
+	assert.Equal(t, idx.Validator(3), v.Len())
 	assert.Equal(t, Weight(44), v.TotalWeight())
 
 	b.Set(4, 0)
@@ -56,7 +57,7 @@ func TestValidators_Set(t *testing.T) {
 
 	v = b.Build()
 
-	assert.Equal(t, 0, v.Len())
+	assert.Equal(t, idx.Validator(0), v.Len())
 	assert.Equal(t, Weight(0), v.TotalWeight())
 }
 

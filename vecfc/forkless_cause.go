@@ -76,7 +76,6 @@ func (vi *Index) forklessCause(aID, bID hash.Event) bool {
 			// we may count the same creator multiple times (on different branches)!
 			// so not every call increases the counter
 			yes.CountByIdx(creatorIdx)
-		} else {
 		}
 	}
 	return yes.HasQuorum()

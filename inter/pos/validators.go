@@ -81,8 +81,8 @@ func newValidators(values ValidatorsBuilder) *Validators {
 }
 
 // Len returns count of validators in Validators objects
-func (vv *Validators) Len() int {
-	return len(vv.values)
+func (vv *Validators) Len() idx.Validator {
+	return idx.Validator(len(vv.values))
 }
 
 // calcCaches calculates internal caches for validators
@@ -119,6 +119,11 @@ func (vv *Validators) Get(id idx.ValidatorID) Weight {
 // GetIdx returns index (offset) of validator in the group
 func (vv *Validators) GetIdx(id idx.ValidatorID) idx.Validator {
 	return vv.cache.indexes[id]
+}
+
+// GetID returns index validator ID by index (offset) of validator in the group
+func (vv *Validators) GetID(i idx.Validator) idx.ValidatorID {
+	return vv.cache.ids[i]
 }
 
 // GetWeightByIdx returns weight for validator by index
