@@ -111,7 +111,7 @@ type eventErrPair struct {
 	err   error
 }
 
-func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, time time.Time, fetchEvents dagfetcher.EventsRequesterFn) error {
+func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, time time.Time, fetchEvents dagfetcher.EventsRequesterFn, done chan struct{}) error {
 	if !f.eventsSemaphore.Acquire(events.Metric(), f.cfg.EventsSemaphoreTimeout) {
 		return ErrBusy
 	}
@@ -164,6 +164,9 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, time t
 		if len(toRequest) != 0 {
 			_ = f.callback.NotifyAnnounces(peer, toRequest, time, fetchEvents)
 		}
+		if done != nil {
+			done <- struct{}{}
+		}
 	})
 }
 
@@ -193,4 +196,8 @@ func (f *Processor) Clear() {
 
 func (f *Processor) TotalBuffered() dag.Metric {
 	return f.buffer.Total()
+}
+
+func (f *Processor) TasksCount() int {
+	return f.orderedInserter.TasksCount() + f.unorderedInserters.TasksCount()
 }
