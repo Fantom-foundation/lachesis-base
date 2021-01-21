@@ -95,7 +95,7 @@ func (s *Seeder) Start() {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		go s.readerLoop()
+		s.readerLoop()
 	}()
 }
 
