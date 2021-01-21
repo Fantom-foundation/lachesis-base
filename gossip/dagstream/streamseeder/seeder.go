@@ -138,6 +138,17 @@ func (s *Seeder) UnregisterPeer(peer string) error {
 	}
 }
 
+func (s *Seeder) waitPendingResponsesBelowLimit() {
+	for atomic.LoadInt32(&s.pendingResponsesSize) >= s.cfg.MaxPendingResponsesSize {
+		if s.done {
+			// terminating, abort all operations
+			return
+		}
+		// we shouldn't get there normally, so it's fine to use a spin lock instead of a conditional variable
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func (s *Seeder) readerLoop() {
 	for {
 		// Wait for an outside event to occur
@@ -154,14 +165,7 @@ func (s *Seeder) readerLoop() {
 			delete(s.peerSessions, peerID)
 
 		case op := <-s.notifyReceivedRequest:
-			for atomic.LoadInt32(&s.pendingResponsesSize) >= s.cfg.MaxPendingResponsesSize {
-				if s.done {
-					// terminating, abort all operations
-					return
-				}
-				// we shouldn't get there normally, so it's fine to use a spin lock instead of a conditional variable
-				time.Sleep(10 * time.Millisecond)
-			}
+			s.waitPendingResponsesBelowLimit()
 
 			// prune oldest session
 			sessions := s.peerSessions[op.peer.ID]
@@ -190,55 +194,54 @@ func (s *Seeder) readerLoop() {
 				continue
 			}
 
-			if session.done {
-				continue
+			for i := uint32(0); i < op.request.MaxChunks && !session.done; i++ {
+				allConsumed := true
+				resp := dagstream.Response{}
+				size := uint64(0)
+				var last hash.Event
+				var ids hash.Events
+				s.callback.ForEachEvent(session.next, func(id hash.Event, event interface{}, eventSize uint64) bool {
+					if bytes.Compare(id.Bytes(), session.stop) >= 0 {
+						return false
+					}
+					lim := op.request.Limit
+					limitReached := idx.Event(len(resp.IDs)) >= lim.Num || idx.Event(len(resp.Events)) >= lim.Num || size >= lim.Size
+					if size != 0 && limitReached {
+						allConsumed = false
+						return false
+					}
+					if op.request.Type == dagstream.RequestEvents {
+						resp.Events = append(resp.Events, event)
+						ids = append(ids, id)
+					} else {
+						resp.IDs = append(resp.IDs, id)
+						ids = resp.IDs
+					}
+					size += eventSize
+					last = id
+					return true
+				})
+				// update session
+				nextBn := last.Big()
+				nextBn.Add(nextBn, common.Big1)
+				session.next = common.BytesToHash(nextBn.Bytes()).Bytes()
+				session.done = allConsumed
+				s.sessions[sessionIDAndPeer{op.request.Session.ID, op.peer.ID}] = session
+
+				resp.Done = allConsumed
+				resp.SessionID = op.request.Session.ID
+
+				memSize := int32(size)
+				if op.request.Type != dagstream.RequestEvents {
+					memSize = int32(len(resp.IDs) * 128)
+				}
+				s.waitPendingResponsesBelowLimit()
+				atomic.AddInt32(&s.pendingResponsesSize, memSize)
+				_ = s.senders[session.senderI].Enqueue(func() {
+					_ = session.sendChunk(resp, ids)
+					atomic.AddInt32(&s.pendingResponsesSize, -memSize)
+				})
 			}
-
-			allConsumed := true
-			resp := dagstream.Response{}
-			size := uint64(0)
-			var last hash.Event
-			var ids hash.Events
-			s.callback.ForEachEvent(session.next, func(id hash.Event, event interface{}, eventSize uint64) bool {
-				if bytes.Compare(id.Bytes(), session.stop) >= 0 {
-					return false
-				}
-				lim := op.request.Limit
-				limitReached := idx.Event(len(resp.IDs)) >= lim.Num || idx.Event(len(resp.Events)) >= lim.Num || size >= lim.Size
-				if size != 0 && limitReached {
-					allConsumed = false
-					return false
-				}
-				if op.request.Type == dagstream.RequestEvents {
-					resp.Events = append(resp.Events, event)
-					ids = append(ids, id)
-				} else {
-					resp.IDs = append(resp.IDs, id)
-					ids = resp.IDs
-				}
-				size += eventSize
-				last = id
-				return true
-			})
-			// update session
-			nextBn := last.Big()
-			nextBn.Add(nextBn, common.Big1)
-			session.next = common.BytesToHash(nextBn.Bytes()).Bytes()
-			session.done = allConsumed
-			s.sessions[sessionIDAndPeer{op.request.Session.ID, op.peer.ID}] = session
-
-			resp.Done = allConsumed
-			resp.SessionID = op.request.Session.ID
-
-			memSize := int32(size)
-			if op.request.Type != dagstream.RequestEvents {
-				memSize = int32(len(resp.IDs) * 128)
-			}
-			atomic.AddInt32(&s.pendingResponsesSize, memSize)
-			_ = s.senders[session.senderI].Enqueue(func() {
-				_ = session.sendChunk(resp, ids)
-				atomic.AddInt32(&s.pendingResponsesSize, -memSize)
-			})
 		}
 	}
 }

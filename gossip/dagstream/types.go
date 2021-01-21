@@ -6,9 +6,10 @@ import (
 )
 
 type Request struct {
-	Session Session
-	Limit   dag.Metric
-	Type    RequestType
+	Session   Session
+	Limit     dag.Metric
+	Type      RequestType
+	MaxChunks uint32
 }
 
 type Response struct {

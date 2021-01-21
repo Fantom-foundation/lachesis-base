@@ -140,8 +140,8 @@ func (d *Leecher) startSession(candidates []string) {
 
 	d.session.agent = peerleecher.New(&d.wg, d.cfg.Session, peerleecher.EpochDownloaderCallbacks{
 		OnlyNotConnected: d.callback.OnlyNotConnected,
-		RequestChunk: func(n dag.Metric) error {
-			return d.callback.RequestChunk(peer, dagstream.Request{session, n, typ})
+		RequestChunks: func(n dag.Metric, maxChunks uint32) error {
+			return d.callback.RequestChunk(peer, dagstream.Request{session, n, typ, maxChunks})
 		},
 		Suspend: func() bool {
 			return d.callback.Suspend(peer)
