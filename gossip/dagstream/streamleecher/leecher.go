@@ -178,6 +178,7 @@ func (d *Leecher) routine() {
 
 func (d *Leecher) loop() {
 	syncTicker := time.NewTicker(d.cfg.RecheckInterval)
+	defer syncTicker.Stop()
 	for {
 		select {
 		case <-d.quit:

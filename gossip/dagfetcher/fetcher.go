@@ -210,6 +210,7 @@ func (f *Fetcher) processNotification(notification announcesBatch, fetchTimer *t
 func (f *Fetcher) loop() {
 	// Iterate the event fetching until a quit is requested
 	fetchTimer := time.NewTimer(0)
+	defer fetchTimer.Stop()
 
 	for {
 		// Wait for an outside event to occur

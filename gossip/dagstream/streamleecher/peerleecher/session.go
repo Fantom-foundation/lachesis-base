@@ -113,6 +113,7 @@ func (d *PeerLeecher) NotifyChunkReceived(last hash.Event) error {
 func (d *PeerLeecher) loop() {
 	// Iterate the event fetching until a quit is requested
 	syncTicker := time.NewTicker(d.cfg.RecheckInterval)
+	defer syncTicker.Stop()
 
 	for {
 		// Wait for an outside event to occur
