@@ -7,7 +7,6 @@ import (
 
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
-	"github.com/Fantom-foundation/lachesis-base/utils/workers"
 )
 
 var (
@@ -24,7 +23,7 @@ type receivedChunk struct {
 type EpochDownloaderCallbacks struct {
 	OnlyNotConnected OnlyNotConnectedFn
 
-	RequestChunk func(dag.Metric) error
+	RequestChunks func(n dag.Metric, maxChunks uint32) error
 
 	Suspend func() bool
 
@@ -50,8 +49,6 @@ type PeerLeecher struct {
 
 	wg *sync.WaitGroup
 
-	parallelTasks *workers.Workers
-
 	// Callbacks
 	callback EpochDownloaderCallbacks
 }
@@ -61,7 +58,6 @@ func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloader
 	quit := make(chan struct{})
 	return &PeerLeecher{
 		processingChunks:    make([]receivedChunk, 0, cfg.ParallelChunksDownload*2),
-		parallelTasks:       workers.New(wg, quit, cfg.ParallelChunksDownload*2),
 		notifyReceivedChunk: make(chan *receivedChunk, cfg.ParallelChunksDownload*2),
 		quit:                quit,
 		cfg:                 cfg,
@@ -73,7 +69,6 @@ func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloader
 // Start boots up the announcement based synchroniser, accepting and processing
 // hash notifications and event fetches until termination requested.
 func (d *PeerLeecher) Start() {
-	d.parallelTasks.Start(d.cfg.ParallelChunksDownload)
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -93,7 +88,6 @@ func (d *PeerLeecher) Terminate() {
 	defer d.quitMu.Unlock()
 	if !d.done {
 		close(d.quit)
-		d.parallelTasks.Drain()
 		d.done = true
 	}
 }
@@ -119,6 +113,7 @@ func (d *PeerLeecher) NotifyChunkReceived(last hash.Event) error {
 func (d *PeerLeecher) loop() {
 	// Iterate the event fetching until a quit is requested
 	syncTicker := time.NewTicker(d.cfg.RecheckInterval)
+	defer syncTicker.Stop()
 
 	for {
 		// Wait for an outside event to occur
@@ -170,16 +165,9 @@ func (d *PeerLeecher) tryToSync() {
 		return
 	}
 
-	requestsToSend := make([]dag.Metric, 0, d.cfg.ParallelChunksDownload)
-
-	for d.totalRequested < d.totalProcessed+d.cfg.ParallelChunksDownload {
-		requestsToSend = append(requestsToSend, d.cfg.DefaultChunkSize)
-		d.totalRequested++
-	}
-	for _, r := range requestsToSend {
-		request := r
-		_ = d.parallelTasks.Enqueue(func() {
-			_ = d.callback.RequestChunk(request)
-		})
+	if d.totalRequested < d.totalProcessed+d.cfg.ParallelChunksDownload {
+		requestsToSend := (d.totalProcessed + d.cfg.ParallelChunksDownload) - d.totalRequested
+		d.totalRequested += requestsToSend
+		_ = d.callback.RequestChunks(d.cfg.DefaultChunkSize, uint32(requestsToSend))
 	}
 }
