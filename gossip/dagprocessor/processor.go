@@ -107,7 +107,7 @@ type eventErrPair struct {
 	err   error
 }
 
-func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notifyAnnounces func(hash.Events), done chan struct{}) error {
+func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notifyAnnounces func(hash.Events), done func()) error {
 	if !f.eventsSemaphore.Acquire(events.Metric(), f.cfg.EventsSemaphoreTimeout) {
 		return ErrBusy
 	}
@@ -118,6 +118,9 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 	}
 
 	return inserter.Enqueue(func() {
+		if done != nil {
+			defer done()
+		}
 		checkedC := make(chan eventErrPair, len(events))
 		f.callback.Event.CheckParentless(events, func(checked dag.Events, errs []error) {
 			for i, e := range checked {
@@ -159,9 +162,6 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 		// request unknown event parents
 		if notifyAnnounces != nil && len(toRequest) != 0 {
 			notifyAnnounces(toRequest)
-		}
-		if done != nil {
-			done <- struct{}{}
 		}
 	})
 }
