@@ -1,4 +1,4 @@
-package dagfetcher
+package itemsfetcher
 
 import "time"
 

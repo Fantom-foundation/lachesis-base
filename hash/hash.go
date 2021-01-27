@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"math/rand"
 	"reflect"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,6 +24,10 @@ var (
 
 // Hash represents the 32 byte hash of arbitrary data.
 type Hash [HashLength]byte
+
+type Hashes []Hash
+
+type HashesSet map[Hash]struct{}
 
 // BytesToHash sets b to hash.
 // If b is larger than len(h), b will be cropped from the left.
@@ -107,4 +112,117 @@ func FakeHash(seed ...int64) (h common.Hash) {
 		panic(err)
 	}
 	return
+}
+
+/*
+ * HashesSet methods:
+ */
+
+// NewHashesSet makes hash index.
+func NewHashesSet(h ...Hash) HashesSet {
+	hh := HashesSet{}
+	hh.Add(h...)
+	return hh
+}
+
+// Copy copies hashes to a new structure.
+func (hh HashesSet) Copy() HashesSet {
+	ee := make(HashesSet, len(hh))
+	for k, v := range hh {
+		ee[k] = v
+	}
+
+	return ee
+}
+
+// String returns human readable string representation.
+func (hh HashesSet) String() string {
+	ss := make([]string, 0, len(hh))
+	for h := range hh {
+		ss = append(ss, h.String())
+	}
+	return "[" + strings.Join(ss, ", ") + "]"
+}
+
+// Slice returns whole index as slice.
+func (hh HashesSet) Slice() Hashes {
+	arr := make(Hashes, len(hh))
+	i := 0
+	for h := range hh {
+		arr[i] = h
+		i++
+	}
+	return arr
+}
+
+// Add appends hash to the index.
+func (hh HashesSet) Add(hash ...Hash) (changed bool) {
+	for _, h := range hash {
+		if _, ok := hh[h]; !ok {
+			hh[h] = struct{}{}
+			changed = true
+		}
+	}
+	return
+}
+
+// Erase erase hash from the index.
+func (hh HashesSet) Erase(hash ...Hash) (changed bool) {
+	for _, h := range hash {
+		if _, ok := hh[h]; ok {
+			delete(hh, h)
+			changed = true
+		}
+	}
+	return
+}
+
+// Contains returns true if hash is in.
+func (hh HashesSet) Contains(hash Hash) bool {
+	_, ok := hh[hash]
+	return ok
+}
+
+/*
+ * Hashes methods:
+ */
+
+// NewHashes makes hash slice.
+func NewHashes(h ...Hash) Hashes {
+	hh := Hashes{}
+	hh.Add(h...)
+	return hh
+}
+
+// Copy copies hashes to a new structure.
+func (hh Hashes) Copy() Hashes {
+	ee := make(Hashes, len(hh))
+	for k, v := range hh {
+		ee[k] = v
+	}
+
+	return ee
+}
+
+// String returns human readable string representation.
+func (hh Hashes) String() string {
+	ss := make([]string, 0, len(hh))
+	for _, h := range hh {
+		ss = append(ss, h.String())
+	}
+	return "[" + strings.Join(ss, ", ") + "]"
+}
+
+// Set returns whole index as a HashesSet.
+func (hh Hashes) Set() HashesSet {
+	set := make(HashesSet, len(hh))
+	for _, h := range hh {
+		set[h] = struct{}{}
+	}
+	return set
+}
+
+// Add appends hash to the slice.
+func (hh *Hashes) Add(hash ...Hash) {
+	*hh = append(*hh, hash...)
 }

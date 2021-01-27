@@ -4,9 +4,7 @@ import (
 	"errors"
 	"runtime"
 	"sync"
-	"time"
 
-	"github.com/Fantom-foundation/lachesis-base/gossip/dagfetcher"
 	"github.com/Fantom-foundation/lachesis-base/gossip/dagordering"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -49,8 +47,6 @@ type Callback struct {
 	Event EventCallback
 	// PeerMisbehaviour is a callback type for dropping a peer detected as malicious.
 	PeerMisbehaviour func(peer string, err error) bool
-
-	NotifyAnnounces func(peer string, ids hash.Events, time time.Time, fetchEvents dagfetcher.EventsRequesterFn) error
 }
 
 // New creates an event processor
@@ -111,7 +107,7 @@ type eventErrPair struct {
 	err   error
 }
 
-func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, time time.Time, fetchEvents dagfetcher.EventsRequesterFn, done chan struct{}) error {
+func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notifyAnnounces func(hash.Events), done chan struct{}) error {
 	if !f.eventsSemaphore.Acquire(events.Metric(), f.cfg.EventsSemaphoreTimeout) {
 		return ErrBusy
 	}
@@ -161,8 +157,8 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, time t
 		}
 
 		// request unknown event parents
-		if len(toRequest) != 0 {
-			_ = f.callback.NotifyAnnounces(peer, toRequest, time, fetchEvents)
+		if notifyAnnounces != nil && len(toRequest) != 0 {
+			notifyAnnounces(toRequest)
 		}
 		if done != nil {
 			done <- struct{}{}
