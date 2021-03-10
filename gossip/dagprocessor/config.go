@@ -24,7 +24,7 @@ func DefaultConfig() Config {
 	return Config{
 		EventsBufferLimit: dag.Metric{
 			// Shouldn't be too big because complexity is O(n) for each insertion in the EventsBuffer
-			Num:  500,
+			Num:  3000,
 			Size: 10 * opt.MiB,
 		},
 		EventsSemaphoreTimeout: 10 * time.Second,
