@@ -33,10 +33,10 @@ func New(maxWeight uint, maxSize int) (*Cache, error) {
 // NewWeightedLRU constructs an LRU of the given weight and size
 func NewWithEvict(maxWeight uint, maxSize int, onEvict EvictCallback) (*Cache, error) {
 	if maxSize < 0 {
-		return nil, errors.New("Must provide a non-negative size")
+		return nil, errors.New("must provide a non-negative size")
 	}
 	if maxWeight < 0 {
-		return nil, errors.New("Must provide a non-negative weight")
+		return nil, errors.New("must provide a non-negative weight")
 	}
 	c := &Cache{
 		maxSize:   maxSize,

@@ -76,7 +76,7 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)
 	}
-	r := rand.New(rand.NewSource(int64((len(nodes) + cheatersCount))))
+	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
 	tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			input.SetEvent(e)

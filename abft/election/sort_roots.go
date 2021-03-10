@@ -21,5 +21,5 @@ func (el *Election) chooseAtropos() (*Res, error) {
 			}, nil
 		}
 	}
-	return nil, errors.New("All the roots are decided as 'no', which is possible only if more than 1/3W are Byzantine")
+	return nil, errors.New("all the roots are decided as 'no', which is possible only if more than 1/3W are Byzantine")
 }

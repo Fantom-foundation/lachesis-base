@@ -31,7 +31,7 @@ func DefaultConfig() Config {
 		BaseProgressWatchdog: time.Second * 5,
 		BaseSessionWatchdog:  time.Second * 30 * 5,
 		MinSessionRestart:    time.Second * 5,
-		MaxSessionRestart:    time.Minute * 2,
+		MaxSessionRestart:    time.Minute * 5,
 	}
 }
 

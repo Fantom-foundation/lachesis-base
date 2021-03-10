@@ -54,7 +54,7 @@ func New(cfg Config, callbacks Callbacks) *Seeder {
 		cfg:                    cfg,
 	}
 	for i := 0; i < cfg.SenderThreads; i++ {
-		s.senders[i] = workers.New(&s.wg, s.quit, s.cfg.MaxMaxSenderTasks)
+		s.senders[i] = workers.New(&s.wg, s.quit, s.cfg.MaxSenderTasks)
 	}
 	return s
 }

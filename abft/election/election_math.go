@@ -75,8 +75,8 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 					}
 					if !allVotes.Count(observedRoot.Slot.Validator) {
 						// it shouldn't be possible to get here, because we've taken 1 root from every node above
-						return nil, fmt.Errorf("forkless caused by 2 fork roots => more than 1/3W are Byzantine (%s, election frame=%d, validator=%d)",
-							subjectHash.String(), el.frameToDecide, validatorSubject)
+						return nil, fmt.Errorf("forkless caused by 2 fork roots => more than 1/3W are Byzantine (election frame=%d, validator=%d)",
+							el.frameToDecide, validatorSubject)
 					}
 				} else {
 					return nil, errors.New("every root must vote for every not decided subject. possibly roots are processed out of order")

@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/gossip/dagordering"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/utils/datasemaphore"
 	"github.com/Fantom-foundation/lachesis-base/utils/workers"
 )
@@ -47,6 +48,7 @@ type Callback struct {
 	Event EventCallback
 	// PeerMisbehaviour is a callback type for dropping a peer detected as malicious.
 	PeerMisbehaviour func(peer string, err error) bool
+	HighestLamport   func() idx.Lamport
 }
 
 // New creates an event processor
@@ -167,13 +169,22 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 }
 
 func (f *Processor) process(peer string, res eventErrPair) (toRequest hash.Events) {
+	// release event if failed validation
 	if res.err != nil {
 		f.callback.PeerMisbehaviour(peer, res.err)
 		f.callback.Event.Released(res.event, peer, res.err)
 		return hash.Events{}
 	}
+	// release event if it's too far in future
+	highestLamport := f.callback.HighestLamport()
+	maxLamportDiff := 1 + idx.Lamport(f.cfg.EventsBufferLimit.Num)
+	if res.event.Lamport() > highestLamport+maxLamportDiff {
+		f.callback.Event.Released(res.event, peer, res.err)
+		return hash.Events{}
+	}
+	// push event to the ordering buffer
 	complete := f.buffer.PushEvent(res.event, peer)
-	if !complete {
+	if !complete && res.event.Lamport() <= highestLamport+maxLamportDiff/10 {
 		return res.event.Parents()
 	}
 	return hash.Events{}

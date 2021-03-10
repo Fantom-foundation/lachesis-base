@@ -66,7 +66,7 @@ func (w *Flushable) Put(key []byte, value []byte) error {
 
 func (w *Flushable) put(key []byte, value []byte) error {
 	if value == nil || key == nil {
-		return errors.New("Flushable: key or value is nil")
+		return errors.New("flushable: key or value is nil")
 	}
 	if w.modified == nil {
 		return errClosed
