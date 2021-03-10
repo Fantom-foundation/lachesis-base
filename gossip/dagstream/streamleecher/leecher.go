@@ -23,7 +23,8 @@ type Leecher struct {
 	session sessionState
 	epoch   idx.Epoch
 
-	emptyState bool
+	emptyState   bool
+	forceSyncing bool
 
 	peers map[string]struct{}
 
@@ -107,7 +108,7 @@ func (d *Leecher) selectSessionPeerCandidates() []string {
 	}
 	sinceEnd := time.Since(d.session.endTime)
 	waitUntilProcessed := d.session.try == 0 || sinceEnd > d.cfg.MinSessionRestart
-	hasSomethingToSync := d.session.try == 0 || len(futureEpochPeers) > 0 || sinceEnd >= d.cfg.MaxSessionRestart
+	hasSomethingToSync := d.session.try == 0 || len(futureEpochPeers) > 0 || sinceEnd >= d.cfg.MaxSessionRestart || d.forceSyncing
 	if waitUntilProcessed && hasSomethingToSync {
 		if len(futureEpochPeers) > 0 && (d.session.try%5 != 4 || len(currentEpochPeers) == 0) {
 			// normally work only with peers which have a higher epoch
@@ -159,6 +160,8 @@ func (d *Leecher) startSession(candidates []string) {
 	d.session.peer = peer
 
 	d.session.agent.Start()
+
+	d.forceSyncing = false
 }
 
 func (d *Leecher) routine() {
@@ -226,6 +229,12 @@ func (d *Leecher) PeersNum() int {
 	defer d.mu.RUnlock()
 
 	return len(d.peers)
+}
+
+func (d *Leecher) ForceSyncing() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.forceSyncing = true
 }
 
 // UnregisterPeer removes a peer from the known list, preventing current or any future sessions with the peer
