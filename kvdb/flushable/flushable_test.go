@@ -181,12 +181,14 @@ func TestFlushable(t *testing.T) {
 			testForEach := func(db kvdb.Store, first bool) {
 
 				var it kvdb.Iterator
-				if try%3 == 0 {
+				if try%4 == 0 {
 					it = db.NewIterator(nil, nil)
-				} else if try%3 == 1 {
+				} else if try%4 == 1 {
 					it = db.NewIterator(prefix, nil)
-				} else {
+				} else if try%4 == 2 {
 					it = db.NewIterator(nil, prefix)
+				} else {
+					it = db.NewIterator(prefix[:len(prefix)/2], prefix[len(prefix)/2:])
 				}
 				defer it.Release()
 
