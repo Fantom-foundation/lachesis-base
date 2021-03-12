@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/Fantom-foundation/lachesis-base/eventcheck"
 	"github.com/Fantom-foundation/lachesis-base/gossip/dagordering"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -179,7 +180,7 @@ func (f *Processor) process(peer string, res eventErrPair) (toRequest hash.Event
 	highestLamport := f.callback.HighestLamport()
 	maxLamportDiff := 1 + idx.Lamport(f.cfg.EventsBufferLimit.Num)
 	if res.event.Lamport() > highestLamport+maxLamportDiff {
-		f.callback.Event.Released(res.event, peer, res.err)
+		f.callback.Event.Released(res.event, peer, eventcheck.ErrSpilledEvent)
 		return hash.Events{}
 	}
 	// push event to the ordering buffer
@@ -197,8 +198,6 @@ func (f *Processor) IsBuffered(id hash.Event) bool {
 // Clear
 func (f *Processor) Clear() {
 	f.buffer.Clear()
-	f.unorderedInserters.Drain()
-	f.orderedInserter.Drain()
 }
 
 func (f *Processor) TotalBuffered() dag.Metric {
