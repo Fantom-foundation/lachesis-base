@@ -66,12 +66,12 @@ func testEventsBuffer(t *testing.T, try int64) {
 			}
 		},
 
-		Exists: func(e hash.Event) bool {
-			return processed[e] != nil
+		Exists: func(id hash.Event) bool {
+			return processed[id] != nil
 		},
 
-		Get: func(e hash.Event) dag.Event {
-			return processed[e]
+		Get: func(id hash.Event) dag.Event {
+			return processed[id]
 		},
 
 		Check: func(e dag.Event, parents dag.Events) error {
@@ -196,6 +196,9 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 		go func() {
 			defer wg.Done()
 			buffer.PushEvent(e, "")
+			if r.Intn(10) == 0 {
+				buffer.Clear()
+			}
 		}()
 	}
 	wg.Wait()
