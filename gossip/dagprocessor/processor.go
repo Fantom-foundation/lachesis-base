@@ -94,7 +94,6 @@ func (f *Processor) Start() {
 func (f *Processor) Stop() {
 	close(f.quit)
 	f.eventsSemaphore.Terminate()
-	f.Clear()
 	f.wg.Wait()
 	f.buffer.Clear()
 }
@@ -132,12 +131,12 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 		})
 
 		var orderedResults []eventErrPair
-		var eventPos map[hash.Event]int
+		var eventPos map[hash.Event][]int
 		if ordered {
 			orderedResults = make([]eventErrPair, len(events))
-			eventPos = make(map[hash.Event]int, len(events))
+			eventPos = make(map[hash.Event][]int, len(events))
 			for i, e := range events {
-				eventPos[e.ID()] = i
+				eventPos[e.ID()] = append(eventPos[e.ID()], i)
 			}
 		}
 		var processed int
@@ -146,7 +145,9 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 			select {
 			case res := <-checkedC:
 				if ordered {
-					orderedResults[eventPos[res.event.ID()]] = res
+					for _, i := range eventPos[res.event.ID()] {
+						orderedResults[i] = res
+					}
 
 					for i := processed; processed < len(orderedResults) && orderedResults[i].event != nil; i++ {
 						toRequest = append(toRequest, f.process(peer, orderedResults[i])...)
