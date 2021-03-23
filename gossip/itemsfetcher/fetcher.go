@@ -106,7 +106,7 @@ func (f *Fetcher) Stop() {
 func (f *Fetcher) Overloaded() bool {
 	return len(f.receivedItems) > f.cfg.MaxQueuedBatches*3/4 ||
 		len(f.notifications) > f.cfg.MaxQueuedBatches*3/4 ||
-		f.announces.Len() > f.cfg.HashLimit*3/4
+		f.announces.Len() > f.cfg.HashLimit/2
 }
 
 // NotifyAnnounces announces the fetcher of the potential availability of a new item in
@@ -288,6 +288,13 @@ func (f *Fetcher) loop() {
 	}
 }
 
+func maxDuration(a, b time.Duration) time.Duration {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // rescheduleFetch resets the specified fetch timer to the next announce timeout.
 func (f *Fetcher) rescheduleFetch(fetch *time.Timer) {
 	// Short circuit if no items are announced
@@ -296,12 +303,20 @@ func (f *Fetcher) rescheduleFetch(fetch *time.Timer) {
 	}
 	// Otherwise find the earliest expiring announcement
 	earliest := time.Now()
+	i := 0
+	maxChecks := f.cfg.HashLimit / 32
 	for _, fetch := range f.fetching {
 		if earliest.After(fetch.fetchingTime) {
 			earliest = fetch.fetchingTime
 		}
+		if i >= maxChecks {
+			// no need to scan all the entries
+			break
+		}
+		i++
 	}
-	fetch.Reset(f.cfg.ArriveTimeout - time.Since(earliest))
+	// limit minimum duration to prevent spinning too often
+	fetch.Reset(maxDuration(f.cfg.ArriveTimeout-time.Since(earliest), f.cfg.ArriveTimeout/8))
 }
 
 // forgetHash removes all traces of a item announcement from the fetcher's
