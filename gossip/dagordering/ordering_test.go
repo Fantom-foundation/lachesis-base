@@ -107,12 +107,11 @@ func TestEventsBufferReleasing(t *testing.T) {
 }
 
 func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
-	r := rand.New(rand.NewSource(try))
 	nodes := tdag.GenNodes(5)
-	eventsPerNode := 1 + r.Intn(maxEvents)/5
+	eventsPerNode := 1 + rand.Intn(maxEvents)/5
 
 	var ordered dag.Events
-	_ = tdag.ForEachRandEvent(nodes, eventsPerNode, 3, r, tdag.ForEachEvent{
+	_ = tdag.ForEachRandEvent(nodes, eventsPerNode, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
@@ -128,8 +127,8 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 	processed := make(map[hash.Event]dag.Event)
 	var mutex sync.Mutex
 	limit := dag.Metric{
-		Num:  idx.Event(r.Intn(maxEvents)),
-		Size: uint64(r.Intn(maxEvents * 100)),
+		Num:  idx.Event(rand.Intn(maxEvents)),
+		Size: uint64(rand.Intn(maxEvents * 100)),
 	}
 	buffer := New(limit, Callback{
 		Process: func(e dag.Event) error {
@@ -145,10 +144,10 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 					return nil
 				}
 			}
-			if r.Intn(10) == 0 {
+			if rand.Intn(10) == 0 {
 				return errors.New("testing error")
 			}
-			if r.Intn(10) == 0 {
+			if rand.Intn(10) == 0 {
 				time.Sleep(time.Microsecond * 100)
 			}
 			processed[e.ID()] = e
@@ -176,10 +175,10 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 		Check: func(e dag.Event, parents dag.Events) error {
 			mutex.Lock()
 			defer mutex.Unlock()
-			if r.Intn(10) == 0 {
+			if rand.Intn(10) == 0 {
 				return errors.New("testing error")
 			}
-			if r.Intn(10) == 0 {
+			if rand.Intn(10) == 0 {
 				time.Sleep(time.Microsecond * 100)
 			}
 			return nil
@@ -187,16 +186,16 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 	})
 
 	// duplicate some events
-	ordered = append(ordered, ordered[:r.Intn(len(ordered))]...)
+	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...)
 	// shuffle events
 	wg := sync.WaitGroup{}
-	for _, rnd := range r.Perm(len(ordered)) {
+	for _, rnd := range rand.Perm(len(ordered)) {
 		e := ordered[rnd]
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			buffer.PushEvent(e, "")
-			if r.Intn(10) == 0 {
+			if rand.Intn(10) == 0 {
 				buffer.Clear()
 			}
 		}()

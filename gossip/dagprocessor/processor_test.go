@@ -16,8 +16,8 @@ import (
 )
 
 func TestProcessor(t *testing.T) {
-	for try := int64(0); try < 500; try++ {
-		testProcessor(t, try)
+	for try := 0; try < 500; try++ {
+		testProcessor(t)
 	}
 }
 
@@ -47,7 +47,7 @@ func shuffleIntoChunks(inEvents dag.Events) []dag.Events {
 	return chunks
 }
 
-func testProcessor(t *testing.T, try int64) {
+func testProcessor(t *testing.T) {
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
@@ -190,8 +190,7 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
-	r := rand.New(rand.NewSource(try))
-	_ = tdag.ForEachRandEvent(nodes, 10, 3, r, tdag.ForEachEvent{
+	_ = tdag.ForEachRandEvent(nodes, 10, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
@@ -203,8 +202,8 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	})
 
 	limit := dag.Metric{
-		Num:  idx.Event(r.Intn(maxEvents)),
-		Size: uint64(r.Intn(maxEvents * 100)),
+		Num:  idx.Event(rand.Intn(maxEvents)),
+		Size: uint64(rand.Intn(maxEvents * 100)),
 	}
 	limitPlus1group := dag.Metric{
 		Num:  limit.Num + maxGroupSize.Num,
@@ -236,10 +235,10 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 						return nil
 					}
 				}
-				if r.Intn(10) == 0 {
+				if rand.Intn(10) == 0 {
 					return errors.New("testing error")
 				}
-				if r.Intn(10) == 0 {
+				if rand.Intn(10) == 0 {
 					time.Sleep(time.Microsecond * 100)
 				}
 				if highestLamport < e.Lamport() {
@@ -279,10 +278,10 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				return onlyInterested
 			},
 			CheckParents: func(e dag.Event, parents dag.Events) error {
-				if r.Intn(10) == 0 {
+				if rand.Intn(10) == 0 {
 					return errors.New("testing error")
 				}
-				if r.Intn(10) == 0 {
+				if rand.Intn(10) == 0 {
 					time.Sleep(time.Microsecond * 100)
 				}
 				return nil
@@ -292,11 +291,11 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				for _, chunk := range chunks {
 					errs := make([]error, len(chunk))
 					for i := range errs {
-						if r.Intn(10) == 0 {
+						if rand.Intn(10) == 0 {
 							errs[i] = errors.New("testing error")
 						}
 					}
-					if r.Intn(10) == 0 {
+					if rand.Intn(10) == 0 {
 						time.Sleep(time.Microsecond * 100)
 					}
 					checked(chunk, errs)
@@ -304,14 +303,14 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 			},
 		},
 		PeerMisbehaviour: func(peer string, err error) bool {
-			return r.Intn(2) == 0
+			return rand.Intn(2) == 0
 		},
 		HighestLamport: func() idx.Lamport {
 			return highestLamport
 		},
 	})
 	// duplicate some events
-	ordered = append(ordered, ordered[:r.Intn(len(ordered))]...)
+	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...)
 	// shuffle events
 	chunks := shuffleIntoChunks(ordered)
 
@@ -320,13 +319,13 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	wg := sync.WaitGroup{}
 	for _, chunk := range chunks {
 		wg.Add(1)
-		err := processor.Enqueue("", chunk, r.Intn(2) == 0, func(events hash.Events) {}, func() {
+		err := processor.Enqueue("", chunk, rand.Intn(2) == 0, func(events hash.Events) {}, func() {
 			wg.Done()
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if r.Intn(10) == 0 {
+		if rand.Intn(10) == 0 {
 			processor.Clear()
 		}
 	}

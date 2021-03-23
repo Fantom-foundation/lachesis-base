@@ -62,11 +62,11 @@ type MutableBaseEvent struct {
 }
 
 // Build build immutable event
-func (me *MutableBaseEvent) Build(r_id [24]byte) *BaseEvent {
+func (me *MutableBaseEvent) Build(rID [24]byte) *BaseEvent {
 	e := me.BaseEvent
 	copy(e.id[0:4], e.epoch.Bytes())
 	copy(e.id[4:8], e.lamport.Bytes())
-	copy(e.id[8:], r_id[:])
+	copy(e.id[8:], rID[:])
 	return &e
 }
 
@@ -127,8 +127,8 @@ func (e *MutableBaseEvent) SetParents(v hash.Events) { e.parents = v }
 
 func (e *MutableBaseEvent) SetLamport(v idx.Lamport) { e.lamport = v }
 
-func (e *MutableBaseEvent) SetID(r_id [24]byte) {
+func (e *MutableBaseEvent) SetID(rID [24]byte) {
 	copy(e.id[0:4], e.epoch.Bytes())
 	copy(e.id[4:8], e.lamport.Bytes())
-	copy(e.id[8:], r_id[:])
+	copy(e.id[8:], rID[:])
 }

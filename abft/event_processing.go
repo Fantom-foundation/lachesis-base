@@ -87,20 +87,23 @@ func (p *Orderer) handleElection(selfParentFrame idx.Frame, root dag.Event) erro
 		if sealed {
 			break
 		}
-		err = p.bootstrapElection()
+		sealed, err = p.bootstrapElection()
 		if err != nil {
 			return err
+		}
+		if sealed {
+			break
 		}
 	}
 	return nil
 }
 
 // bootstrapElection calls processKnownRoots until it returns nil
-func (p *Orderer) bootstrapElection() error {
+func (p *Orderer) bootstrapElection() (bool, error) {
 	for {
 		decided, err := p.processKnownRoots()
 		if err != nil {
-			return err
+			return false, err
 		}
 		if decided == nil {
 			break
@@ -108,13 +111,13 @@ func (p *Orderer) bootstrapElection() error {
 
 		sealed, err := p.onFrameDecided(decided.Frame, decided.Atropos)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if sealed {
-			return nil
+			return true, nil
 		}
 	}
-	return nil
+	return false, nil
 }
 
 // The function is similar to processRoot, but it fully re-processes the current voting.

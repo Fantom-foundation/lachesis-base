@@ -46,7 +46,7 @@ func (v *Checker) Validate(e dag.Event, parents dag.Events) error {
 	}
 
 	// seq
-	if (e.Seq() <= 1) != (e.SelfParent() == nil) {
+	if (e.Seq() == 1) != (e.SelfParent() == nil) {
 		return ErrWrongSeq
 	}
 	if e.SelfParent() != nil {
