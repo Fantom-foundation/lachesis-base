@@ -19,7 +19,12 @@ var (
 	ErrWrongType        = errors.New("wrong request type")
 	ErrWrongSelectorLen = errors.New("wrong event selector length")
 	ErrSelectorMismatch = errors.New("session selector mismatch")
+	ErrTooManyChunks    = errors.New("too many request chunks")
 	errTerminated       = errors.New("terminated")
+)
+
+const (
+	hashMemSize = 128
 )
 
 type Seeder struct {
@@ -117,6 +122,19 @@ func (s *Seeder) NotifyRequestReceived(peer Peer, r dagstream.Request) (err erro
 	if r.Type != dagstream.RequestIDs && r.Type != dagstream.RequestEvents {
 		return nil, ErrWrongType
 	}
+	if r.MaxChunks > s.cfg.MaxResponseChunks {
+		return nil, ErrTooManyChunks
+	}
+	// sanitize maximum chunk limits
+	maxNumLimit := idx.Event(s.cfg.MaxPendingResponsesSize/hashMemSize) / 4
+	if r.Limit.Num > maxNumLimit {
+		r.Limit.Num = maxNumLimit
+	}
+	maxSizeLimit := (uint64(s.cfg.MaxPendingResponsesSize) - uint64(r.Limit.Num*hashMemSize)) / 2
+	if r.Limit.Size > maxSizeLimit {
+		r.Limit.Size = maxSizeLimit
+	}
+	// submit request
 	op := &requestAndPeer{
 		peer:    peer,
 		request: r,
@@ -144,7 +162,7 @@ func (s *Seeder) waitPendingResponsesBelowLimit() {
 			// terminating, abort all operations
 			return
 		}
-		// we shouldn't get there normally, so it's fine to use a spin lock instead of a conditional variable
+		// we shouldn't get here normally, so it's fine to spin instead of a conditional variable
 		time.Sleep(10 * time.Millisecond)
 	}
 }
@@ -231,9 +249,9 @@ func (s *Seeder) readerLoop() {
 				resp.Done = allConsumed
 				resp.SessionID = op.request.Session.ID
 
-				memSize := int32(size)
+				memSize := int32(size) + int32(len(resp.Events)*hashMemSize)
 				if op.request.Type != dagstream.RequestEvents {
-					memSize = int32(len(resp.IDs) * 128)
+					memSize = int32(len(resp.IDs) * hashMemSize)
 				}
 				s.waitPendingResponsesBelowLimit()
 				atomic.AddInt32(&s.pendingResponsesSize, memSize)
