@@ -158,23 +158,17 @@ func (hh EventsSet) Slice() Events {
 }
 
 // Add appends hash to the index.
-func (hh EventsSet) Add(hash ...Event) (changed bool) {
+func (hh EventsSet) Add(hash ...Event) {
 	for _, h := range hash {
-		if _, ok := hh[h]; !ok {
-			hh[h] = struct{}{}
-			changed = true
-		}
+		hh[h] = struct{}{}
 	}
 	return
 }
 
 // Erase erase hash from the index.
-func (hh EventsSet) Erase(hash ...Event) (changed bool) {
+func (hh EventsSet) Erase(hash ...Event) {
 	for _, h := range hash {
-		if _, ok := hh[h]; ok {
-			delete(hh, h)
-			changed = true
-		}
+		delete(hh, h)
 	}
 	return
 }

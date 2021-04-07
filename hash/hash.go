@@ -156,23 +156,17 @@ func (hh HashesSet) Slice() Hashes {
 }
 
 // Add appends hash to the index.
-func (hh HashesSet) Add(hash ...Hash) (changed bool) {
+func (hh HashesSet) Add(hash ...Hash) {
 	for _, h := range hash {
-		if _, ok := hh[h]; !ok {
-			hh[h] = struct{}{}
-			changed = true
-		}
+		hh[h] = struct{}{}
 	}
 	return
 }
 
 // Erase erase hash from the index.
-func (hh HashesSet) Erase(hash ...Hash) (changed bool) {
+func (hh HashesSet) Erase(hash ...Hash) {
 	for _, h := range hash {
-		if _, ok := hh[h]; ok {
-			delete(hh, h)
-			changed = true
-		}
+		delete(hh, h)
 	}
 	return
 }
