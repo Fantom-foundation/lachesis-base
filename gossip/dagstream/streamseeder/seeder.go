@@ -116,7 +116,7 @@ func (s *Seeder) Stop() {
 }
 
 func (s *Seeder) NotifyRequestReceived(peer Peer, r dagstream.Request) (err error, peerErr error) {
-	if len(r.Session.Start) > len(hash.ZeroEvent) {
+	if len(r.Session.Start) > len(hash.ZeroEvent) || len(r.Session.Stop) > len(hash.ZeroEvent) {
 		return nil, ErrWrongSelectorLen
 	}
 	if r.Type != dagstream.RequestIDs && r.Type != dagstream.RequestEvents {
