@@ -1,5 +1,7 @@
 package abft
 
+import "github.com/Fantom-foundation/lachesis-base/utils/cachescale"
+
 type Config struct {
 }
 
@@ -26,11 +28,11 @@ type StoreConfig struct {
 }
 
 // DefaultStoreConfig for livenet.
-func DefaultStoreConfig() StoreConfig {
+func DefaultStoreConfig(scale cachescale.Func) StoreConfig {
 	return StoreConfig{
 		StoreCacheConfig{
-			RootsNum:    1000,
-			RootsFrames: 100,
+			RootsNum:    scale.U(1000),
+			RootsFrames: scale.I(100),
 		},
 	}
 }
