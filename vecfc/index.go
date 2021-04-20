@@ -14,9 +14,9 @@ import (
 
 // IndexCacheConfig - config for cache sizes of Engine
 type IndexCacheConfig struct {
-	ForklessCausePairs   int `cache:"scale"`
-	HighestBeforeSeqSize uint `cache:"scale"`
-	LowestAfterSeqSize   uint `cache:"scale"`
+	ForklessCausePairs   int
+	HighestBeforeSeqSize uint
+	LowestAfterSeqSize   uint
 }
 
 // IndexConfig - Engine config (cache sizes)
