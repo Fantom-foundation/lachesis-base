@@ -1,6 +1,10 @@
 package itemsfetcher
 
-import "time"
+import (
+	"time"
+
+	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
+)
 
 type Config struct {
 	ForgetTimeout time.Duration // Time before an announced event is forgotten
@@ -17,14 +21,14 @@ type Config struct {
 	MaxQueuedBatches int
 }
 
-func DefaultConfig() Config {
+func DefaultConfig(scale cachescale.Func) Config {
 	return Config{
 		ForgetTimeout:       1 * time.Minute,
 		ArriveTimeout:       1000 * time.Millisecond,
 		GatherSlack:         100 * time.Millisecond,
 		HashLimit:           20000,
-		MaxBatch:            512,
-		MaxQueuedBatches:    32,
+		MaxBatch:            scale.I(512),
+		MaxQueuedBatches:    scale.I(32),
 		MaxParallelRequests: 256,
 	}
 }
