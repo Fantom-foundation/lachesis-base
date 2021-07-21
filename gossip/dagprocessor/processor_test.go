@@ -12,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
 	"github.com/Fantom-foundation/lachesis-base/utils/datasemaphore"
 )
 
@@ -69,7 +70,7 @@ func testProcessor(t *testing.T) {
 	semaphore := datasemaphore.New(limit, func(received dag.Metric, processing dag.Metric, releasing dag.Metric) {
 		t.Fatal("events semaphore inconsistency")
 	})
-	config := DefaultConfig()
+	config := DefaultConfig(cachescale.Identity)
 	config.EventsBufferLimit = limit
 
 	checked := 0
@@ -212,7 +213,7 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	semaphore := datasemaphore.New(limitPlus1group, func(received dag.Metric, processing dag.Metric, releasing dag.Metric) {
 		t.Fatal("events semaphore inconsistency")
 	})
-	config := DefaultConfig()
+	config := DefaultConfig(cachescale.Identity)
 	config.EventsBufferLimit = limit
 
 	released := uint32(0)
