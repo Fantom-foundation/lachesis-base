@@ -17,6 +17,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
 )
 
 func TestSeederResponsesOrder(t *testing.T) {
@@ -47,7 +48,7 @@ func (rr *ResponsesContainer) Append(peer string, sessionID uint32, response dag
 }
 
 func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
-	config := DefaultConfig()
+	config := DefaultConfig(cachescale.Identity)
 	config.MaxPendingResponsesSize = 5000
 
 	events := make(dag.Events, maxEvents)

@@ -8,10 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Fantom-foundation/lachesis-base/eventcheck/queuedcheck"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
 	"github.com/Fantom-foundation/lachesis-base/utils/datasemaphore"
 )
 
@@ -26,7 +28,28 @@ var maxGroupSize = dag.Metric{
 	Size: 50 * 50,
 }
 
-func shuffleIntoChunks(inEvents dag.Events) []dag.Events {
+func shuffleTasksIntoChunks(inTasks []queuedcheck.EventTask)  [][]queuedcheck.EventTask {
+	if len(inTasks) == 0 {
+		return nil
+	}
+	var chunks [][]queuedcheck.EventTask
+	var lastChunk []queuedcheck.EventTask
+	var lastChunkSize dag.Metric
+	for _, rnd := range rand.Perm(len(inTasks)) {
+		t := inTasks[rnd]
+		if rand.Intn(10) == 0 || lastChunkSize.Num+1 >= maxGroupSize.Num || lastChunkSize.Size+uint64(t.Event().Size()) >= maxGroupSize.Size {
+			chunks = append(chunks, lastChunk)
+			lastChunk = []queuedcheck.EventTask{}
+		}
+		lastChunk = append(lastChunk, t)
+		lastChunkSize.Num++
+		lastChunkSize.Size += uint64(t.Event().Size())
+	}
+	chunks = append(chunks, lastChunk)
+	return chunks
+}
+
+func shuffleEventsIntoChunks(inEvents dag.Events) []dag.Events {
 	if len(inEvents) == 0 {
 		return nil
 	}
@@ -69,7 +92,7 @@ func testProcessor(t *testing.T) {
 	semaphore := datasemaphore.New(limit, func(received dag.Metric, processing dag.Metric, releasing dag.Metric) {
 		t.Fatal("events semaphore inconsistency")
 	})
-	config := DefaultConfig()
+	config := DefaultConfig(cachescale.Identity)
 	config.EventsBufferLimit = limit
 
 	checked := 0
@@ -137,10 +160,13 @@ func testProcessor(t *testing.T) {
 				}
 				return nil
 			},
-			CheckParentless: func(inEvents dag.Events, checked func(ee dag.Events, errs []error)) {
-				chunks := shuffleIntoChunks(inEvents)
+			CheckParentless: func(tasks []queuedcheck.EventTask, checked func(res []queuedcheck.EventTask)) {
+				chunks := shuffleTasksIntoChunks(tasks)
 				for _, chunk := range chunks {
-					checked(chunk, make([]error, len(chunk)))
+					for _, t := range chunk {
+						t.SetResult(nil)
+					}
+					checked(chunk)
 				}
 			},
 		},
@@ -152,7 +178,7 @@ func testProcessor(t *testing.T) {
 		},
 	})
 	// shuffle events
-	chunks := shuffleIntoChunks(ordered)
+	chunks := shuffleEventsIntoChunks(ordered)
 
 	// process events
 	processor.Start()
@@ -212,7 +238,7 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	semaphore := datasemaphore.New(limitPlus1group, func(received dag.Metric, processing dag.Metric, releasing dag.Metric) {
 		t.Fatal("events semaphore inconsistency")
 	})
-	config := DefaultConfig()
+	config := DefaultConfig(cachescale.Identity)
 	config.EventsBufferLimit = limit
 
 	released := uint32(0)
@@ -286,19 +312,20 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				}
 				return nil
 			},
-			CheckParentless: func(inEvents dag.Events, checked func(ee dag.Events, errs []error)) {
-				chunks := shuffleIntoChunks(inEvents)
+			CheckParentless: func(tasks []queuedcheck.EventTask, checked func(res []queuedcheck.EventTask)) {
+				chunks := shuffleTasksIntoChunks(tasks)
 				for _, chunk := range chunks {
-					errs := make([]error, len(chunk))
-					for i := range errs {
+					for i := range chunk {
 						if rand.Intn(10) == 0 {
-							errs[i] = errors.New("testing error")
+							chunk[i].SetResult(errors.New("testing error"))
+						} else {
+							chunk[i].SetResult(nil)
 						}
 					}
 					if rand.Intn(10) == 0 {
 						time.Sleep(time.Microsecond * 100)
 					}
-					checked(chunk, errs)
+					checked(chunk)
 				}
 			},
 		},
@@ -312,7 +339,7 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	// duplicate some events
 	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...)
 	// shuffle events
-	chunks := shuffleIntoChunks(ordered)
+	chunks := shuffleEventsIntoChunks(ordered)
 
 	// process events
 	processor.Start()
