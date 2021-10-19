@@ -1,38 +1,33 @@
-package peerleecher
+package basepeerleecher
 
 import (
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/Fantom-foundation/lachesis-base/hash"
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
 var (
 	errTerminated = errors.New("terminated")
 )
 
-// OnlyNotConnectedFn returns only not connected events.
-type OnlyNotConnectedFn func(ids hash.Events) hash.Events
+type IsProcessed func(id interface{}) bool
 
 type receivedChunk struct {
-	last hash.Event
+	id interface{}
 }
 
 type EpochDownloaderCallbacks struct {
-	OnlyNotConnected OnlyNotConnectedFn
+	IsProcessed IsProcessed
 
-	RequestChunks func(n dag.Metric, maxChunks uint32) error
+	RequestChunks func(maxNum uint32, maxSize uint64, maxChunks uint32) error
 
 	Suspend func() bool
 
 	Done func() bool
 }
 
-// PeerLeecher is responsible for accumulating pack announcements from various peers
-// and scheduling them for retrieval.
-type PeerLeecher struct {
+// BasePeerLeecher is responsible for scheduling items for retrieval.
+type BasePeerLeecher struct {
 	cfg EpochDownloaderConfig
 
 	totalRequested int
@@ -40,7 +35,6 @@ type PeerLeecher struct {
 
 	processingChunks []receivedChunk
 
-	// Various event channels
 	notifyReceivedChunk chan *receivedChunk
 
 	quitMu sync.Mutex
@@ -53,10 +47,10 @@ type PeerLeecher struct {
 	callback EpochDownloaderCallbacks
 }
 
-// New creates a packs fetcher to retrieve events based on pack announcements. Works only with 1 peer.
-func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloaderCallbacks) *PeerLeecher {
+// New creates an items fetcher to retrieve items chunk-by-chunk. Works only with 1 peer.
+func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloaderCallbacks) *BasePeerLeecher {
 	quit := make(chan struct{})
-	return &PeerLeecher{
+	return &BasePeerLeecher{
 		processingChunks:    make([]receivedChunk, 0, cfg.ParallelChunksDownload*2),
 		notifyReceivedChunk: make(chan *receivedChunk, cfg.ParallelChunksDownload*2),
 		quit:                quit,
@@ -67,8 +61,8 @@ func New(wg *sync.WaitGroup, cfg EpochDownloaderConfig, callback EpochDownloader
 }
 
 // Start boots up the announcement based synchroniser, accepting and processing
-// hash notifications and event fetches until termination requested.
-func (d *PeerLeecher) Start() {
+// fetches until termination requested.
+func (d *BasePeerLeecher) Start() {
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -78,12 +72,12 @@ func (d *PeerLeecher) Start() {
 
 // Stop terminates the announcement based synchroniser, canceling all pending
 // operations.
-func (d *PeerLeecher) Stop() {
+func (d *BasePeerLeecher) Stop() {
 	d.Terminate()
 	d.wg.Wait()
 }
 
-func (d *PeerLeecher) Terminate() {
+func (d *BasePeerLeecher) Terminate() {
 	d.quitMu.Lock()
 	defer d.quitMu.Unlock()
 	if !d.done {
@@ -92,14 +86,14 @@ func (d *PeerLeecher) Terminate() {
 	}
 }
 
-func (d *PeerLeecher) Stopped() bool {
+func (d *BasePeerLeecher) Stopped() bool {
 	return d.done
 }
 
-// NotifyPackInfo injects new pack infos from a peer
-func (d *PeerLeecher) NotifyChunkReceived(last hash.Event) error {
+// NotifyChunkReceived injects new pack infos from a peer
+func (d *BasePeerLeecher) NotifyChunkReceived(id interface{}) error {
 	op := &receivedChunk{
-		last: last,
+		id: id,
 	}
 	select {
 	case d.notifyReceivedChunk <- op:
@@ -109,21 +103,18 @@ func (d *PeerLeecher) NotifyChunkReceived(last hash.Event) error {
 	}
 }
 
-// Loop is the main leecher's loop, checking and processing various notifications
-func (d *PeerLeecher) loop() {
-	// Iterate the event fetching until a quit is requested
+// Loop is the main leecher's loop, fetching chunks according to the progress of their arrival
+func (d *BasePeerLeecher) loop() {
 	syncTicker := time.NewTicker(d.cfg.RecheckInterval)
 	defer syncTicker.Stop()
 
 	for {
-		// Wait for an outside event to occur
 		select {
 		case <-d.quit:
 			// terminating, abort all operations
 			return
 
 		case op := <-d.notifyReceivedChunk:
-
 			if d.done {
 				d.Terminate()
 				continue
@@ -139,7 +130,7 @@ func (d *PeerLeecher) loop() {
 	}
 }
 
-func (d *PeerLeecher) routine() {
+func (d *BasePeerLeecher) routine() {
 	if d.callback.Done() {
 		d.Terminate()
 		return
@@ -148,19 +139,19 @@ func (d *PeerLeecher) routine() {
 	d.tryToSync()
 }
 
-func (d *PeerLeecher) sweepProcessedChunks() []receivedChunk {
+func (d *BasePeerLeecher) sweepProcessedChunks() []receivedChunk {
 	notProcessed := make([]receivedChunk, 0, len(d.processingChunks))
 	for _, op := range d.processingChunks {
-		if len(d.callback.OnlyNotConnected(hash.Events{op.last})) != 0 {
-			notProcessed = append(notProcessed, op)
-		} else {
+		if d.callback.IsProcessed(op.id) {
 			d.totalProcessed++
+		} else {
+			notProcessed = append(notProcessed, op)
 		}
 	}
 	return notProcessed
 }
 
-func (d *PeerLeecher) tryToSync() {
+func (d *BasePeerLeecher) tryToSync() {
 	if d.callback.Suspend() {
 		return
 	}
@@ -168,6 +159,6 @@ func (d *PeerLeecher) tryToSync() {
 	if d.totalRequested < d.totalProcessed+d.cfg.ParallelChunksDownload {
 		requestsToSend := (d.totalProcessed + d.cfg.ParallelChunksDownload) - d.totalRequested
 		d.totalRequested += requestsToSend
-		_ = d.callback.RequestChunks(d.cfg.DefaultChunkSize, uint32(requestsToSend))
+		_ = d.callback.RequestChunks(d.cfg.DefaultChunkItemsNum, d.cfg.DefaultChunkItemsSize, uint32(requestsToSend))
 	}
 }

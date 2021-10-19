@@ -1,9 +1,10 @@
-package streamseeder
+package basestreamseeder
 
 import (
 	"bytes"
 	"math/big"
 	"math/rand"
+	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -12,13 +13,23 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Fantom-foundation/lachesis-base/gossip/dagstream"
+	"github.com/Fantom-foundation/lachesis-base/gossip/basestream"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
-	"github.com/Fantom-foundation/lachesis-base/utils/cachescale"
 )
+
+func defaultConfig() Config {
+	return Config{
+		SenderThreads:           8,
+		MaxSenderTasks:          128,
+		MaxPendingResponsesSize: 64 * 1024 * 1024,
+		MaxResponsePayloadNum:   100000,
+		MaxResponsePayloadSize:  16 * 1024 * 1024,
+		MaxResponseChunks:       12,
+	}
+}
 
 func TestSeederResponsesOrder(t *testing.T) {
 	for try := 0; try < 25; try++ {
@@ -28,27 +39,27 @@ func TestSeederResponsesOrder(t *testing.T) {
 
 type ResponsesContainer struct {
 	mu          sync.RWMutex
-	peerSession map[string][]dagstream.Response
+	peerSession map[string][]basestream.Response
 }
 
 func locatorOf(peer string, sessionID uint32) string {
 	return peer + ":" + strconv.Itoa(int(sessionID))
 }
 
-func (rr *ResponsesContainer) Get(peer string, sessionID uint32) []dagstream.Response {
+func (rr *ResponsesContainer) Get(peer string, sessionID uint32) []basestream.Response {
 	rr.mu.RLock()
 	defer rr.mu.RUnlock()
 	return rr.peerSession[locatorOf(peer, sessionID)]
 }
 
-func (rr *ResponsesContainer) Append(peer string, sessionID uint32, response dagstream.Response) {
+func (rr *ResponsesContainer) Append(peer string, sessionID uint32, response basestream.Response) {
 	rr.mu.Lock()
 	defer rr.mu.Unlock()
 	rr.peerSession[locatorOf(peer, sessionID)] = append(rr.peerSession[locatorOf(peer, sessionID)], response)
 }
 
 func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
-	config := DefaultConfig(cachescale.Identity)
+	config := defaultConfig()
 	config.MaxPendingResponsesSize = 5000
 
 	events := make(dag.Events, maxEvents)
@@ -61,21 +72,41 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 		events[i] = e.Build(rID)
 	}
 
+	// sort events
+	sort.Slice(events, func(i, j int) bool {
+		a, b := events[i], events[j]
+		return bytes.Compare(a.ID().Bytes(), b.ID().Bytes()) > 0
+	})
+
 	seeder := New(config, Callbacks{
-		ForEachEvent: func(start []byte, onEvent func(key hash.Event, event interface{}, size uint64) bool) {
+		ForEachItem: func(start basestream.Locator, rType basestream.RequestType,
+			onKey func(key basestream.Locator) bool, onAppended func(items basestream.Payload) bool) basestream.Payload {
+
+			res := testPayload{
+				IDs:    hash.Events{},
+				Events: dag.Events{},
+				Size:   0,
+			}
+
 			for _, e := range events {
-				if bytes.Compare(e.ID().Bytes(), start) > 0 {
+				if bytes.Compare(e.ID().Bytes(), start.(testLocator).B) > 0 {
 					continue
 				}
-				if !onEvent(e.ID(), e, uint64(e.Size())) {
+				if !onKey(testLocator{e.ID().Bytes()}) {
+					break
+				}
+				res.AddEvent(e.ID(), e)
+				if !onAppended(res) {
 					break
 				}
 			}
+
+			return res
 		},
 	})
 
 	responses := ResponsesContainer{
-		peerSession: map[string][]dagstream.Response{},
+		peerSession: map[string][]basestream.Response{},
 	}
 
 	terminated := false
@@ -89,9 +120,9 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 			}
 		} else {
 			sessionID := uint32(i)
-			reqType := dagstream.RequestIDs
+			reqType := basestream.RequestType(0)
 			if sessionID%2 == 0 {
-				reqType = dagstream.RequestEvents
+				reqType = 1
 			}
 			startIdx := rand.Intn(len(events))
 			endIdx := startIdx
@@ -100,31 +131,30 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 			}
 			err, peerErr := seeder.NotifyRequestReceived(Peer{
 				ID: peer,
-				SendChunk: func(response dagstream.Response, ids hash.Events) error {
-					if reqType == dagstream.RequestIDs {
-						require.Empty(t, response.Events)
-						require.Equal(t, response.IDs, ids)
+				SendChunk: func(response basestream.Response) error {
+					if reqType == 0 {
+						require.Empty(t, response.Payload.(testPayload).Events)
 					} else {
-						require.Empty(t, response.IDs)
-						require.Equal(t, len(response.Events), len(ids))
+						require.Equal(t, len(response.Payload.(testPayload).IDs), len(response.Payload.(testPayload).Events))
+					}
+					if !response.Done {
+						require.NotEmpty(t, response.Payload.(testPayload).IDs)
 					}
 					time.Sleep(time.Duration(rand.Int63n(int64(time.Millisecond))))
 					responses.Append(peer, response.SessionID, response)
 					return nil
 				},
 				Misbehaviour: func(err error) {},
-			}, dagstream.Request{
-				Session: dagstream.Session{
+			}, basestream.Request{
+				Session: basestream.Session{
 					ID:    sessionID,
-					Start: events[startIdx].ID().Bytes(),
-					Stop:  events[endIdx].ID().Bytes(),
+					Start: testLocator{events[startIdx].ID().Bytes()},
+					Stop:  testLocator{events[endIdx].ID().Bytes()},
 				},
-				Limit: dag.Metric{
-					Num:  idx.Event(rand.Intn(10)),
-					Size: uint64(rand.Intn(5000)),
-				},
-				Type:      reqType,
-				MaxChunks: uint32(rand.Intn(int(config.MaxResponseChunks + 1))),
+				Type:           reqType,
+				MaxPayloadNum:  uint32(rand.Intn(10)),
+				MaxPayloadSize: uint64(rand.Intn(5000)),
+				MaxChunks:      uint32(rand.Intn(int(config.MaxResponseChunks + 1))),
 			})
 			require.NoError(t, peerErr)
 			if !terminated {
@@ -135,7 +165,7 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 			terminated = true
 			seeder.Stop()
 		}
-		require.LessOrEqual(t, atomic.LoadInt32(&seeder.pendingResponsesSize), 2*config.MaxPendingResponsesSize)
+		require.LessOrEqual(t, atomic.LoadInt64(&seeder.pendingResponsesSize), 2*config.MaxPendingResponsesSize)
 	}
 	time.Sleep(5 * time.Millisecond) // give some time for seeder to finish the some of the work
 	if !terminated {
@@ -147,9 +177,9 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 		done := false
 		for _, r := range sessionResponses {
 			require.False(t, done)
-			ids := r.IDs
-			if len(r.Events) != 0 {
-				for _, e := range r.Events {
+			ids := r.Payload.(testPayload).IDs
+			if len(r.Payload.(testPayload).Events) != 0 {
+				for _, e := range r.Payload.(testPayload).Events {
 					ids = append(ids, e.(dag.Event).ID())
 					require.Equal(t, e.(dag.Event).ID().Lamport(), e.(dag.Event).Lamport())
 				}

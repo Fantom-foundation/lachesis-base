@@ -1,13 +1,12 @@
-package peerleecher
+package basepeerleecher
 
 import (
 	"time"
-
-	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
 type EpochDownloaderConfig struct {
 	RecheckInterval        time.Duration
-	DefaultChunkSize       dag.Metric
+	DefaultChunkItemsNum   uint32
+	DefaultChunkItemsSize  uint64
 	ParallelChunksDownload int
 }

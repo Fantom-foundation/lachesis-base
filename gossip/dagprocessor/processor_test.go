@@ -28,7 +28,7 @@ var maxGroupSize = dag.Metric{
 	Size: 50 * 50,
 }
 
-func shuffleTasksIntoChunks(inTasks []queuedcheck.EventTask)  [][]queuedcheck.EventTask {
+func shuffleTasksIntoChunks(inTasks []queuedcheck.EventTask) [][]queuedcheck.EventTask {
 	if len(inTasks) == 0 {
 		return nil
 	}
