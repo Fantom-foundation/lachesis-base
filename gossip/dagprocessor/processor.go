@@ -2,7 +2,6 @@ package dagprocessor
 
 import (
 	"errors"
-	"runtime"
 	"sync"
 
 	"github.com/Fantom-foundation/lachesis-base/eventcheck"
@@ -27,8 +26,8 @@ type Processor struct {
 
 	callback Callback
 
-	orderedInserter    *workers.Workers
-	unorderedInserters *workers.Workers
+	checker         *workers.Workers
+	orderedInserter *workers.Workers
 
 	buffer *dagordering.EventsBuffer
 
@@ -54,10 +53,6 @@ type Callback struct {
 
 // New creates an event processor
 func New(eventsSemaphore *datasemaphore.DataSemaphore, cfg Config, callback Callback) *Processor {
-	if cfg.MaxUnorderedInsertions == 0 {
-		cfg.MaxUnorderedInsertions = runtime.NumCPU()
-	}
-
 	f := &Processor{
 		cfg:             cfg,
 		quit:            make(chan struct{}),
@@ -78,15 +73,15 @@ func New(eventsSemaphore *datasemaphore.DataSemaphore, cfg Config, callback Call
 		Exists:   callback.Event.Exists,
 		Check:    callback.Event.CheckParents,
 	})
-	f.orderedInserter = workers.New(&f.wg, f.quit, cfg.MaxTasks())
-	f.unorderedInserters = workers.New(&f.wg, f.quit, cfg.MaxTasks())
+	f.orderedInserter = workers.New(&f.wg, f.quit, cfg.MaxTasks)
+	f.checker = workers.New(&f.wg, f.quit, cfg.MaxTasks)
 	return f
 }
 
 // Start boots up the events processor.
 func (f *Processor) Start() {
 	f.orderedInserter.Start(1)
-	f.unorderedInserters.Start(f.cfg.MaxUnorderedInsertions)
+	f.checker.Start(1)
 }
 
 // Stop interrupts the processor, canceling all the pending operations.
@@ -100,8 +95,8 @@ func (f *Processor) Stop() {
 
 // Overloaded returns true if too much events are being processed or requested
 func (f *Processor) Overloaded() bool {
-	return f.unorderedInserters.TasksCount() > f.cfg.MaxTasks()*3/4 ||
-		f.orderedInserter.TasksCount() > f.cfg.MaxTasks()*3/4
+	return f.checker.TasksCount() > f.cfg.MaxTasks*3/4 ||
+		f.orderedInserter.TasksCount() > f.cfg.MaxTasks*3/4
 }
 
 type checkRes struct {
@@ -115,16 +110,8 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 		return ErrBusy
 	}
 
-	inserter := f.unorderedInserters
-	if ordered {
-		inserter = f.orderedInserter
-	}
-
-	return inserter.Enqueue(func() {
-		if done != nil {
-			defer done()
-		}
-		checkedC := make(chan *checkRes, len(events))
+	checkedC := make(chan *checkRes, len(events))
+	err := f.checker.Enqueue(func() {
 		for i, e := range events {
 			pos := idx.Event(i)
 			event := e
@@ -135,6 +122,15 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 					pos: pos,
 				}
 			})
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	return f.orderedInserter.Enqueue(func() {
+		if done != nil {
+			defer done()
 		}
 
 		var orderedResults []*checkRes
@@ -206,5 +202,5 @@ func (f *Processor) TotalBuffered() dag.Metric {
 }
 
 func (f *Processor) TasksCount() int {
-	return f.orderedInserter.TasksCount() + f.unorderedInserters.TasksCount()
+	return f.orderedInserter.TasksCount() + f.checker.TasksCount()
 }

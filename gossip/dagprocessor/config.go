@@ -14,11 +14,7 @@ type Config struct {
 
 	EventsSemaphoreTimeout time.Duration
 
-	MaxUnorderedInsertions int
-}
-
-func (c Config) MaxTasks() int {
-	return c.MaxUnorderedInsertions*2 + 1
+	MaxTasks int
 }
 
 func DefaultConfig(scale cachescale.Func) Config {
@@ -29,5 +25,6 @@ func DefaultConfig(scale cachescale.Func) Config {
 			Size: scale.U64(10 * opt.MiB),
 		},
 		EventsSemaphoreTimeout: 10 * time.Second,
+		MaxTasks:               128,
 	}
 }
