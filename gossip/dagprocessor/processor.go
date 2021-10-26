@@ -39,7 +39,6 @@ type EventCallback struct {
 	Released        func(e dag.Event, peer string, err error)
 	Get             func(hash.Event) dag.Event
 	Exists          func(hash.Event) bool
-	OnlyInterested  func(ids hash.Events) hash.Events
 	CheckParents    func(e dag.Event, parents dag.Events) error
 	CheckParentless func(e dag.Event, checked func(error))
 }

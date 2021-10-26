@@ -118,17 +118,6 @@ func testProcessor(t *testing.T) {
 				return processed[id]
 			},
 
-			OnlyInterested: func(ids hash.Events) hash.Events {
-				mu.RLock()
-				defer mu.RUnlock()
-				onlyInterested := make(hash.Events, 0, len(ids))
-				for _, id := range ids {
-					if processed[id] != nil {
-						onlyInterested = append(onlyInterested, id)
-					}
-				}
-				return onlyInterested
-			},
 			CheckParents: func(e dag.Event, parents dag.Events) error {
 				mu.RLock()
 				defer mu.RUnlock()
@@ -264,17 +253,6 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				return processed[id]
 			},
 
-			OnlyInterested: func(ids hash.Events) hash.Events {
-				mu.RLock()
-				defer mu.RUnlock()
-				onlyInterested := make(hash.Events, 0, len(ids))
-				for _, id := range ids {
-					if processed[id] != nil {
-						onlyInterested = append(onlyInterested, id)
-					}
-				}
-				return onlyInterested
-			},
 			CheckParents: func(e dag.Event, parents dag.Events) error {
 				if rand.Intn(10) == 0 {
 					return errors.New("testing error")
