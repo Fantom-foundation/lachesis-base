@@ -44,10 +44,8 @@ type EventCallback struct {
 }
 
 type Callback struct {
-	Event EventCallback
-	// PeerMisbehaviour is a callback type for dropping a peer detected as malicious.
-	PeerMisbehaviour func(peer string, err error) bool
-	HighestLamport   func() idx.Lamport
+	Event          EventCallback
+	HighestLamport func() idx.Lamport
 }
 
 // New creates an event processor
@@ -169,7 +167,6 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 func (f *Processor) process(peer string, event dag.Event, resErr error) (toRequest hash.Events) {
 	// release event if failed validation
 	if resErr != nil {
-		f.callback.PeerMisbehaviour(peer, resErr)
 		f.callback.Event.Released(event, peer, resErr)
 		return hash.Events{}
 	}
@@ -192,7 +189,6 @@ func (f *Processor) IsBuffered(id hash.Event) bool {
 	return f.buffer.IsBuffered(id)
 }
 
-// Clear
 func (f *Processor) Clear() {
 	f.buffer.Clear()
 }
