@@ -131,9 +131,6 @@ func testProcessor(t *testing.T) {
 				checked(nil)
 			},
 		},
-		PeerMisbehaviour: func(peer string, err error) bool {
-			return rand.Intn(2) == 0
-		},
 		HighestLamport: func() idx.Lamport {
 			return highestLamport
 		},
@@ -272,9 +269,6 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				}
 				checked(err)
 			},
-		},
-		PeerMisbehaviour: func(peer string, err error) bool {
-			return rand.Intn(2) == 0
 		},
 		HighestLamport: func() idx.Lamport {
 			return highestLamport
