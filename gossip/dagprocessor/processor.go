@@ -126,7 +126,7 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 	if err != nil {
 		return err
 	}
-
+	eventsLen := len(events)
 	return f.orderedInserter.Enqueue(func() {
 		if done != nil {
 			defer done()
@@ -134,11 +134,11 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 
 		var orderedResults []*checkRes
 		if ordered {
-			orderedResults = make([]*checkRes, len(events))
+			orderedResults = make([]*checkRes, eventsLen)
 		}
 		var processed int
 		var toRequest hash.Events
-		for processed < len(events) {
+		for processed < eventsLen {
 			select {
 			case res := <-checkedC:
 				if ordered {
@@ -146,6 +146,7 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 
 					for i := processed; processed < len(orderedResults) && orderedResults[i] != nil; i++ {
 						toRequest = append(toRequest, f.process(peer, orderedResults[i].e, orderedResults[i].err)...)
+						orderedResults[i] = nil // free the memory
 						processed++
 					}
 				} else {
