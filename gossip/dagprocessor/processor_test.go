@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/lachesis-base/eventcheck/queuedcheck"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
@@ -26,27 +25,6 @@ func TestProcessor(t *testing.T) {
 var maxGroupSize = dag.Metric{
 	Num:  50,
 	Size: 50 * 50,
-}
-
-func shuffleTasksIntoChunks(inTasks []queuedcheck.EventTask)  [][]queuedcheck.EventTask {
-	if len(inTasks) == 0 {
-		return nil
-	}
-	var chunks [][]queuedcheck.EventTask
-	var lastChunk []queuedcheck.EventTask
-	var lastChunkSize dag.Metric
-	for _, rnd := range rand.Perm(len(inTasks)) {
-		t := inTasks[rnd]
-		if rand.Intn(10) == 0 || lastChunkSize.Num+1 >= maxGroupSize.Num || lastChunkSize.Size+uint64(t.Event().Size()) >= maxGroupSize.Size {
-			chunks = append(chunks, lastChunk)
-			lastChunk = []queuedcheck.EventTask{}
-		}
-		lastChunk = append(lastChunk, t)
-		lastChunkSize.Num++
-		lastChunkSize.Size += uint64(t.Event().Size())
-	}
-	chunks = append(chunks, lastChunk)
-	return chunks
 }
 
 func shuffleEventsIntoChunks(inEvents dag.Events) []dag.Events {
@@ -140,17 +118,6 @@ func testProcessor(t *testing.T) {
 				return processed[id]
 			},
 
-			OnlyInterested: func(ids hash.Events) hash.Events {
-				mu.RLock()
-				defer mu.RUnlock()
-				onlyInterested := make(hash.Events, 0, len(ids))
-				for _, id := range ids {
-					if processed[id] != nil {
-						onlyInterested = append(onlyInterested, id)
-					}
-				}
-				return onlyInterested
-			},
 			CheckParents: func(e dag.Event, parents dag.Events) error {
 				mu.RLock()
 				defer mu.RUnlock()
@@ -160,18 +127,9 @@ func testProcessor(t *testing.T) {
 				}
 				return nil
 			},
-			CheckParentless: func(tasks []queuedcheck.EventTask, checked func(res []queuedcheck.EventTask)) {
-				chunks := shuffleTasksIntoChunks(tasks)
-				for _, chunk := range chunks {
-					for _, t := range chunk {
-						t.SetResult(nil)
-					}
-					checked(chunk)
-				}
+			CheckParentless: func(e dag.Event, checked func(err error)) {
+				checked(nil)
 			},
-		},
-		PeerMisbehaviour: func(peer string, err error) bool {
-			return rand.Intn(2) == 0
 		},
 		HighestLamport: func() idx.Lamport {
 			return highestLamport
@@ -292,17 +250,6 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				return processed[id]
 			},
 
-			OnlyInterested: func(ids hash.Events) hash.Events {
-				mu.RLock()
-				defer mu.RUnlock()
-				onlyInterested := make(hash.Events, 0, len(ids))
-				for _, id := range ids {
-					if processed[id] != nil {
-						onlyInterested = append(onlyInterested, id)
-					}
-				}
-				return onlyInterested
-			},
 			CheckParents: func(e dag.Event, parents dag.Events) error {
 				if rand.Intn(10) == 0 {
 					return errors.New("testing error")
@@ -312,25 +259,16 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 				}
 				return nil
 			},
-			CheckParentless: func(tasks []queuedcheck.EventTask, checked func(res []queuedcheck.EventTask)) {
-				chunks := shuffleTasksIntoChunks(tasks)
-				for _, chunk := range chunks {
-					for i := range chunk {
-						if rand.Intn(10) == 0 {
-							chunk[i].SetResult(errors.New("testing error"))
-						} else {
-							chunk[i].SetResult(nil)
-						}
-					}
-					if rand.Intn(10) == 0 {
-						time.Sleep(time.Microsecond * 100)
-					}
-					checked(chunk)
+			CheckParentless: func(e dag.Event, checked func(err error)) {
+				var err error
+				if rand.Intn(10) == 0 {
+					err = errors.New("testing error")
 				}
+				if rand.Intn(10) == 0 {
+					time.Sleep(time.Microsecond * 100)
+				}
+				checked(err)
 			},
-		},
-		PeerMisbehaviour: func(peer string, err error) bool {
-			return rand.Intn(2) == 0
 		},
 		HighestLamport: func() idx.Lamport {
 			return highestLamport

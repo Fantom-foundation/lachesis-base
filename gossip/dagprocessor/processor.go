@@ -2,11 +2,9 @@ package dagprocessor
 
 import (
 	"errors"
-	"runtime"
 	"sync"
 
 	"github.com/Fantom-foundation/lachesis-base/eventcheck"
-	"github.com/Fantom-foundation/lachesis-base/eventcheck/queuedcheck"
 	"github.com/Fantom-foundation/lachesis-base/gossip/dagordering"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -28,8 +26,8 @@ type Processor struct {
 
 	callback Callback
 
-	orderedInserter    *workers.Workers
-	unorderedInserters *workers.Workers
+	checker         *workers.Workers
+	orderedInserter *workers.Workers
 
 	buffer *dagordering.EventsBuffer
 
@@ -41,24 +39,17 @@ type EventCallback struct {
 	Released        func(e dag.Event, peer string, err error)
 	Get             func(hash.Event) dag.Event
 	Exists          func(hash.Event) bool
-	OnlyInterested  func(ids hash.Events) hash.Events
 	CheckParents    func(e dag.Event, parents dag.Events) error
-	CheckParentless func(tasks []queuedcheck.EventTask, checked func(res []queuedcheck.EventTask))
+	CheckParentless func(e dag.Event, checked func(error))
 }
 
 type Callback struct {
-	Event EventCallback
-	// PeerMisbehaviour is a callback type for dropping a peer detected as malicious.
-	PeerMisbehaviour func(peer string, err error) bool
-	HighestLamport   func() idx.Lamport
+	Event          EventCallback
+	HighestLamport func() idx.Lamport
 }
 
 // New creates an event processor
 func New(eventsSemaphore *datasemaphore.DataSemaphore, cfg Config, callback Callback) *Processor {
-	if cfg.MaxUnorderedInsertions == 0 {
-		cfg.MaxUnorderedInsertions = runtime.NumCPU()
-	}
-
 	f := &Processor{
 		cfg:             cfg,
 		quit:            make(chan struct{}),
@@ -79,15 +70,15 @@ func New(eventsSemaphore *datasemaphore.DataSemaphore, cfg Config, callback Call
 		Exists:   callback.Event.Exists,
 		Check:    callback.Event.CheckParents,
 	})
-	f.orderedInserter = workers.New(&f.wg, f.quit, cfg.MaxTasks())
-	f.unorderedInserters = workers.New(&f.wg, f.quit, cfg.MaxTasks())
+	f.orderedInserter = workers.New(&f.wg, f.quit, cfg.MaxTasks)
+	f.checker = workers.New(&f.wg, f.quit, cfg.MaxTasks)
 	return f
 }
 
 // Start boots up the events processor.
 func (f *Processor) Start() {
 	f.orderedInserter.Start(1)
-	f.unorderedInserters.Start(f.cfg.MaxUnorderedInsertions)
+	f.checker.Start(1)
 }
 
 // Stop interrupts the processor, canceling all the pending operations.
@@ -101,62 +92,63 @@ func (f *Processor) Stop() {
 
 // Overloaded returns true if too much events are being processed or requested
 func (f *Processor) Overloaded() bool {
-	return f.unorderedInserters.TasksCount() > f.cfg.MaxTasks()*3/4 ||
-		f.orderedInserter.TasksCount() > f.cfg.MaxTasks()*3/4
+	return f.checker.TasksCount() > f.cfg.MaxTasks*3/4 ||
+		f.orderedInserter.TasksCount() > f.cfg.MaxTasks*3/4
 }
 
-type indexedTask struct {
-	queuedcheck.EventTask
+type checkRes struct {
+	e   dag.Event
+	err error
 	pos idx.Event
 }
 
 func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notifyAnnounces func(hash.Events), done func()) error {
-	eventTasks := make([]queuedcheck.EventTask, 0, len(events))
-	for i, e := range events {
-		eventTasks = append(eventTasks, &indexedTask{
-			EventTask: queuedcheck.NewTask(e),
-			pos:       idx.Event(i),
-		})
-	}
-
 	if !f.eventsSemaphore.Acquire(events.Metric(), f.cfg.EventsSemaphoreTimeout) {
 		return ErrBusy
 	}
 
-	inserter := f.unorderedInserters
-	if ordered {
-		inserter = f.orderedInserter
+	checkedC := make(chan *checkRes, len(events))
+	err := f.checker.Enqueue(func() {
+		for i, e := range events {
+			pos := idx.Event(i)
+			event := e
+			f.callback.Event.CheckParentless(event, func(err error) {
+				checkedC <- &checkRes{
+					e:   event,
+					err: err,
+					pos: pos,
+				}
+			})
+		}
+	})
+	if err != nil {
+		return err
 	}
-
-	return inserter.Enqueue(func() {
+	eventsLen := len(events)
+	return f.orderedInserter.Enqueue(func() {
 		if done != nil {
 			defer done()
 		}
-		checkedC := make(chan *indexedTask, len(eventTasks))
-		f.callback.Event.CheckParentless(eventTasks, func(checked []queuedcheck.EventTask) {
-			for _, e := range checked {
-				checkedC <- e.(*indexedTask)
-			}
-		})
 
-		var orderedResults []*indexedTask
+		var orderedResults []*checkRes
 		if ordered {
-			orderedResults = make([]*indexedTask, len(eventTasks))
+			orderedResults = make([]*checkRes, eventsLen)
 		}
 		var processed int
 		var toRequest hash.Events
-		for processed < len(eventTasks) {
+		for processed < eventsLen {
 			select {
 			case res := <-checkedC:
 				if ordered {
 					orderedResults[res.pos] = res
 
 					for i := processed; processed < len(orderedResults) && orderedResults[i] != nil; i++ {
-						toRequest = append(toRequest, f.process(peer, orderedResults[i].Event(), orderedResults[i].Result())...)
+						toRequest = append(toRequest, f.process(peer, orderedResults[i].e, orderedResults[i].err)...)
+						orderedResults[i] = nil // free the memory
 						processed++
 					}
 				} else {
-					toRequest = append(toRequest, f.process(peer, res.Event(), res.Result())...)
+					toRequest = append(toRequest, f.process(peer, res.e, res.err)...)
 					processed++
 				}
 
@@ -175,7 +167,6 @@ func (f *Processor) Enqueue(peer string, events dag.Events, ordered bool, notify
 func (f *Processor) process(peer string, event dag.Event, resErr error) (toRequest hash.Events) {
 	// release event if failed validation
 	if resErr != nil {
-		f.callback.PeerMisbehaviour(peer, resErr)
 		f.callback.Event.Released(event, peer, resErr)
 		return hash.Events{}
 	}
@@ -198,7 +189,6 @@ func (f *Processor) IsBuffered(id hash.Event) bool {
 	return f.buffer.IsBuffered(id)
 }
 
-// Clear
 func (f *Processor) Clear() {
 	f.buffer.Clear()
 }
@@ -208,5 +198,5 @@ func (f *Processor) TotalBuffered() dag.Metric {
 }
 
 func (f *Processor) TasksCount() int {
-	return f.orderedInserter.TasksCount() + f.unorderedInserters.TasksCount()
+	return f.orderedInserter.TasksCount() + f.checker.TasksCount()
 }
