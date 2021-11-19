@@ -25,3 +25,15 @@ func Uint32ToBytes(n uint32) []byte {
 func BytesToUint32(b []byte) uint32 {
 	return binary.BigEndian.Uint32(b)
 }
+
+// Uint16ToBytes converts uint16 to bytes.
+func Uint16ToBytes(n uint16) []byte {
+	var res [2]byte
+	binary.BigEndian.PutUint16(res[:], n)
+	return res[:]
+}
+
+// BytesToUint16 converts uint16 from bytes.
+func BytesToUint16(b []byte) uint16 {
+	return binary.BigEndian.Uint16(b)
+}
