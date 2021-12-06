@@ -26,6 +26,17 @@ func WrapIteratedReader(parent kvdb.IteratedReader, mu *sync.RWMutex) kvdb.Itera
 	}
 }
 
+// WrapSnapshot underlying db to make its methods synced with mu.
+func WrapSnapshot(parent kvdb.Snapshot, mu *sync.RWMutex) kvdb.Snapshot {
+	return &readonlySnapshot{
+		iteratedReader: iteratedReader{
+			mu:         mu,
+			underlying: parent,
+		},
+		snap: parent,
+	}
+}
+
 // WrapReadonlyStore underlying db to make its methods synced with mu.
 func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) kvdb.ReadonlyStore {
 	return &readonlyStore{
