@@ -24,7 +24,7 @@ type IndexConfig struct {
 	Caches IndexCacheConfig
 }
 
-// Engine is a data to detect forkless-cause condition, calculate median timestamp, detect forks.
+// Index is a data to detect forkless-cause condition, calculate median timestamp, detect forks.
 type Index struct {
 	*vecengine.Engine
 
@@ -62,13 +62,7 @@ func DefaultConfig(scale cachescale.Func) IndexConfig {
 
 // LiteConfig returns default index config for tests
 func LiteConfig() IndexConfig {
-	return IndexConfig{
-		Caches: IndexCacheConfig{
-			ForklessCausePairs:   500,
-			HighestBeforeSeqSize: 4 * 1024,
-			LowestAfterSeqSize:   4 * 1024,
-		},
-	}
+	return DefaultConfig(cachescale.Ratio{Base: 100, Target: 1})
 }
 
 // NewIndex creates Index instance.
