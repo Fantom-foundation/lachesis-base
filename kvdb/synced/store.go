@@ -16,7 +16,10 @@ type store struct {
 func WrapStore(parent kvdb.Store, mu *sync.RWMutex) kvdb.Store {
 	s := &store{
 		readonlyStore: readonlyStore{
-			mu:         mu,
+			iteratedReader: iteratedReader{
+				mu:         mu,
+				underlying: parent,
+			},
 			underlying: parent,
 		},
 		underlying: parent,

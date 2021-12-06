@@ -27,7 +27,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 	return false, nil
 }
 
-// get retrieves the given key if it's present in the key-value store.
+// Get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
 	return nil, nil
 }
@@ -53,6 +53,15 @@ func (db *Database) NewBatch() kvdb.Batch {
 // initial key (or after, if it does not exist).
 func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	return &iterator{}
+}
+
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
+	return &Snapshot{New()}, nil
 }
 
 // Stat returns a particular internal stat of the database.
@@ -140,4 +149,13 @@ func (it *iterator) Value() []byte {
 // Release releases associated resources. Release should always succeed and can
 // be called multiple times without causing error.
 func (it *iterator) Release() {
+}
+
+// Snapshot is a DB snapshot.
+type Snapshot struct {
+	*Database
+}
+
+func (s *Snapshot) Release() {
+	s.Database = nil
 }

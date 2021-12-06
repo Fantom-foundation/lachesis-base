@@ -17,7 +17,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
@@ -42,12 +41,12 @@ func TestFlushable(t *testing.T) {
 	// create wrappers
 	dbs := map[string]kvdb.Store{
 		"leveldb": leveldb1,
-		"memory":  memorydb.New(),
+		"memory":  Wrap(devnull),
 	}
 
 	flushableDbs := map[string]*Flushable{
 		"cache-over-leveldb": Wrap(leveldb2),
-		"cache-over-memory":  Wrap(memorydb.New()),
+		"cache-over-memory":  Wrap(Wrap(devnull)),
 	}
 
 	baseLdb := table.New(dbs["leveldb"], []byte{})

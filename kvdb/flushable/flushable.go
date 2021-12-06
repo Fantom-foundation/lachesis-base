@@ -19,11 +19,17 @@ var (
 // On reading, it looks in memory cache first. If not found, it looks in a parent DB.
 // On writing, it writes only in cache. To flush the cache into parent DB, call Flush().
 type Flushable struct {
+	flushableReader
 	onDrop     func()
 	underlying kvdb.Store
 
-	modified       *rbt.Tree // modified, comparing to parent, pairs. deleted values are nil
 	sizeEstimation *int
+}
+
+type flushableReader struct {
+	underlying kvdb.IteratedReader
+
+	modified *rbt.Tree // modified, comparing to parent, pairs. deleted values are nil
 
 	lock sync.RWMutex
 }
@@ -45,9 +51,12 @@ func WrapWithDrop(parent kvdb.Store, drop func()) *Flushable {
 	}
 
 	return &Flushable{
-		underlying:     parent,
+		flushableReader: flushableReader{
+			underlying: parent,
+			modified:   rbt.NewWithStringComparator(),
+		},
 		onDrop:         drop,
-		modified:       rbt.NewWithStringComparator(),
+		underlying:     parent,
 		sizeEstimation: new(int),
 	}
 }
@@ -78,7 +87,7 @@ func (w *Flushable) put(key []byte, value []byte) error {
 }
 
 // Has checks if key is in the exists. Looks in cache first, then - in DB.
-func (w *Flushable) Has(key []byte) (bool, error) {
+func (w *flushableReader) Has(key []byte) (bool, error) {
 	w.lock.RLock()
 	defer w.lock.RUnlock()
 
@@ -95,7 +104,7 @@ func (w *Flushable) Has(key []byte) (bool, error) {
 }
 
 // Get returns key-value pair by key. Looks in cache first, then - in DB.
-func (w *Flushable) Get(key []byte) ([]byte, error) {
+func (w *flushableReader) Get(key []byte) ([]byte, error) {
 	w.lock.RLock()
 	defer w.lock.RUnlock()
 
@@ -396,10 +405,37 @@ func (it *flushableIterator) Release() {
 	}
 }
 
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (w *Flushable) GetSnapshot() (kvdb.Snapshot, error) {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
+	parentSnap, err := w.underlying.GetSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	modifiedCopy := rbt.NewWithStringComparator()
+	for it := w.modified.Iterator(); it.Next(); {
+		modifiedCopy.Put(it.Key(), it.Value())
+	}
+	return &Snapshot{
+		flushableReader: flushableReader{
+			underlying: parentSnap,
+			modified:   modifiedCopy,
+			// Note: Snapshot has an independent mutex
+			lock: sync.RWMutex{},
+		},
+		parentSnap: parentSnap,
+	}, nil
+}
+
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
-func (w *Flushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+func (w *flushableReader) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	w.lock.RLock()
 	defer w.lock.RUnlock()
 
@@ -493,4 +529,17 @@ func (b *cacheBatch) Replay(w kvdb.Writer) error {
 		}
 	}
 	return nil
+}
+
+// Snapshot is a DB snapshot.
+type Snapshot struct {
+	flushableReader
+	parentSnap kvdb.Snapshot
+}
+
+func (s *Snapshot) Release() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.parentSnap.Release()
+	s.modified = nil
 }

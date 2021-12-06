@@ -114,7 +114,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 	return db.db.Has(key, nil)
 }
 
-// get retrieves the given key if it's present in the key-value store.
+// Get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
 	dat, err := db.db.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
@@ -147,6 +147,19 @@ func (db *Database) NewBatch() kvdb.Batch {
 // initial key (or after, if it does not exist).
 func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	return db.db.NewIterator(bytesPrefixRange(prefix, start), nil)
+}
+
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
+	snap, err := db.db.GetSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	return &Snapshot{snap}, nil
 }
 
 // Stat returns a particular internal stat of the database.
@@ -244,4 +257,47 @@ func bytesPrefixRange(prefix, start []byte) *util.Range {
 	r := util.BytesPrefix(prefix)
 	r.Start = append(r.Start, start...)
 	return r
+}
+
+// Snapshot is a DB snapshot.
+type Snapshot struct {
+	snap *leveldb.Snapshot
+}
+
+func (snap *Snapshot) String() string {
+	return snap.snap.String()
+}
+
+// Get retrieves the given key if it's present in the key-value store.
+func (snap *Snapshot) Get(key []byte) (value []byte, err error) {
+	dat, err := snap.snap.Get(key, nil)
+	if err != nil && err == leveldb.ErrNotFound {
+		return nil, nil
+	}
+	return dat, err
+}
+
+// Has retrieves if a key is present in the key-value store.
+func (snap *Snapshot) Has(key []byte) (ret bool, err error) {
+	dat, err := snap.snap.Has(key, nil)
+	if err != nil && err == leveldb.ErrNotFound {
+		return false, nil
+	}
+	return dat, err
+}
+
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (snap *Snapshot) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	return snap.snap.NewIterator(bytesPrefixRange(prefix, start), nil)
+}
+
+// Release releases the snapshot. This will not release any returned
+// iterators, the iterators would still be valid until released or the
+// underlying DB is closed.
+//
+// Other methods should not be called after the snapshot has been released.
+func (snap *Snapshot) Release() {
+	snap.snap.Release()
 }

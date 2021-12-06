@@ -52,7 +52,7 @@ func (f *Fallible) Has(key []byte) (bool, error) {
 	return f.Underlying.Has(key)
 }
 
-// get retrieves the given key if it's present in the key-value data store.
+// Get retrieves the given key if it's present in the key-value data store.
 func (f *Fallible) Get(key []byte) ([]byte, error) {
 	return f.Underlying.Get(key)
 }
@@ -81,6 +81,15 @@ func (f *Fallible) NewBatch() kvdb.Batch {
 // initial key (or after, if it does not exist).
 func (f *Fallible) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	return f.Underlying.NewIterator(prefix, start)
+}
+
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (f *Fallible) GetSnapshot() (kvdb.Snapshot, error) {
+	return f.Underlying.GetSnapshot()
 }
 
 // Stat returns a particular internal stat of the database.
