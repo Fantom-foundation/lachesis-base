@@ -5,12 +5,12 @@ import "github.com/Fantom-foundation/lachesis-base/utils/cachescale"
 type Config struct {
 }
 
-// DefaultStoreConfig for livenet.
+// DefaultConfig for livenet.
 func DefaultConfig() Config {
 	return Config{}
 }
 
-// LiteStoreConfig is for tests or inmemory.
+// LiteConfig is for tests or inmemory.
 func LiteConfig() Config {
 	return Config{}
 }
@@ -39,10 +39,5 @@ func DefaultStoreConfig(scale cachescale.Func) StoreConfig {
 
 // LiteStoreConfig is for tests or inmemory.
 func LiteStoreConfig() StoreConfig {
-	return StoreConfig{
-		StoreCacheConfig{
-			RootsNum:    50,
-			RootsFrames: 10,
-		},
-	}
+	return DefaultStoreConfig(cachescale.Ratio{Base: 20, Target: 1})
 }
