@@ -29,8 +29,8 @@ const (
 // functionality it also supports batch writes and iterating over the keyspace in
 // binary-alphabetical order.
 type Database struct {
-	fn string      // filename for reporting
-	db *leveldb.DB // LevelDB instance
+	filename   string      // filename for reporting
+	underlying *leveldb.DB // LevelDB instance
 
 	quitLock sync.Mutex // Mutex protecting the quit channel access
 
@@ -64,8 +64,8 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 	}
 	// Assemble the wrapper with all the registered metrics
 	ldb := &Database{
-		fn: path,
-		db: db,
+		filename:   path,
+		underlying: db,
 	}
 
 	ldb.onClose = close
@@ -80,12 +80,12 @@ func (db *Database) Close() error {
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()
 
-	if db.db == nil {
+	if db.underlying == nil {
 		panic("already closed")
 	}
 
-	ldb := db.db
-	db.db = nil
+	ldb := db.underlying
+	db.underlying = nil
 
 	if db.onClose != nil {
 		if err := db.onClose(); err != nil {
@@ -101,7 +101,7 @@ func (db *Database) Close() error {
 
 // Drop whole database.
 func (db *Database) Drop() {
-	if db.db != nil {
+	if db.underlying != nil {
 		panic("Close database first!")
 	}
 	if db.onDrop != nil {
@@ -111,7 +111,7 @@ func (db *Database) Drop() {
 
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
-	dat, err := db.db.Has(key, nil)
+	dat, err := db.underlying.Has(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
 		return false, nil
 	}
@@ -120,7 +120,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 
 // Get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
-	dat, err := db.db.Get(key, nil)
+	dat, err := db.underlying.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
 		return nil, nil
 	}
@@ -129,19 +129,19 @@ func (db *Database) Get(key []byte) ([]byte, error) {
 
 // Put inserts the given value into the key-value store.
 func (db *Database) Put(key []byte, value []byte) error {
-	return db.db.Put(key, value, nil)
+	return db.underlying.Put(key, value, nil)
 }
 
 // Delete removes the key from the key-value store.
 func (db *Database) Delete(key []byte) error {
-	return db.db.Delete(key, nil)
+	return db.underlying.Delete(key, nil)
 }
 
 // NewBatch creates a write-only key-value store that buffers changes to its host
 // database until a final write is called.
 func (db *Database) NewBatch() kvdb.Batch {
 	return &batch{
-		db: db.db,
+		db: db.underlying,
 		b:  new(leveldb.Batch),
 	}
 }
@@ -150,7 +150,7 @@ func (db *Database) NewBatch() kvdb.Batch {
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
 func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
-	return db.db.NewIterator(bytesPrefixRange(prefix, start), nil)
+	return db.underlying.NewIterator(bytesPrefixRange(prefix, start), nil)
 }
 
 // GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
@@ -159,7 +159,7 @@ func (db *Database) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 //
 // The snapshot must be released after use, by calling Release method.
 func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
-	snap, err := db.db.GetSnapshot()
+	snap, err := db.underlying.GetSnapshot()
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
 
 // Stat returns a particular internal stat of the database.
 func (db *Database) Stat(property string) (string, error) {
-	return db.db.GetProperty(property)
+	return db.underlying.GetProperty(property)
 }
 
 // Compact flattens the underlying data store for the given key range. In essence,
@@ -179,12 +179,12 @@ func (db *Database) Stat(property string) (string, error) {
 // is treated as a key after all keys in the data store. If both is nil then it
 // will compact entire data store.
 func (db *Database) Compact(start []byte, limit []byte) error {
-	return db.db.CompactRange(util.Range{Start: start, Limit: limit})
+	return db.underlying.CompactRange(util.Range{Start: start, Limit: limit})
 }
 
 // Path returns the path to the database directory.
 func (db *Database) Path() string {
-	return db.fn
+	return db.filename
 }
 
 // batch is a write-only leveldb batch that commits changes to its host database
