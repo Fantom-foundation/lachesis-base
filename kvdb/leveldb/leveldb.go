@@ -268,13 +268,13 @@ type Snapshot struct {
 	snap *leveldb.Snapshot
 }
 
-func (snap *Snapshot) String() string {
-	return snap.snap.String()
+func (s *Snapshot) String() string {
+	return s.snap.String()
 }
 
 // Get retrieves the given key if it's present in the key-value store.
-func (snap *Snapshot) Get(key []byte) (value []byte, err error) {
-	dat, err := snap.snap.Get(key, nil)
+func (s *Snapshot) Get(key []byte) (value []byte, err error) {
+	dat, err := s.snap.Get(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
 		return nil, nil
 	}
@@ -282,8 +282,8 @@ func (snap *Snapshot) Get(key []byte) (value []byte, err error) {
 }
 
 // Has retrieves if a key is present in the key-value store.
-func (snap *Snapshot) Has(key []byte) (ret bool, err error) {
-	dat, err := snap.snap.Has(key, nil)
+func (s *Snapshot) Has(key []byte) (ret bool, err error) {
+	dat, err := s.snap.Has(key, nil)
 	if err != nil && err == leveldb.ErrNotFound {
 		return false, nil
 	}
@@ -293,8 +293,8 @@ func (snap *Snapshot) Has(key []byte) (ret bool, err error) {
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
-func (snap *Snapshot) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
-	return snap.snap.NewIterator(bytesPrefixRange(prefix, start), nil)
+func (s *Snapshot) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	return s.snap.NewIterator(bytesPrefixRange(prefix, start), nil)
 }
 
 // Release releases the snapshot. This will not release any returned
@@ -302,6 +302,6 @@ func (snap *Snapshot) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 // underlying DB is closed.
 //
 // Other methods should not be called after the snapshot has been released.
-func (snap *Snapshot) Release() {
-	snap.snap.Release()
+func (s *Snapshot) Release() {
+	s.snap.Release()
 }
