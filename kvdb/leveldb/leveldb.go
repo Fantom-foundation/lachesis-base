@@ -111,7 +111,11 @@ func (db *Database) Drop() {
 
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
-	return db.db.Has(key, nil)
+	dat, err := db.db.Has(key, nil)
+	if err != nil && err == leveldb.ErrNotFound {
+		return false, nil
+	}
+	return dat, err
 }
 
 // Get retrieves the given key if it's present in the key-value store.
