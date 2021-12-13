@@ -156,9 +156,9 @@ type readonlySnapshot struct {
 	snap kvdb.Snapshot
 }
 
-func (it *readonlySnapshot) Release() {
-	it.mu.Lock()
-	defer it.mu.Unlock()
+func (s *readonlySnapshot) Release() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	it.snap.Release()
+	s.snap.Release()
 }
