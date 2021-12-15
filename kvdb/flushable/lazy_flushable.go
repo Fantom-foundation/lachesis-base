@@ -45,6 +45,7 @@ func (w *LazyFlushable) initUnderlyingDb() (kvdb.Store, error) {
 		if err != nil {
 			return nil, err
 		}
+		w.flushableReader.underlying = w.underlying
 		w.producer = nil // need once
 	}
 
@@ -61,6 +62,7 @@ func (w *LazyFlushable) Flush() (err error) {
 	if err != nil {
 		return err
 	}
+	w.flushableReader.underlying = w.underlying
 
 	return w.flush()
 }

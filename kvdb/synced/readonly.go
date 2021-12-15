@@ -6,24 +6,50 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
+// iteratedReader wrapper around any kvdb.IteratedReader.
+type iteratedReader struct {
+	mu         *sync.RWMutex
+	underlying kvdb.IteratedReader
+}
+
 // readonlyStore wrapper around any kvdb.ReadonlyStore.
 type readonlyStore struct {
-	mu         *sync.RWMutex
+	iteratedReader
 	underlying kvdb.ReadonlyStore
+}
+
+// WrapIteratedReader underlying db to make its methods synced with mu.
+func WrapIteratedReader(parent kvdb.IteratedReader, mu *sync.RWMutex) kvdb.IteratedReader {
+	return &iteratedReader{
+		mu:         mu,
+		underlying: parent,
+	}
+}
+
+// WrapSnapshot underlying db to make its methods synced with mu.
+func WrapSnapshot(parent kvdb.Snapshot, mu *sync.RWMutex) kvdb.Snapshot {
+	return &readonlySnapshot{
+		iteratedReader: iteratedReader{
+			mu:         mu,
+			underlying: parent,
+		},
+		snap: parent,
+	}
 }
 
 // WrapReadonlyStore underlying db to make its methods synced with mu.
 func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) kvdb.ReadonlyStore {
-	ro := &readonlyStore{
-		mu:         mu,
+	return &readonlyStore{
+		iteratedReader: iteratedReader{
+			mu:         mu,
+			underlying: parent,
+		},
 		underlying: parent,
 	}
-
-	return ro
 }
 
 // Has checks if key is in the exists.
-func (ro *readonlyStore) Has(key []byte) (bool, error) {
+func (ro *iteratedReader) Has(key []byte) (bool, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
@@ -31,11 +57,24 @@ func (ro *readonlyStore) Has(key []byte) (bool, error) {
 }
 
 // Get returns key-value pair by key.
-func (ro *readonlyStore) Get(key []byte) ([]byte, error) {
+func (ro *iteratedReader) Get(key []byte) ([]byte, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
 	return ro.underlying.Get(key)
+}
+
+// NewIterator creates a binary-alphabetical iterator over a subset
+// of database content with a particular key prefix, starting at a particular
+// initial key (or after, if it does not exist).
+func (ro *iteratedReader) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	ro.mu.RLock()
+	defer ro.mu.RUnlock()
+
+	return &readonlyIterator{
+		mu:       ro.mu,
+		parentIt: ro.underlying.NewIterator(prefix, start),
+	}
 }
 
 // Stat returns a particular internal stat of the database.
@@ -46,17 +85,26 @@ func (ro *readonlyStore) Stat(property string) (string, error) {
 	return ro.underlying.Stat(property)
 }
 
-// NewIterator creates a binary-alphabetical iterator over a subset
-// of database content with a particular key prefix, starting at a particular
-// initial key (or after, if it does not exist).
-func (ro *readonlyStore) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (ro *readonlyStore) GetSnapshot() (kvdb.Snapshot, error) {
 	ro.mu.RLock()
 	defer ro.mu.RUnlock()
 
-	return &readonlyIterator{
-		mu:       ro.mu,
-		parentIt: ro.underlying.NewIterator(prefix, start),
+	snap, err := ro.underlying.GetSnapshot()
+	if err != nil {
+		return nil, err
 	}
+	return &readonlySnapshot{
+		iteratedReader: iteratedReader{
+			mu:         ro.mu,
+			underlying: snap,
+		},
+		snap: snap,
+	}, nil
 }
 
 /*
@@ -101,4 +149,16 @@ func (it *readonlyIterator) Value() []byte {
 // be called multiple times without causing error.
 func (it *readonlyIterator) Release() {
 	it.parentIt.Release()
+}
+
+type readonlySnapshot struct {
+	iteratedReader
+	snap kvdb.Snapshot
+}
+
+func (s *readonlySnapshot) Release() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.snap.Release()
 }

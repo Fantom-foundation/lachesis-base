@@ -1,4 +1,4 @@
-package flushable
+package memorydb
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
@@ -20,8 +20,8 @@ func TestSyncedPoolUnderlying(t *testing.T) {
 		tbname  = "table"
 	)
 
-	dbs := memorydb.NewProducer("")
-	pool := NewSyncedPool(dbs, []byte("flushID"))
+	dbs := NewProducer("")
+	pool := flushable.NewSyncedPool(dbs, []byte("flushID"))
 
 	db1, err := pool.GetUnderlying(dbname1)
 	require.NoError(err)

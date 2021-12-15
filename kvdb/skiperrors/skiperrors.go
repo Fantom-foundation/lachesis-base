@@ -8,7 +8,12 @@ import (
 // It ignores some errors of underlying store.
 // NOTE: ignoring is not implemented at Iterator, Batch, .
 type wrapper struct {
+	readWrapper
 	underlying kvdb.Store
+}
+
+type readWrapper struct {
+	reader kvdb.IteratedReader
 
 	errs []error
 }
@@ -16,12 +21,15 @@ type wrapper struct {
 // Wrap returns a wrapped kvdb.Store.
 func Wrap(db kvdb.Store, errs ...error) kvdb.Store {
 	return &wrapper{
+		readWrapper: readWrapper{
+			reader: db,
+			errs:   errs,
+		},
 		underlying: db,
-		errs:       errs,
 	}
 }
 
-func (f *wrapper) skip(got error) bool {
+func (f *readWrapper) skip(got error) bool {
 	if got == nil {
 		return false
 	}
@@ -40,17 +48,17 @@ func (f *wrapper) skip(got error) bool {
  */
 
 // Has retrieves if a key is present in the key-value data store.
-func (f *wrapper) Has(key []byte) (bool, error) {
-	has, err := f.underlying.Has(key)
+func (f *readWrapper) Has(key []byte) (bool, error) {
+	has, err := f.reader.Has(key)
 	if f.skip(err) {
 		return false, nil
 	}
 	return has, err
 }
 
-// get retrieves the given key if it's present in the key-value data store.
-func (f *wrapper) Get(key []byte) ([]byte, error) {
-	b, err := f.underlying.Get(key)
+// Get retrieves the given key if it's present in the key-value data store.
+func (f *readWrapper) Get(key []byte) ([]byte, error) {
+	b, err := f.reader.Get(key)
 	if f.skip(err) {
 		return nil, nil
 	}
@@ -84,8 +92,27 @@ func (f *wrapper) NewBatch() kvdb.Batch {
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
-func (f *wrapper) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
-	return f.underlying.NewIterator(prefix, start)
+func (f *readWrapper) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+	return f.reader.NewIterator(prefix, start)
+}
+
+// GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
+// is a frozen snapshot of a DB state at a particular point in time. The
+// content of snapshot are guaranteed to be consistent.
+//
+// The snapshot must be released after use, by calling Release method.
+func (f *wrapper) GetSnapshot() (kvdb.Snapshot, error) {
+	snap, err := f.underlying.GetSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	return &Snapshot{
+		readWrapper{
+			reader: snap,
+			errs:   f.errs,
+		},
+		snap,
+	}, nil
 }
 
 // Stat returns a particular internal stat of the database.
@@ -119,4 +146,14 @@ func (f *wrapper) Close() error {
 		return nil
 	}
 	return err
+}
+
+// Snapshot is a DB snapshot.
+type Snapshot struct {
+	readWrapper
+	snap kvdb.Snapshot
+}
+
+func (s *Snapshot) Release() {
+	s.snap.Release()
 }

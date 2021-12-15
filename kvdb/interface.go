@@ -43,6 +43,22 @@ type Reader interface {
 	ethdb.KeyValueReader
 }
 
+// IteratedReader wraps the Iteratee, Reader methods of a backing data store.
+type IteratedReader interface {
+	Reader
+	Iteratee
+}
+
+type Snapshot interface {
+	IteratedReader
+	Release()
+}
+
+// Snapshoter wraps the GetSnapshot methods of a backing data store.
+type Snapshoter interface {
+	GetSnapshot() (Snapshot, error)
+}
+
 // Batcher wraps the NewBatch method of a backing data store.
 type Batcher interface {
 	// NewBatch creates a write-only database that buffers changes to its host db
@@ -61,19 +77,17 @@ type Iteratee interface {
 // Store contains all the methods required to allow handling different
 // key-value data stores backing the high level database.
 type Store interface {
-	Reader
+	ReadonlyStore
 	Writer
 	Batcher
-	Iteratee
-	ethdb.Stater
 	ethdb.Compacter
 	io.Closer
 }
 
 // ReadonlyStore contains only reading methods of Store.
 type ReadonlyStore interface {
-	Reader
-	Iteratee
+	IteratedReader
+	Snapshoter
 	ethdb.Stater
 }
 

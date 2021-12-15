@@ -38,7 +38,10 @@ func noPrefix(key, prefix []byte) []byte {
 func New(db kvdb.Store, prefix []byte) *Table {
 	return &Table{
 		Readonly: Readonly{
-			prefix:     prefix,
+			IteratedReader: IteratedReader{
+				prefix:     prefix,
+				underlying: db,
+			},
 			underlying: db,
 		},
 		underlying: db,
