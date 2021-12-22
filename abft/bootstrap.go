@@ -49,6 +49,12 @@ func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	return err
 }
 
+// Reset switches epoch state to a new empty epoch.
+func (p *Orderer) Reset(epoch idx.Epoch, validators *pos.Validators) error {
+	p.store.applyGenesis(epoch, validators)
+	return nil
+}
+
 func (p *Orderer) loadEpochDB() error {
 	return p.store.openEpochDB(p.store.GetEpoch())
 }

@@ -18,7 +18,7 @@ type OrdererDagIndex interface {
 	dagidx.ForklessCause
 }
 
-// Unlike processes events to reach finality on their order.
+// Orderer processes events to reach finality on their order.
 // Unlike abft.Lachesis, this raw level of abstraction doesn't track cheaters detection
 type Orderer struct {
 	config Config
@@ -32,7 +32,7 @@ type Orderer struct {
 	callback OrdererCallbacks
 }
 
-// New creates Orderer instance.
+// NewOrderer creates Orderer instance.
 // Unlike Lachesis, Orderer doesn't updates DAG indexes for events, and doesn't detect cheaters
 // It has only one purpose - reaching consensus on events order.
 func NewOrderer(store *Store, input EventSource, dagIndex OrdererDagIndex, crit func(error), config Config) *Orderer {
