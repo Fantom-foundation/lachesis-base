@@ -27,7 +27,7 @@ type Lachesis struct {
 	callback      lachesis.ConsensusCallbacks
 }
 
-// New creates Lachesis instance.
+// NewLachesis creates Lachesis instance.
 func NewLachesis(store *Store, input EventSource, dagIndex DagIndex, crit func(error), config Config) *Lachesis {
 	p := &Lachesis{
 		Orderer:  NewOrderer(store, input, dagIndex, crit, config),

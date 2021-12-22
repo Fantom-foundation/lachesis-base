@@ -25,15 +25,20 @@ func (s *Store) ApplyGenesis(g *Genesis) error {
 		return fmt.Errorf("genesis already applied")
 	}
 
+	s.applyGenesis(g.Epoch, g.Validators)
+	return nil
+}
+
+// applyGenesis switches epoch state to a new empty epoch.
+func (s *Store) applyGenesis(epoch idx.Epoch, validators *pos.Validators) {
 	es := &EpochState{}
 	ds := &LastDecidedState{}
 
-	es.Validators = g.Validators
-	es.Epoch = g.Epoch
+	es.Validators = validators
+	es.Epoch = epoch
 	ds.LastDecidedFrame = FirstFrame - 1
 
 	s.SetEpochState(es)
 	s.SetLastDecidedState(ds)
 
-	return nil
 }
