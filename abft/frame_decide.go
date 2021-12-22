@@ -31,6 +31,22 @@ func (p *Orderer) onFrameDecided(frame idx.Frame, atropos hash.Event) (bool, err
 	return newValidators != nil, nil
 }
 
+func (p *Orderer) resetEpochStore(newEpoch idx.Epoch) error {
+	err := p.store.dropEpochDB()
+	if err != nil {
+		return err
+	}
+	err = p.store.openEpochDB(newEpoch)
+	if err != nil {
+		return err
+	}
+
+	if p.callback.EpochDBLoaded != nil {
+		p.callback.EpochDBLoaded(newEpoch)
+	}
+	return nil
+}
+
 func (p *Orderer) sealEpoch(newValidators *pos.Validators) error {
 	// new PrevEpoch state
 	epochState := *p.store.GetEpochState()
@@ -38,18 +54,5 @@ func (p *Orderer) sealEpoch(newValidators *pos.Validators) error {
 	epochState.Validators = newValidators
 	p.store.SetEpochState(&epochState)
 
-	// reset internal epoch DB
-	err := p.store.dropEpochDB()
-	if err != nil {
-		return err
-	}
-	err = p.store.openEpochDB(epochState.Epoch)
-	if err != nil {
-		return err
-	}
-
-	if p.callback.EpochDBLoaded != nil {
-		p.callback.EpochDBLoaded(epochState.Epoch)
-	}
-	return nil
+	return p.resetEpochStore(epochState.Epoch)
 }
