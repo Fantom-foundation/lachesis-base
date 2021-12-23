@@ -53,7 +53,12 @@ func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 func (p *Orderer) Reset(epoch idx.Epoch, validators *pos.Validators) error {
 	p.store.applyGenesis(epoch, validators)
 	// reset internal epoch DB
-	return p.resetEpochStore(epoch)
+	err := p.resetEpochStore(epoch)
+	if err != nil {
+		return err
+	}
+	p.election.Reset(validators, FirstFrame)
+	return nil
 }
 
 func (p *Orderer) loadEpochDB() error {
