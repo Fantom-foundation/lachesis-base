@@ -1,6 +1,8 @@
 package abft
 
 import (
+	"math/rand"
+
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
@@ -106,4 +108,14 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 	}
 
 	return extended, store, input
+}
+
+func mutateValidators(validators *pos.Validators) *pos.Validators {
+	r := rand.New(rand.NewSource(int64(validators.TotalWeight())))
+	builder := pos.NewBuilder()
+	for _, vid := range validators.IDs() {
+		stake := uint64(validators.Get(vid))*uint64(500+r.Intn(500))/1000 + 1
+		builder.Set(vid, pos.Weight(stake))
+	}
+	return builder.Build()
 }

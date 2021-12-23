@@ -60,11 +60,13 @@ func TestRestart_2_8_10(t *testing.T) {
 }
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
-	testRestartAndReset(t, weights, cheatersCount, false)
-	testRestartAndReset(t, weights, cheatersCount, true)
+	testRestartAndReset(t, weights, false, cheatersCount, false)
+	testRestartAndReset(t, weights, false, cheatersCount, true)
+	testRestartAndReset(t, weights, true, 0, false)
+	testRestartAndReset(t, weights, true, 0, true)
 }
 
-func testRestartAndReset(t *testing.T, weights []pos.Weight, cheatersCount int, resets bool) {
+func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool) {
 	assertar := assert.New(t)
 
 	const (
@@ -92,6 +94,9 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, cheatersCount int, 
 		lch.applyBlock = func(block *lachesis.Block) *pos.Validators {
 			if lch.store.GetLastDecidedFrame()+1 == idx.Frame(maxEpochBlocks) {
 				// seal epoch
+				if mutateWeights {
+					return mutateValidators(lch.store.GetValidators())
+				}
 				return lch.store.GetValidators()
 			}
 			return nil
@@ -104,8 +109,8 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, cheatersCount int, 
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)
 	}
-	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
 	epochStates := map[idx.Epoch]*EpochState{}
+	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
@@ -206,7 +211,7 @@ func compareStates(assertar *assert.Assertions, expected, restored *TestLachesis
 	assertar.Equal(
 		*(expected.store.GetLastDecidedState()), *(restored.store.GetLastDecidedState()))
 	assertar.Equal(
-		*(expected.store.GetEpochState()), *(restored.store.GetEpochState()))
+		expected.store.GetEpochState().String(), restored.store.GetEpochState().String())
 	// check last block
 	if len(expected.blocks) != 0 {
 		assertar.Equal(expected.lastBlock, restored.lastBlock)

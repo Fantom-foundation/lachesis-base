@@ -2,6 +2,7 @@ package abft
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Fantom-foundation/lachesis-base/abft/election"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
@@ -24,6 +25,10 @@ type EpochState struct {
 	// these values change only after a change of epoch
 	Epoch      idx.Epoch
 	Validators *pos.Validators
+}
+
+func (es EpochState) String() string {
+	return fmt.Sprintf("%d/%s", es.Epoch, es.Validators.String())
 }
 
 // Bootstrap restores abft's state from store.

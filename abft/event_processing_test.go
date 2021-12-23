@@ -60,12 +60,14 @@ func TestLachesisRandom_2_8_10(t *testing.T) {
 }
 
 func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
-	testLachesisRandomAndReset(t, weights, cheatersCount, false)
-	testLachesisRandomAndReset(t, weights, cheatersCount, true)
+	testLachesisRandomAndReset(t, weights, false, cheatersCount, false)
+	testLachesisRandomAndReset(t, weights, false, cheatersCount, true)
+	testLachesisRandomAndReset(t, weights, true, 0, false)
+	testLachesisRandomAndReset(t, weights, true, 0, true)
 }
 
 // TestLachesis 's possibility to get consensus in general on any event order.
-func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, cheatersCount int, reset bool) {
+func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, reset bool) {
 	assertar := assert.New(t)
 
 	const lchCount = 3
@@ -88,6 +90,9 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, cheatersCoun
 		lch.applyBlock = func(block *lachesis.Block) *pos.Validators {
 			if lch.store.GetLastDecidedFrame()+1 == idx.Frame(maxEpochBlocks) {
 				// seal epoch
+				if mutateWeights {
+					return mutateValidators(lch.store.GetValidators())
+				}
 				return lch.store.GetValidators()
 			}
 			return nil
@@ -101,8 +106,8 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, cheatersCoun
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)
 	}
-	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
 	epochStates := map[idx.Epoch]*EpochState{}
+	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
@@ -126,6 +131,7 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, cheatersCoun
 		}
 	}
 
+	// connect events to other instances
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		for i := 1; i < len(lchs); i++ {
 			if reset && epoch != epochs-1 && r.Intn(2) == 0 {
