@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
 )
 
-// Events is a ordered slice of events.
+// TestEvents is a ordered slice of events.
 type TestEvents []*TestEvent
 
 // String returns human readable representation.

@@ -105,7 +105,7 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 
 		// call confirmBlock again
 		_, err := lch.onFrameDecided(frame, atropos)
-		gotBlock := lch.blocks[idx.Block(len(lch.blocks))]
+		gotBlock := lch.blocks[lch.lastBlock]
 
 		if !assertar.NoError(err) {
 			break

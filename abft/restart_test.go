@@ -60,6 +60,11 @@ func TestRestart_2_8_10(t *testing.T) {
 }
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
+	testRestartAndReset(t, weights, cheatersCount, false)
+	testRestartAndReset(t, weights, cheatersCount, true)
+}
+
+func testRestartAndReset(t *testing.T, weights []pos.Weight, cheatersCount int, resets bool) {
 	assertar := assert.New(t)
 
 	const (
@@ -100,6 +105,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		parentCount = len(nodes)
 	}
 	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
+	epochStates := map[idx.Epoch]*EpochState{}
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
@@ -108,6 +114,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 					lchs[GENERATOR].Process(e))
 
 				ordered = append(ordered, e)
+				epochStates[lchs[GENERATOR].store.GetEpoch()] = lchs[GENERATOR].store.GetEpochState()
 			},
 			Build: func(e dag.MutableEvent, name string) error {
 				if epoch != lchs[GENERATOR].store.GetEpoch() {
@@ -118,20 +125,39 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			},
 		})
 	}
+	if !assertar.Equal(maxEpochBlocks*epochs, len(lchs[GENERATOR].blocks)) {
+		return
+	}
+
+	resetEpoch := idx.Epoch(0)
 
 	// use pre-ordered events, call consensus(es) directly
-	for n, e := range ordered {
-		if r.Intn(10) == 0 || n%20 == 0 {
+	for _, e := range ordered {
+		if e.Epoch() < resetEpoch {
+			continue
+		}
+		if resets && epochStates[e.Epoch()+2] != nil && r.Intn(30) == 0 {
+			// never reset last epoch to be able to compare latest state
+			resetEpoch = e.Epoch() + 1
+			err := lchs[EXPECTED].Reset(resetEpoch, epochStates[resetEpoch].Validators)
+			assertar.NoError(err)
+			err = lchs[RESTORED].Reset(resetEpoch, epochStates[resetEpoch].Validators)
+			assertar.NoError(err)
+		}
+		if e.Epoch() < resetEpoch {
+			continue
+		}
+		if r.Intn(10) == 0 {
 			prev := lchs[RESTORED]
 
 			store := NewMemStore()
 			// copy prev DB into new one
 			{
 				it := prev.store.mainDB.NewIterator(nil, nil)
-				defer it.Release()
 				for it.Next() {
 					assertar.NoError(store.mainDB.Put(it.Key(), it.Value()))
 				}
+				it.Release()
 			}
 			restartEpochDB := memorydb.New()
 			{
@@ -172,9 +198,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		}
 	}
 
-	if !assertar.Equal(maxEpochBlocks*epochs, len(lchs[EXPECTED].blocks)) {
-		return
-	}
+	compareStates(assertar, lchs[GENERATOR], lchs[RESTORED])
 	compareBlocks(assertar, lchs[EXPECTED], lchs[RESTORED])
 }
 
@@ -183,21 +207,26 @@ func compareStates(assertar *assert.Assertions, expected, restored *TestLachesis
 		*(expected.store.GetLastDecidedState()), *(restored.store.GetLastDecidedState()))
 	assertar.Equal(
 		*(expected.store.GetEpochState()), *(restored.store.GetEpochState()))
-	// check last Atropos
+	// check last block
 	if len(expected.blocks) != 0 {
+		assertar.Equal(expected.lastBlock, restored.lastBlock)
 		assertar.Equal(
-			expected.blocks[idx.Block(len(expected.blocks))].Atropos,
-			restored.blocks[idx.Block(len(restored.blocks))].Atropos,
-			"block atropos doesn't match")
+			expected.blocks[expected.lastBlock],
+			restored.blocks[restored.lastBlock],
+			"block doesn't match")
 	}
 }
 
 func compareBlocks(assertar *assert.Assertions, expected, restored *TestLachesis) {
-	assertar.Equal(len(expected.blocks), len(restored.blocks))
-	for i := idx.Block(1); i <= idx.Block(len(restored.blocks)); i++ {
-		if !assertar.NotNil(restored.blocks[i]) ||
-			!assertar.Equal(expected.blocks[i], restored.blocks[i]) {
-			return
+	assertar.Equal(expected.lastBlock, restored.lastBlock)
+	for e := idx.Epoch(1); e <= expected.lastBlock.Epoch; e++ {
+		assertar.Equal(expected.epochBlocks[e], restored.epochBlocks[e])
+		for f := idx.Frame(1); f < expected.epochBlocks[e]; f++ {
+			key := BlockKey{e, f}
+			if !assertar.NotNil(restored.blocks[key]) ||
+				!assertar.Equal(expected.blocks[key], restored.blocks[key]) {
+				return
+			}
 		}
 	}
 }
