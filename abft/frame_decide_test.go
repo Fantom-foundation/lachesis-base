@@ -71,7 +71,7 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		return nil
 	}
 
-	eventCount := int(TestMaxEpochBlocks)
+	eventCount := int(TestMaxEpochEvents)
 	parentCount := 5
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)
@@ -120,5 +120,5 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 			break
 		}
 	}
-	assertar.GreaterOrEqual(len(blocks), TestMaxEpochBlocks/5)
+	assertar.GreaterOrEqual(len(blocks), TestMaxEpochEvents/5)
 }

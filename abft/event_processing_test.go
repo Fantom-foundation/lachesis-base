@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TestMaxEpochBlocks = 200
+	TestMaxEpochEvents = 200
 )
 
 func TestLachesisRandom_1(t *testing.T) {
@@ -81,8 +81,10 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeight
 		inputs = append(inputs, input)
 	}
 
+	eventCount := int(TestMaxEpochEvents)
 	const epochs = 5
-	var maxEpochBlocks = TestMaxEpochBlocks / 20
+	// maxEpochBlocks should be much smaller than eventCount so that there would be enough events to seal epoch
+	var maxEpochBlocks = eventCount / 20
 
 	// seal epoch on decided frame == maxEpochBlocks
 	for _, _lch := range lchs {
@@ -101,7 +103,6 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeight
 
 	// create events on lch0
 	ordered := map[idx.Epoch]dag.Events{}
-	eventCount := int(TestMaxEpochBlocks)
 	parentCount := 5
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)

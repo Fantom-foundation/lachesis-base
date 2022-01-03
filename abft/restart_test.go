@@ -75,8 +75,8 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 		EXPECTED  = 1 // sample
 		RESTORED  = 2 // compare with sample
 	)
-
 	nodes := tdag.GenNodes(len(weights))
+
 	lchs := make([]*TestLachesis, 0, COUNT)
 	inputs := make([]*EventStore, 0, COUNT)
 	for i := 0; i < COUNT; i++ {
@@ -85,8 +85,10 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 		inputs = append(inputs, input)
 	}
 
+	eventCount := TestMaxEpochEvents
 	const epochs = 5
-	var maxEpochBlocks = 30
+	// maxEpochBlocks should be much smaller than eventCount so that there would be enough events to seal epoch
+	var maxEpochBlocks = eventCount / 4
 
 	// seal epoch on decided frame == maxEpochBlocks
 	for _, _lch := range lchs {
@@ -104,7 +106,6 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 	}
 
 	var ordered dag.Events
-	eventCount := int(maxEpochBlocks) * 4
 	parentCount := 5
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)

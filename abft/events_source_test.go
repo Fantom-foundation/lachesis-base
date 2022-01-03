@@ -63,7 +63,7 @@ func TestEventStore(t *testing.T) {
 		assertar := assert.New(t)
 
 		nodes := tdag.GenNodes(5)
-		tdag.ForEachRandEvent(nodes, int(TestMaxEpochBlocks)-1, 4, nil, tdag.ForEachEvent{
+		tdag.ForEachRandEvent(nodes, int(TestMaxEpochEvents)-1, 4, nil, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
 				store.SetEvent(e)
 				e1 := store.GetEvent(e.ID())
