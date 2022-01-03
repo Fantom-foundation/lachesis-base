@@ -1,6 +1,7 @@
 package pos
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"sort"
@@ -211,4 +212,15 @@ func (vv *Validators) DecodeRLP(s *rlp.Stream) error {
 	*vv = *builder.Build()
 
 	return nil
+}
+
+func (vv *Validators) String() string {
+	str := ""
+	for i, vid := range vv.SortedIDs() {
+		if len(str) != 0 {
+			str += ","
+		}
+		str += fmt.Sprintf("[%d:%d]", vid, vv.GetWeightByIdx(idx.Validator(i)))
+	}
+	return str
 }

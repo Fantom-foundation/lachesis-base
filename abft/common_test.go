@@ -1,6 +1,9 @@
 package abft
 
 import (
+	"math/rand"
+
+	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -12,11 +15,24 @@ import (
 
 type applyBlockFn func(block *lachesis.Block) *pos.Validators
 
+type BlockKey struct {
+	Epoch idx.Epoch
+	Frame idx.Frame
+}
+
+type BlockResult struct {
+	Atropos    hash.Event
+	Cheaters   lachesis.Cheaters
+	Validators *pos.Validators
+}
+
 // TestLachesis extends Lachesis for tests.
 type TestLachesis struct {
 	*IndexedLachesis
 
-	blocks map[idx.Block]*lachesis.Block
+	blocks      map[BlockKey]*BlockResult
+	lastBlock   BlockKey
+	epochBlocks map[idx.Epoch]idx.Frame
 
 	applyBlock applyBlockFn
 }
@@ -55,18 +71,30 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 
 	extended := &TestLachesis{
 		IndexedLachesis: lch,
-		blocks:          map[idx.Block]*lachesis.Block{},
+		blocks:          map[BlockKey]*BlockResult{},
+		epochBlocks:     map[idx.Epoch]idx.Frame{},
 	}
-
-	blockIdx := idx.Block(0)
 
 	err = extended.Bootstrap(lachesis.ConsensusCallbacks{
 		BeginBlock: func(block *lachesis.Block) lachesis.BlockCallbacks {
-			blockIdx++
 			return lachesis.BlockCallbacks{
 				EndBlock: func() (sealEpoch *pos.Validators) {
 					// track blocks
-					extended.blocks[blockIdx] = block
+					key := BlockKey{
+						Epoch: extended.store.GetEpoch(),
+						Frame: extended.store.GetLastDecidedFrame() + 1,
+					}
+					extended.blocks[key] = &BlockResult{
+						Atropos:    block.Atropos,
+						Cheaters:   block.Cheaters,
+						Validators: extended.store.GetValidators(),
+					}
+					// check that prev block exists
+					if extended.lastBlock.Epoch != key.Epoch && key.Frame != 1 {
+						panic("first frame must be 1")
+					}
+					extended.epochBlocks[key.Epoch]++
+					extended.lastBlock = key
 					if extended.applyBlock != nil {
 						return extended.applyBlock(block)
 					}
@@ -80,4 +108,14 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 	}
 
 	return extended, store, input
+}
+
+func mutateValidators(validators *pos.Validators) *pos.Validators {
+	r := rand.New(rand.NewSource(int64(validators.TotalWeight())))
+	builder := pos.NewBuilder()
+	for _, vid := range validators.IDs() {
+		stake := uint64(validators.Get(vid))*uint64(500+r.Intn(500))/1000 + 1
+		builder.Set(vid, pos.Weight(stake))
+	}
+	return builder.Build()
 }

@@ -1,6 +1,7 @@
 package abft
 
 import (
+	"errors"
 	"math"
 	"math/rand"
 	"testing"
@@ -11,10 +12,11 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/lachesis"
 )
 
 const (
-	TestMaxEpochBlocks = 200
+	TestMaxEpochEvents = 200
 )
 
 func TestLachesisRandom_1(t *testing.T) {
@@ -57,8 +59,15 @@ func TestLachesisRandom_2_8_10(t *testing.T) {
 	testLachesisRandom(t, []pos.Weight{1, 2, 1, 2, 1, 2, 1, 2, 1, 2}, 3)
 }
 
-// TestLachesis 's possibility to get consensus in general on any event order.
 func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
+	testLachesisRandomAndReset(t, weights, false, cheatersCount, false)
+	testLachesisRandomAndReset(t, weights, false, cheatersCount, true)
+	testLachesisRandomAndReset(t, weights, true, 0, false)
+	testLachesisRandomAndReset(t, weights, true, 0, true)
+}
+
+// TestLachesis 's possibility to get consensus in general on any event order.
+func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, reset bool) {
 	assertar := assert.New(t)
 
 	const lchCount = 3
@@ -72,37 +81,79 @@ func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
 		inputs = append(inputs, input)
 	}
 
+	eventCount := int(TestMaxEpochEvents)
+	const epochs = 5
+	// maxEpochBlocks should be much smaller than eventCount so that there would be enough events to seal epoch
+	var maxEpochBlocks = eventCount / 20
+
+	// seal epoch on decided frame == maxEpochBlocks
+	for _, _lch := range lchs {
+		lch := _lch // capture
+		lch.applyBlock = func(block *lachesis.Block) *pos.Validators {
+			if lch.store.GetLastDecidedFrame()+1 == idx.Frame(maxEpochBlocks) {
+				// seal epoch
+				if mutateWeights {
+					return mutateValidators(lch.store.GetValidators())
+				}
+				return lch.store.GetValidators()
+			}
+			return nil
+		}
+	}
+
 	// create events on lch0
-	var ordered dag.Events
-	eventCount := int(TestMaxEpochBlocks)
+	ordered := map[idx.Epoch]dag.Events{}
 	parentCount := 5
 	if parentCount > len(nodes) {
 		parentCount = len(nodes)
 	}
+	epochStates := map[idx.Epoch]*EpochState{}
 	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
-	tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
-		Process: func(e dag.Event, name string) {
-			ordered = append(ordered, e)
+	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
+		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
+			Process: func(e dag.Event, name string) {
+				ordered[epoch] = append(ordered[epoch], e)
 
-			inputs[0].SetEvent(e)
-			assertar.NoError(
-				lchs[0].Process(e))
-		},
-		Build: func(e dag.MutableEvent, name string) error {
-			e.SetEpoch(FirstEpoch)
-			return lchs[0].Build(e)
-		},
-	})
+				inputs[0].SetEvent(e)
+				assertar.NoError(
+					lchs[0].Process(e))
+				epochStates[lchs[0].store.GetEpoch()] = lchs[0].store.GetEpochState()
+			},
+			Build: func(e dag.MutableEvent, name string) error {
+				if epoch != lchs[0].store.GetEpoch() {
+					return errors.New("epoch already sealed, skip")
+				}
+				e.SetEpoch(epoch)
+				return lchs[0].Build(e)
+			},
+		})
+		if lchs[0].store.GetEpoch() != epoch+1 {
+			assertar.Fail("epoch wasn't sealed", epoch)
+		}
+	}
 
-	for i := 1; i < len(lchs); i++ {
-		ee := reorder(ordered)
-		for _, e := range ee {
-			if e.Epoch() != FirstEpoch {
+	// connect events to other instances
+	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
+		for i := 1; i < len(lchs); i++ {
+			if reset && epoch != epochs-1 && r.Intn(2) == 0 {
+				// never reset last epoch to be able to compare latest state
+				resetEpoch := epoch + 1
+				err := lchs[i].Reset(resetEpoch, epochStates[resetEpoch].Validators)
+				assertar.NoError(err)
 				continue
 			}
-			inputs[i].SetEvent(e)
-			assertar.NoError(
-				lchs[i].Process(e))
+			ee := reorder(ordered[epoch])
+			for _, e := range ee {
+				inputs[i].SetEvent(e)
+				assertar.NoError(
+					lchs[i].Process(e))
+				if lchs[i].store.GetEpoch() != epoch {
+					break
+				}
+			}
+			if lchs[i].store.GetEpoch() != epoch+1 {
+				assertar.Fail("epoch wasn't sealed", epoch)
+			}
 		}
 	}
 
@@ -133,16 +184,18 @@ func compareResults(t *testing.T, lchs []*TestLachesis) {
 			assertar.Equal(*(lchs[j].store.GetLastDecidedState()), *(lchs[i].store.GetLastDecidedState()))
 			assertar.Equal(*(lchs[j].store.GetEpochState()), *(lchs[i].store.GetEpochState()))
 
-			both := idx.Block(len(lch0.blocks))
-			if both > idx.Block(len(lch1.blocks)) {
-				both = idx.Block(len(lch1.blocks))
-			}
-
-			for b := idx.Block(1); b <= both; b++ {
-				if !assertar.Equal(
-					lch0.blocks[b], lch1.blocks[b],
-					"block %d", b) {
-					break
+			for e := idx.Epoch(1); e <= lch0.store.GetEpoch(); e++ {
+				both := lch0.epochBlocks[e]
+				if both > lch1.epochBlocks[e] {
+					both = lch1.epochBlocks[e]
+				}
+				for f := idx.Frame(1); f < both; f++ {
+					key := BlockKey{e, f}
+					if !assertar.Equal(
+						lch0.blocks[key], lch1.blocks[key],
+						"block %v", key) {
+						break
+					}
 				}
 			}
 
