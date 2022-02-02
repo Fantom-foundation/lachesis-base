@@ -259,8 +259,6 @@ type flushableIterator struct {
 	treeOk   bool
 
 	start, prefix []byte
-
-	inited bool
 }
 
 // returns the smallest node which is > than specified node
@@ -293,7 +291,7 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 	if node.Value == nil {
 		val = nil // deleted key
 	} else {
-		val = node.Value.([]byte) // putted value
+		val = node.Value.([]byte) // inserted value
 	}
 	return key, val
 }
@@ -301,7 +299,7 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 // init should be called once under lock
 func (it *flushableIterator) init() {
 	it.parentOk = it.parentIt.Next()
-	if it.start != nil {
+	if len(it.start) != 0 {
 		it.treeNode, it.treeOk = it.tree.Ceiling(string(it.start)) // not strict >=
 	} else {
 		it.treeNode = it.tree.Left() // lowest key
@@ -432,12 +430,28 @@ func (w *Flushable) GetSnapshot() (kvdb.Snapshot, error) {
 	}, nil
 }
 
+type errIterator struct {
+	kvdb.Iterator
+	err error
+}
+
+func (it *errIterator) Error() error {
+	return it.err
+}
+
 // NewIterator creates a binary-alphabetical iterator over a subset
 // of database content with a particular key prefix, starting at a particular
 // initial key (or after, if it does not exist).
 func (w *flushableReader) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	w.lock.RLock()
 	defer w.lock.RUnlock()
+
+	if w.modified == nil {
+		return &errIterator{
+			Iterator: devnull.NewIterator(nil, nil),
+			err:      errClosed,
+		}
+	}
 
 	it := &flushableIterator{
 		lock:     &w.lock,
