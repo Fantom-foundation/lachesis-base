@@ -27,8 +27,9 @@ type wrappers struct {
 type SyncedPool struct {
 	producer kvdb.DBProducer
 
-	wrappers    map[string]wrappers
-	queuedDrops map[string]struct{}
+	wrappers      map[string]wrappers
+	queuedDrops   map[string]struct{}
+	queuedDropsMu sync.Mutex
 
 	flushIDKey []byte
 
@@ -78,10 +79,22 @@ func (p *SyncedPool) callbacks(name string) (
 }
 
 func (p *SyncedPool) dropDb(name string) {
-	p.Lock()
-	defer p.Unlock()
+	p.queuedDropsMu.Lock()
+	defer p.queuedDropsMu.Unlock()
 
 	p.queuedDrops[name] = struct{}{}
+}
+
+func (p *SyncedPool) popQueuedDrops() []string {
+	p.queuedDropsMu.Lock()
+	defer p.queuedDropsMu.Unlock()
+
+	res := make([]string, 0, len(p.queuedDrops))
+	for name := range p.queuedDrops {
+		res = append(res, name)
+	}
+	p.queuedDrops = make(map[string]struct{})
+	return res
 }
 
 func (p *SyncedPool) OpenDB(name string) (kvdb.DropableStore, error) {
@@ -136,7 +149,8 @@ func (p *SyncedPool) Flush(id []byte) error {
 
 func (p *SyncedPool) flush(id []byte) error {
 	// drop old DBs
-	for name := range p.queuedDrops {
+	queuedDropsList := p.popQueuedDrops()
+	for _, name := range queuedDropsList {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
 		if w.LazyFlushable == nil {
@@ -149,7 +163,6 @@ func (p *SyncedPool) flush(id []byte) error {
 		// db.Close() is called inside wrapper.Close()
 		db.(kvdb.DropableStore).Drop()
 	}
-	p.queuedDrops = make(map[string]struct{})
 
 	// write dirty flags
 	for _, w := range p.wrappers {
