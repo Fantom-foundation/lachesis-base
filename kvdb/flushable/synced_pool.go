@@ -9,6 +9,7 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/readonlystore"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/synced"
 )
 
@@ -21,7 +22,7 @@ const (
 
 type wrappers struct {
 	*LazyFlushable
-	kvdb.ReadonlyStore
+	ReadonlyStore kvdb.Store
 }
 
 type SyncedPool struct {
@@ -64,10 +65,10 @@ func (p *SyncedPool) Initialize(dbNames []string) error {
 }
 
 func (p *SyncedPool) callbacks(name string) (
-	onOpen func() (kvdb.DropableStore, error),
+	onOpen func() (kvdb.Store, error),
 	onDrop func(),
 ) {
-	onOpen = func() (kvdb.DropableStore, error) {
+	onOpen = func() (kvdb.Store, error) {
 		return p.producer.OpenDB(name)
 	}
 
@@ -97,14 +98,14 @@ func (p *SyncedPool) popQueuedDrops() []string {
 	return res
 }
 
-func (p *SyncedPool) OpenDB(name string) (kvdb.DropableStore, error) {
+func (p *SyncedPool) OpenDB(name string) (kvdb.Store, error) {
 	p.Lock()
 	defer p.Unlock()
 
 	return p.getDb(name), nil
 }
 
-func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
+func (p *SyncedPool) GetUnderlying(name string) (kvdb.Store, error) {
 	p.Lock()
 	defer p.Unlock()
 
@@ -118,7 +119,7 @@ func (p *SyncedPool) GetUnderlying(name string) (kvdb.ReadonlyStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	wrapper.ReadonlyStore = synced.WrapReadonlyStore(db, &p.flushing)
+	wrapper.ReadonlyStore = readonlystore.Wrap(synced.WrapStore(db, &p.flushing))
 	p.wrappers[name] = wrapper
 
 	return wrapper.ReadonlyStore, nil
@@ -160,8 +161,7 @@ func (p *SyncedPool) flush(id []byte) error {
 		if db == nil {
 			continue
 		}
-		// db.Close() is called inside wrapper.Close()
-		db.(kvdb.DropableStore).Drop()
+		db.Drop()
 	}
 
 	// write dirty flags

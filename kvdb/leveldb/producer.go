@@ -40,7 +40,7 @@ func (p *Producer) Names() []string {
 }
 
 // OpenDB or create db with name.
-func (p *Producer) OpenDB(name string) (kvdb.DropableStore, error) {
+func (p *Producer) OpenDB(name string) (kvdb.Store, error) {
 	path := p.resolvePath(name)
 
 	err := os.MkdirAll(path, 0700)

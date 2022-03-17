@@ -9,26 +9,6 @@ type IteratedReader struct {
 	underlying kvdb.IteratedReader
 }
 
-// Readonly table wraper of the underling DB, so all the table's data is stored with a prefix in underling DB.
-type Readonly struct {
-	IteratedReader
-	underlying kvdb.ReadonlyStore
-}
-
-func NewReadonly(db kvdb.ReadonlyStore, prefix []byte) *Readonly {
-	return &Readonly{
-		IteratedReader: IteratedReader{
-			prefix:     prefix,
-			underlying: db,
-		},
-		underlying: db,
-	}
-}
-
-func (t *Readonly) NewReadonlyTable(prefix []byte) *Readonly {
-	return NewReadonly(t, prefix)
-}
-
 func (t *IteratedReader) Has(key []byte) (bool, error) {
 	return t.underlying.Has(prefixed(key, t.prefix))
 }
@@ -41,7 +21,7 @@ func (t *IteratedReader) NewIterator(itPrefix []byte, start []byte) kvdb.Iterato
 	return &iterator{t.underlying.NewIterator(prefixed(itPrefix, t.prefix), start), t.prefix}
 }
 
-func (t *Readonly) GetSnapshot() (kvdb.Snapshot, error) {
+func (t *Table) GetSnapshot() (kvdb.Snapshot, error) {
 	snap, err := t.underlying.GetSnapshot()
 	if err != nil {
 		return nil, err
@@ -55,7 +35,7 @@ func (t *Readonly) GetSnapshot() (kvdb.Snapshot, error) {
 	}, nil
 }
 
-func (t *Readonly) Stat(property string) (string, error) {
+func (t *Table) Stat(property string) (string, error) {
 	return t.underlying.Stat(property)
 }
 

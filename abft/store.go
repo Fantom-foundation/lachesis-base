@@ -30,7 +30,7 @@ type Store struct {
 		FrameRoots       *simplewlru.Cache `cache:"-"` // store by pointer
 	}
 
-	epochDB    kvdb.DropableStore
+	epochDB    kvdb.Store
 	epochTable struct {
 		Roots          kvdb.Store `table:"r"`
 		VectorIndex    kvdb.Store `table:"v"`
@@ -42,7 +42,7 @@ var (
 	ErrNoGenesis = errors.New("genesis not applied")
 )
 
-type EpochDBProducer func(epoch idx.Epoch) kvdb.DropableStore
+type EpochDBProducer func(epoch idx.Epoch) kvdb.Store
 
 // NewStore creates store over key-value db.
 func NewStore(mainDB kvdb.Store, getDB EpochDBProducer, crit func(error), cfg StoreConfig) *Store {
@@ -67,7 +67,7 @@ func (s *Store) initCache() {
 // NewMemStore creates store over memory map.
 // Store is always blank.
 func NewMemStore() *Store {
-	getDb := func(epoch idx.Epoch) kvdb.DropableStore {
+	getDb := func(epoch idx.Epoch) kvdb.Store {
 		return memorydb.New()
 	}
 	cfg := LiteStoreConfig()

@@ -10,7 +10,7 @@ import (
 
 type fakeFS struct {
 	Namespace string
-	Files     map[string]kvdb.DropableStore
+	Files     map[string]kvdb.Store
 
 	sync.RWMutex
 }
@@ -34,7 +34,7 @@ func newFakeFS(namespace string) *fakeFS {
 
 	fs := &fakeFS{
 		Namespace: namespace,
-		Files:     make(map[string]kvdb.DropableStore),
+		Files:     make(map[string]kvdb.Store),
 	}
 	fakeFSs[namespace] = fs
 	return fs
@@ -57,7 +57,7 @@ func (fs *fakeFS) ListFakeDBs() []string {
 	return ls
 }
 
-func (fs *fakeFS) OpenFakeDB(name string) kvdb.DropableStore {
+func (fs *fakeFS) OpenFakeDB(name string) kvdb.Store {
 	fs.Lock()
 	defer fs.Unlock()
 

@@ -12,12 +12,6 @@ type iteratedReader struct {
 	underlying kvdb.IteratedReader
 }
 
-// readonlyStore wrapper around any kvdb.ReadonlyStore.
-type readonlyStore struct {
-	iteratedReader
-	underlying kvdb.ReadonlyStore
-}
-
 // WrapIteratedReader underlying db to make its methods synced with mu.
 func WrapIteratedReader(parent kvdb.IteratedReader, mu *sync.RWMutex) kvdb.IteratedReader {
 	return &iteratedReader{
@@ -34,17 +28,6 @@ func WrapSnapshot(parent kvdb.Snapshot, mu *sync.RWMutex) kvdb.Snapshot {
 			underlying: parent,
 		},
 		snap: parent,
-	}
-}
-
-// WrapReadonlyStore underlying db to make its methods synced with mu.
-func WrapReadonlyStore(parent kvdb.ReadonlyStore, mu *sync.RWMutex) kvdb.ReadonlyStore {
-	return &readonlyStore{
-		iteratedReader: iteratedReader{
-			mu:         mu,
-			underlying: parent,
-		},
-		underlying: parent,
 	}
 }
 
@@ -78,11 +61,11 @@ func (ro *iteratedReader) NewIterator(prefix []byte, start []byte) kvdb.Iterator
 }
 
 // Stat returns a particular internal stat of the database.
-func (ro *readonlyStore) Stat(property string) (string, error) {
-	ro.mu.RLock()
-	defer ro.mu.RUnlock()
+func (s *store) Stat(property string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	return ro.underlying.Stat(property)
+	return s.underlying.Stat(property)
 }
 
 // GetSnapshot returns a latest snapshot of the underlying DB. A snapshot
@@ -90,17 +73,17 @@ func (ro *readonlyStore) Stat(property string) (string, error) {
 // content of snapshot are guaranteed to be consistent.
 //
 // The snapshot must be released after use, by calling Release method.
-func (ro *readonlyStore) GetSnapshot() (kvdb.Snapshot, error) {
-	ro.mu.RLock()
-	defer ro.mu.RUnlock()
+func (s *store) GetSnapshot() (kvdb.Snapshot, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	snap, err := ro.underlying.GetSnapshot()
+	snap, err := s.underlying.GetSnapshot()
 	if err != nil {
 		return nil, err
 	}
 	return &readonlySnapshot{
 		iteratedReader: iteratedReader{
-			mu:         ro.mu,
+			mu:         s.mu,
 			underlying: snap,
 		},
 		snap: snap,

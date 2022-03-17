@@ -148,6 +148,11 @@ func (f *wrapper) Close() error {
 	return err
 }
 
+// Drop drops database.
+func (f *wrapper) Drop() {
+	f.underlying.Drop()
+}
+
 // Snapshot is a DB snapshot.
 type Snapshot struct {
 	readWrapper

@@ -48,7 +48,7 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 		}
 	}
 
-	openEDB := func(epoch idx.Epoch) kvdb.DropableStore {
+	openEDB := func(epoch idx.Epoch) kvdb.Store {
 		return memorydb.New()
 	}
 	crit := func(err error) {

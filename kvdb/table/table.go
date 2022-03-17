@@ -6,7 +6,7 @@ import (
 
 // Table wraper the underling DB, so all the table's data is stored with a prefix in underling DB
 type Table struct {
-	Readonly
+	IteratedReader
 	underlying kvdb.Store
 }
 
@@ -37,11 +37,8 @@ func noPrefix(key, prefix []byte) []byte {
 
 func New(db kvdb.Store, prefix []byte) *Table {
 	return &Table{
-		Readonly: Readonly{
-			IteratedReader: IteratedReader{
-				prefix:     prefix,
-				underlying: db,
-			},
+		IteratedReader: IteratedReader{
+			prefix:     prefix,
 			underlying: db,
 		},
 		underlying: db,

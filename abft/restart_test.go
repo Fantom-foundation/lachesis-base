@@ -174,7 +174,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 				it.Release()
 			}
 			restartEpoch := prev.store.GetEpoch()
-			store.getEpochDB = func(epoch idx.Epoch) kvdb.DropableStore {
+			store.getEpochDB = func(epoch idx.Epoch) kvdb.Store {
 				if epoch == restartEpoch {
 					return restartEpochDB
 				}

@@ -25,7 +25,7 @@ func TestSyncedPoolUnderlying(t *testing.T) {
 
 	db1, err := pool.GetUnderlying(dbname1)
 	require.NoError(err)
-	r1 := table.NewReadonly(db1, []byte(tbname))
+	r1 := table.New(db1, []byte(tbname))
 
 	fdb1, err := pool.OpenDB(dbname1)
 	require.NoError(err)
@@ -37,7 +37,7 @@ func TestSyncedPoolUnderlying(t *testing.T) {
 
 	db2, err := pool.GetUnderlying(dbname2)
 	require.NoError(err)
-	r2 := table.NewReadonly(db2, []byte(tbname))
+	r2 := table.New(db2, []byte(tbname))
 
 	pushData := func(n uint32, w kvdb.Store) {
 		const size uint32 = 10
