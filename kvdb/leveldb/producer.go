@@ -27,7 +27,7 @@ func (p *Producer) Names() []string {
 
 	files, err := ioutil.ReadDir(p.datadir)
 	if err != nil {
-		panic(err)
+		return []string{}
 	}
 
 	for _, f := range files {
