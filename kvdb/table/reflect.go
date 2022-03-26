@@ -3,7 +3,6 @@ package table
 import (
 	"bytes"
 	"errors"
-	"path"
 	"reflect"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -42,7 +41,7 @@ func OpenTables(s interface{}, producer kvdb.DBProducer, baseName string) error 
 	for i := 0; i < value.NumField(); i++ {
 		if prefix := value.Type().Field(i).Tag.Get("table"); prefix != "" && prefix != "-" {
 			keys.Add(prefix)
-			db, err := producer.OpenDB(path.Join(baseName, prefix))
+			db, err := producer.OpenDB(baseName + "/" + prefix)
 			if err != nil {
 				return err
 			}

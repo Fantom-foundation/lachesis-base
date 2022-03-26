@@ -50,10 +50,9 @@ func (t *Table) NewTable(prefix []byte) *Table {
 }
 
 func (t *Table) Close() error {
-	return nil
+	return kvdb.ErrUnsupportedOp
 }
 
-// Drop the whole database.
 func (t *Table) Drop() {}
 
 func (t *Table) Put(key []byte, value []byte) error {
