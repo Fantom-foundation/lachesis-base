@@ -125,3 +125,8 @@ type FlushableDBProducer interface {
 	NotFlushedSizeEst() int
 	Flush(id []byte) error
 }
+
+type FullDBProducer interface {
+	FlushableDBProducer
+	IterableDBProducer
+}
