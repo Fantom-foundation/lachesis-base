@@ -1,51 +1,57 @@
 package multidb
 
 import (
+	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
+	"github.com/Fantom-foundation/lachesis-base/utils/fmtfilter"
 )
 
 type Producer struct {
 	routingTable    map[string]Route
-	routingRegexps  []regexpRoute
+	routingFmt      []scanfRoute
 	producers       map[TypeName]kvdb.FullDBProducer
 	allProducers    map[TypeName]kvdb.FullDBProducer
 	tableRecordsKey []byte
 }
 
 // NewProducer of a combined producer for multiple types of DBs.
-func NewProducer(producers map[TypeName]kvdb.FullDBProducer, routingTable map[string]Route, routingRegexpsMap map[string]Route, tableRecordsKey []byte) *Producer {
+func NewProducer(producers map[TypeName]kvdb.FullDBProducer, routingTable map[string]Route, tableRecordsKey []byte) (*Producer, error) {
 	if _, ok := routingTable[""]; !ok {
-		panic("default route must always be defined")
+		return nil, errors.New("default route must always be defined")
 	}
 	// compile regular expressions
-	routingRegexps := make([]regexpRoute, 0, len(routingRegexpsMap))
+	routingFmt := make([]scanfRoute, 0, len(routingTable))
+	exactRoutingTable := make(map[string]Route, len(routingTable))
 	used := make(map[TypeName]kvdb.FullDBProducer)
-	for regexpRule, route := range routingRegexpsMap {
-		rx, err := regexp.Compile(regexpRule)
-		if err != nil {
-			panic(err)
+	for req, route := range routingTable {
+		used[route.Type] = producers[route.Type]
+		if !strings.ContainsRune(req, '%') && !strings.ContainsRune(route.Name, '%') {
+			exactRoutingTable[req] = route
+			continue
 		}
-		routingRegexps = append(routingRegexps, regexpRoute{
-			regexp: rx,
-			route:  route,
+		fn, err := fmtfilter.CompileFilter(req, route.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		routingFmt = append(routingFmt, scanfRoute{
+			Name:   fn,
+			Type:   route.Type,
+			Table:  route.Table,
+			NoDrop: route.NoDrop,
 		})
-		used[route.Type] = producers[route.Type]
-	}
-	for _, route := range routingTable {
-		used[route.Type] = producers[route.Type]
 	}
 	return &Producer{
 		producers:       used,
 		allProducers:    producers,
-		routingTable:    routingTable,
-		routingRegexps:  routingRegexps,
+		routingTable:    exactRoutingTable,
+		routingFmt:      routingFmt,
 		tableRecordsKey: tableRecordsKey,
-	}
+	}, nil
 }
 
 func (p *Producer) RouteOf(req string) Route {
@@ -53,10 +59,15 @@ func (p *Producer) RouteOf(req string) Route {
 	rightPartName := ""
 	for {
 		dest, ok := p.routingTable[req]
-		for i := 0; !ok && i < len(p.routingRegexps); i++ {
-			// try regexp
-			if p.routingRegexps[i].regexp.MatchString(req) {
-				dest = p.routingRegexps[i].route
+		for i := 0; !ok && i < len(p.routingFmt); i++ {
+			// try scanf
+			if name, err := p.routingFmt[i].Name(req); err == nil {
+				dest = Route{
+					Type:   p.routingFmt[i].Type,
+					Name:   name,
+					Table:  p.routingFmt[i].Table,
+					NoDrop: p.routingFmt[i].NoDrop,
+				}
 				ok = true
 			}
 		}

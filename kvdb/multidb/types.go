@@ -1,7 +1,5 @@
 package multidb
 
-import "regexp"
-
 type TypeName string
 
 type Route struct {
@@ -11,9 +9,11 @@ type Route struct {
 	NoDrop bool
 }
 
-type regexpRoute struct {
-	regexp *regexp.Regexp
-	route  Route
+type scanfRoute struct {
+	Name   func(req string) (string, error)
+	Type   TypeName
+	Table  string
+	NoDrop bool
 }
 
 type DBLocator struct {
