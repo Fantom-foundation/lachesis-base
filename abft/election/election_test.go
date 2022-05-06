@@ -62,7 +62,7 @@ a2_2══╬═════╬═════╣
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
-				DecidedAtropos: "b0_0",
+				DecidedAtropos: "d0_0",
 				DecisiveRoots:  map[string]bool{"a2_2": true},
 			},
 			weights{
@@ -90,7 +90,7 @@ a2_2══╬═════╬═════╣
 		testProcessRoot(t,
 			&testExpected{
 				DecidedFrame:   0,
-				DecidedAtropos: "b0_0",
+				DecidedAtropos: "a0_0",
 				DecisiveRoots:  map[string]bool{"a2_2": true},
 			},
 			weights{
@@ -145,7 +145,7 @@ a1_1══╬═════╣     ║
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "a0_0",
-				DecisiveRoots:  map[string]bool{"a4_4": true},
+				DecisiveRoots:  map[string]bool{"c2_2": true},
 			},
 			weights{
 				"nodeA": 4,
