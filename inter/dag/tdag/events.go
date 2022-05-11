@@ -57,9 +57,9 @@ func (ee TestEvents) ByParents() (res TestEvents) {
 		unsorted[i] = e
 	}
 	sorted := ByParents(unsorted)
-	testSorted := make(TestEvents, len(ee))
+	res = make(TestEvents, len(ee))
 	for i, e := range sorted {
-		testSorted[i] = e.(*TestEvent)
+		res[i] = e.(*TestEvent)
 	}
 
 	return
