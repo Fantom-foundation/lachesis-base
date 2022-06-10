@@ -8,7 +8,7 @@ import (
 // LazyFlushable is a Flushable with delayed DB producer
 type LazyFlushable struct {
 	*Flushable
-	producer func() (kvdb.DropableStore, error)
+	producer func() (kvdb.Store, error)
 }
 
 var (
@@ -18,7 +18,7 @@ var (
 // NewLazy makes flushable with real db producer.
 // Real db won't be produced until first .Flush() is called.
 // All the writes into the cache won't be written in parent until .Flush() is called.
-func NewLazy(producer func() (kvdb.DropableStore, error), drop func()) *LazyFlushable {
+func NewLazy(producer func() (kvdb.Store, error), drop func()) *LazyFlushable {
 	if producer == nil {
 		panic("nil producer")
 	}

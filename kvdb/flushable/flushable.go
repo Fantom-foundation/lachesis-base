@@ -36,7 +36,7 @@ type flushableReader struct {
 
 // Wrap underlying db.
 // All the writes into the cache won't be written in parent until .Flush() is called.
-func Wrap(parent kvdb.DropableStore) *Flushable {
+func Wrap(parent kvdb.Store) *Flushable {
 	if parent == nil {
 		panic("nil parent")
 	}

@@ -8,18 +8,15 @@ import (
 
 // store wrapper around any kvdb.Store.
 type store struct {
-	readonlyStore
+	iteratedReader
 	underlying kvdb.Store
 }
 
 // WrapStore underlying db to make its methods synced with mu.
 func WrapStore(parent kvdb.Store, mu *sync.RWMutex) kvdb.Store {
 	s := &store{
-		readonlyStore: readonlyStore{
-			iteratedReader: iteratedReader{
-				mu:         mu,
-				underlying: parent,
-			},
+		iteratedReader: iteratedReader{
+			mu:         mu,
 			underlying: parent,
 		},
 		underlying: parent,
@@ -58,6 +55,14 @@ func (s *store) Close() error {
 	defer s.mu.Unlock()
 
 	return s.underlying.Close()
+}
+
+// Drop drops database.
+func (s *store) Drop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.underlying.Drop()
 }
 
 // NewBatch creates new batch.

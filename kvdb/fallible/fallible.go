@@ -14,13 +14,13 @@ var (
 // Fallible is a kvdb.Store wrapper around any kvdb.Store.
 // It falls when write counter is full for test purpose.
 type Fallible struct {
-	Underlying kvdb.DropableStore
+	Underlying kvdb.Store
 
 	writes int32
 }
 
 // Wrap returns a wrapped kvdb.Store with counter 0. Set it manually.
-func Wrap(db kvdb.DropableStore) *Fallible {
+func Wrap(db kvdb.Store) *Fallible {
 	return &Fallible{
 		Underlying: db,
 	}
