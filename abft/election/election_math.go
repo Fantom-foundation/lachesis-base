@@ -21,10 +21,6 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 		return nil, nil
 	}
 	round := newRoot.Slot.Frame - el.frameToDecide
-	if round == 0 {
-		return nil, nil
-	}
-
 	notDecidedRoots := el.notDecidedRoots()
 
 	var observedRoots []RootAndSlot
