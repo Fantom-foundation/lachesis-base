@@ -24,11 +24,11 @@ type Database struct {
 
 // New returns a wrapped LevelDB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
-func New(path string, cache int, close func() error, drop func()) (*Database, error) {
+func New(path string, cache int, handles int, close func() error, drop func()) (*Database, error) {
 	db, err := pebble.Open(path, &pebble.Options{
 		Cache:                    pebble.NewCache(int64(cache / 2)), // default 8 MB
 		MemTableSize:             cache / 4,                         // default 4 MB
-		MaxOpenFiles:             1000,                              // default 1000
+		MaxOpenFiles:             handles,                           // default 1000
 		WALBytesPerSync:          0,                                 // default 0 (matches RocksDB = no background syncing)
 		MaxConcurrentCompactions: 3,                                 // default 1, important for big imports performance
 	})
