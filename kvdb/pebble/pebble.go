@@ -5,8 +5,10 @@ import (
 	"sync"
 
 	"github.com/cockroachdb/pebble"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/utils/piecefunc"
 )
 
 // Database is a persistent key-value store. Apart from basic data storage
@@ -22,28 +24,77 @@ type Database struct {
 	onDrop  func()
 }
 
+// adjustCache scales down cache to match "real" RAM usage by process
+var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
+	{
+		X: 0,
+		Y: 16 * opt.KiB,
+	},
+	{
+		X: 46 * opt.MiB,
+		Y: 100 * opt.KiB,
+	},
+	{
+		X: 60 * opt.MiB,
+		Y: 1 * opt.MiB,
+	},
+	{
+		X: 190 * opt.MiB,
+		Y: 10 * opt.MiB,
+	},
+	{
+		X: 300 * opt.MiB,
+		Y: 18 * opt.MiB,
+	},
+	{
+		X: 450 * opt.MiB,
+		Y: 40 * opt.MiB,
+	},
+	{
+		X: 600 * opt.MiB,
+		Y: 100 * opt.MiB,
+	},
+	{
+		X: 750 * opt.MiB,
+		Y: 130 * opt.MiB,
+	},
+	{
+		X: 1200 * opt.MiB,
+		Y: 300 * opt.MiB,
+	},
+	{
+		X: 3300 * opt.MiB,
+		Y: 1000 * opt.MiB,
+	},
+	{
+		X: 6400000 * opt.MiB,
+		Y: 2000000 * opt.MiB,
+	},
+})
+
 // New returns a wrapped LevelDB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
 func New(path string, cache int, handles int, close func() error, drop func()) (*Database, error) {
+	cache = int(adjustCache(uint64(cache)))
 	db, err := pebble.Open(path, &pebble.Options{
-		Cache:                    pebble.NewCache(int64(cache / 2)), // default 8 MB
-		MemTableSize:             cache / 4,                         // default 4 MB
-		MaxOpenFiles:             handles,                           // default 1000
-		WALBytesPerSync:          0,                                 // default 0 (matches RocksDB = no background syncing)
-		MaxConcurrentCompactions: 3,                                 // default 1, important for big imports performance
+		Cache:                    pebble.NewCache(int64(cache * 2 / 3)), // default 8 MB
+		MemTableSize:             cache / 3,                             // default 4 MB
+		MaxOpenFiles:             handles,                               // default 1000
+		WALBytesPerSync:          0,                                     // default 0 (matches RocksDB = no background syncing)
+		MaxConcurrentCompactions: 3,                                     // default 1, important for big imports performance
 	})
 
 	if err != nil {
 		return nil, err
 	}
 	// Assemble the wrapper with all the registered metrics
-	ldb := Database{
+	pdb := Database{
 		filename:   path,
 		underlying: db,
 		onClose:    close,
 		onDrop:     drop,
 	}
-	return &ldb, nil
+	return &pdb, nil
 }
 
 // Close stops the metrics collection, flushes any pending data to disk and closes
@@ -287,7 +338,7 @@ func (s *snapshot) Release() {
 	_ = s.snap.Close()
 }
 
-// batch is a write-only leveldb batch that commits changes to its host database
+// batch is a write-only pebble batch that commits changes to its host database
 // when Write is called. A batch cannot be used concurrently.
 type batch struct {
 	db   *pebble.DB
