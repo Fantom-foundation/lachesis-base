@@ -1,3 +1,4 @@
+//go:build !js
 // +build !js
 
 // Package leveldb implements the key-value database layer based on LevelDB.
