@@ -58,6 +58,7 @@ func (p *Producer) RouteOf(req string) Route {
 	rightPartTable := ""
 	rightPartName := ""
 	for {
+		println(req)
 		dest, ok := p.routingTable[req]
 		for i := 0; !ok && i < len(p.routingFmt); i++ {
 			// try scanf
@@ -72,6 +73,7 @@ func (p *Producer) RouteOf(req string) Route {
 			}
 		}
 		if ok {
+			println(req, dest.Type, dest.Name + rightPartName, dest.Table + rightPartTable)
 			return Route{
 				Type:   dest.Type,
 				Name:   dest.Name + rightPartName,
@@ -89,6 +91,7 @@ func (p *Producer) RouteOf(req string) Route {
 			rightPartTable += req[slashPos+1:]
 			req = req[:slashPos]
 		}
+		println(req, "not found", rightPartName, rightPartTable)
 	}
 }
 
