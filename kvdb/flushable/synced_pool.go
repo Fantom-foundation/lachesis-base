@@ -191,21 +191,17 @@ func (p *SyncedPool) Flush(id []byte) error {
 }
 
 func (p *SyncedPool) flush(id []byte) error {
-	queuedClosesMap := p.popQueuedCloses()
 	queuedDropsList := p.popQueuedDrops()
-	// drop (and close if queued) DBs
+	// close and drop DBs
 	for _, name := range queuedDropsList {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
 		if w.Flushable == nil {
 			continue
 		}
-		if _, ok := queuedClosesMap[name]; ok {
-			err := w.Flushable.RealClose()
-			if err != nil {
-				return err
-			}
-			delete(queuedClosesMap, name)
+		err := w.Flushable.RealClose()
+		if err != nil {
+			return err
 		}
 		db := w.Flushable.underlying
 		if db == nil {
@@ -259,19 +255,6 @@ func (p *SyncedPool) flush(id []byte) error {
 		}
 	}
 
-	// close DBs which were closed but not dropped
-	for name := range queuedClosesMap {
-		w := p.wrappers[name]
-		delete(p.wrappers, name)
-		if w.Flushable.LazyFlushable == nil {
-			continue
-		}
-		err := w.Flushable.RealClose()
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -295,7 +278,7 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 	var (
 		descrs []string
 		list   = func() string {
-			return strings.Join(descrs, ",\n")
+			return strings.Join(descrs, ", ")
 		}
 	)
 	for name, w := range p.wrappers {
@@ -317,7 +300,7 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 			flushID = mark
 		}
 		if !bytes.Equal(mark, flushID) {
-			return flushID, fmt.Errorf("not synced: %s", list())
+			return flushID, fmt.Errorf("not synced: %s != %s", hexutils.BytesToHex(flushID), list())
 		}
 	}
 	return flushID, nil
