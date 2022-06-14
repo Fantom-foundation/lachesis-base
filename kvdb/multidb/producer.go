@@ -38,6 +38,7 @@ func NewProducer(producers map[TypeName]kvdb.FullDBProducer, routingTable map[st
 			return nil, err
 		}
 
+		println(len(routingFmt), req, route.Name)
 		routingFmt = append(routingFmt, scanfRoute{
 			Name:   fn,
 			Type:   route.Type,
@@ -63,6 +64,7 @@ func (p *Producer) RouteOf(req string) Route {
 		for i := 0; !ok && i < len(p.routingFmt); i++ {
 			// try scanf
 			if name, err := p.routingFmt[i].Name(req); err == nil {
+				println(req, name, i, "fmt")
 				dest = Route{
 					Type:   p.routingFmt[i].Type,
 					Name:   name,
