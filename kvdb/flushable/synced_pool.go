@@ -193,7 +193,7 @@ func (p *SyncedPool) Flush(id []byte) error {
 func (p *SyncedPool) flush(id []byte) error {
 	queuedClosesMap := p.popQueuedCloses()
 	queuedDropsList := p.popQueuedDrops()
-	// drop (and close if queued) old DBs
+	// drop (and close if queued) DBs
 	for _, name := range queuedDropsList {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
@@ -259,7 +259,7 @@ func (p *SyncedPool) flush(id []byte) error {
 		}
 	}
 
-	// close DBs which were both closed but not dropped
+	// close DBs which were closed but not dropped
 	for name := range queuedClosesMap {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
