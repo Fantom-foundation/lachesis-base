@@ -102,6 +102,7 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 func (db *Database) Close() error {
 	db.quitLock.Lock()
 	defer db.quitLock.Unlock()
+	println("pebble close")
 
 	if db.underlying == nil {
 		panic("already closed")
