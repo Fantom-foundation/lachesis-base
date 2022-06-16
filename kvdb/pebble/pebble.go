@@ -125,6 +125,7 @@ func (db *Database) Close() error {
 
 // Drop whole database.
 func (db *Database) Drop() {
+	println("pebble drop")
 	if db.underlying != nil {
 		panic("Close database first!")
 	}

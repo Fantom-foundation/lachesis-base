@@ -150,6 +150,7 @@ func (db *Database) Close() error {
 
 // Drop whole database.
 func (db *Database) Drop() {
+	println("leveldb drop")
 	if db.underlying != nil {
 		panic("Close database first!")
 	}
