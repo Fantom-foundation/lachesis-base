@@ -5,6 +5,9 @@
 package leveldb
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -218,7 +221,48 @@ func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
 
 // Stat returns a particular internal stat of the database.
 func (db *Database) Stat(property string) (string, error) {
-	return db.underlying.GetProperty(property)
+	prop := property
+	if property == "disk.size" {
+		prop = "stats"
+	}
+	prop = fmt.Sprintf("leveldb.%s", prop)
+	stats, err := db.underlying.GetProperty(prop)
+	if err == nil && property == "disk.size" {
+		// This is how a LevelDB stats table looks like (currently):
+		//   Compactions
+		//    Level |   Tables   |    Size(MB)   |    Time(sec)  |    Read(MB)   |   Write(MB)
+		//   -------+------------+---------------+---------------+---------------+---------------
+		//      0   |          0 |       0.00000 |       1.27969 |       0.00000 |      12.31098
+		//      1   |         85 |     109.27913 |      28.09293 |     213.92493 |     214.26294
+		//      2   |        523 |    1000.37159 |       7.26059 |      66.86342 |      66.77884
+		//      3   |        570 |    1113.18458 |       0.00000 |       0.00000 |       0.00000
+		compactions := make([]float64, 4)
+		// Find the compaction table, skip the header
+		lines := strings.Split(stats, "\n")
+		for len(lines) > 0 && strings.TrimSpace(lines[0]) != "Compactions" {
+			lines = lines[1:]
+		}
+		if len(lines) <= 3 {
+			return "", errors.New("compaction leveldbTable not found")
+		}
+		lines = lines[3:]
+
+		for _, line := range lines {
+			parts := strings.Split(line, "|")
+			if len(parts) != 6 {
+				break
+			}
+			for idx, counter := range parts[2:] {
+				value, err := strconv.ParseFloat(strings.TrimSpace(counter), 64)
+				if err != nil {
+					return "", err
+				}
+				compactions[idx] += value
+			}
+		}
+		return fmt.Sprintf("Size(MB):%.5f", compactions[0]), nil
+	}
+	return stats, err
 }
 
 // Compact flattens the underlying data store for the given key range. In essence,
