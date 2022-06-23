@@ -69,21 +69,17 @@ func WrapWithDrop(parent kvdb.Store, drop func()) *Flushable {
 func (w *Flushable) Put(key []byte, value []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
-
-	return w.put(key, value)
-}
-
-func (w *Flushable) put(key []byte, value []byte) error {
 	if value == nil || key == nil {
 		return errors.New("flushable: key or value is nil")
 	}
-	if w.modified == nil {
-		return errClosed
-	}
 
+	w.put(key, value)
+	return nil
+}
+
+func (w *Flushable) put(key []byte, value []byte) {
 	w.modified.Put(string(key), common.CopyBytes(value))
 	*w.sizeEstimation += len(key) + len(value) + 128
-	return nil
 }
 
 // Has checks if key is in the exists. Looks in cache first, then - in DB.
@@ -127,13 +123,13 @@ func (w *Flushable) Delete(key []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
-	return w.delete(key)
+	w.delete(key)
+	return nil
 }
 
-func (w *Flushable) delete(key []byte) error {
+func (w *Flushable) delete(key []byte) {
 	w.modified.Put(string(key), nil)
 	*w.sizeEstimation += len(key) + 128 // it should be (len(key) - len(old value)), but we'd need to read old value
-	return nil
 }
 
 // DropNotFlushed drops all the not flushed keys.
@@ -502,17 +498,14 @@ func (b *cacheBatch) Delete(key []byte) error {
 func (b *cacheBatch) Write() error {
 	b.db.lock.Lock()
 	defer b.db.lock.Unlock()
+	if b.db.modified == nil {
+		return errClosed
+	}
 	for _, kv := range b.writes {
-		var err error
-
 		if kv.v == nil {
-			err = b.db.delete(kv.k)
+			b.db.delete(kv.k)
 		} else {
-			err = b.db.put(kv.k, kv.v)
-		}
-
-		if err != nil {
-			return err
+			b.db.put(kv.k, kv.v)
 		}
 	}
 	return nil
