@@ -274,7 +274,7 @@ func (db *Database) Stat(property string) (string, error) {
 			float64(total.BytesFlushed+total.BytesCompacted)/1048576.0), nil
 	}
 	if property == "disk.size" {
-		return fmt.Sprintf("Size(MB):%.5f", float64(metrics.Total().Size)/1048576.0), nil
+		return fmt.Sprintf("Size(B):%d", metrics.Total().Size), nil
 	}
 	if property == "stats" {
 		return metrics.String(), nil
