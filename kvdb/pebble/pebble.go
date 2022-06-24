@@ -197,9 +197,10 @@ func bytesPrefix(prefix []byte) pebble.IterOptions {
 func (db *Database) Stat(property string) (string, error) {
 	// only "leveldb." prefix is accessible using debug.chaindbProperty
 	if property == "leveldb.iostats" {
+		total := db.underlying.Metrics().Total()
 		return fmt.Sprintf("Read(MB):%.5f Write(MB):%.5f",
-			float64(db.underlying.Metrics().Total().BytesRead)/1048576.0, // 1024*1024
-			float64(db.underlying.Metrics().Total().BytesIn)/1048576.0), nil
+			float64(total.BytesRead)/1048576.0, // 1024*1024
+			float64(total.BytesFlushed+total.BytesCompacted)/1048576.0), nil
 	}
 	if property == "leveldb.metrics" {
 		return db.underlying.Metrics().String(), nil
