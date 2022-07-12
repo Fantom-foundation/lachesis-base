@@ -126,7 +126,13 @@ type FlushableDBProducer interface {
 	Flush(id []byte) error
 }
 
-type FullDBProducer interface {
+type ScopedFlushableProducer interface {
 	FlushableDBProducer
+	Initialize(dbNames []string, flushID []byte) ([]byte, error)
+	Close() error
+}
+
+type FullDBProducer interface {
+	ScopedFlushableProducer
 	IterableDBProducer
 }

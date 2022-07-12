@@ -217,19 +217,7 @@ func (p *SyncedPool) flush(id []byte) error {
 			return err
 		}
 
-		prev, err := db.Get(p.flushIDKey)
-		if err != nil {
-			return err
-		}
-		if prev == nil {
-			prev = []byte("initial")
-		}
-
-		marker := bytes.NewBuffer(nil)
-		marker.Write([]byte{DirtyPrefix})
-		marker.Write(prev)
-		marker.Write(id)
-		err = db.Put(p.flushIDKey, marker.Bytes())
+		err = MarkFlushID(db, p.flushIDKey, DirtyPrefix, id)
 		if err != nil {
 			return err
 		}
@@ -249,7 +237,7 @@ func (p *SyncedPool) flush(id []byte) error {
 		if err != nil {
 			return err
 		}
-		err = db.Put(p.flushIDKey, append([]byte{CleanPrefix}, id...))
+		err = MarkFlushID(db, p.flushIDKey, CleanPrefix, id)
 		if err != nil {
 			return err
 		}
@@ -275,21 +263,31 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 	p.Lock()
 	defer p.Unlock()
 
+	dbs := map[string]kvdb.Store{}
+	for name, w := range p.wrappers {
+		db, err := w.Flushable.InitUnderlyingDb()
+		if err != nil {
+			return flushID, err
+		}
+		dbs[name] = db
+	}
+	return CheckDBsSynced(dbs, p.flushIDKey, flushID)
+}
+
+func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]byte, error) {
 	var (
 		descrs []string
 		list   = func() string {
 			return strings.Join(descrs, ", ")
 		}
 	)
-	for name, w := range p.wrappers {
-		db, err := w.Flushable.InitUnderlyingDb()
+	for name, db := range dbs {
+		mark, err := db.Get(flushIDKey)
 		if err != nil {
 			return flushID, err
 		}
-
-		mark, err := db.Get(p.flushIDKey)
-		if err != nil {
-			return flushID, err
+		if mark == nil {
+			return flushID, fmt.Errorf("nin-initialized DB state: %s", name)
 		}
 		descrs = append(descrs, fmt.Sprintf("%s: %s", name, hexutils.BytesToHex(mark)))
 
@@ -328,4 +326,8 @@ func (p *SyncedPool) Close() error {
 	}
 	*p = SyncedPool{}
 	return nil
+}
+
+func MarkFlushID(db kvdb.Store, key []byte, prefix byte, flushID []byte) error {
+	return db.Put(key, append([]byte{prefix}, flushID...))
 }

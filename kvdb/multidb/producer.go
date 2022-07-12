@@ -174,3 +174,24 @@ func (p *Producer) Flush(id []byte) error {
 	}
 	return nil
 }
+
+func (p *Producer) Initialize(dbNames []string, flushID []byte) ([]byte, error) {
+	for _, producer := range p.producers {
+		var err error
+		flushID, err = producer.Initialize(dbNames, flushID)
+		if err != nil {
+			return flushID, err
+		}
+	}
+	return flushID, nil
+}
+
+func (p *Producer) Close() error {
+	for _, producer := range p.producers {
+		err := producer.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
