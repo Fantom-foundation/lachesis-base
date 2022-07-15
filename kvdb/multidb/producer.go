@@ -13,7 +13,7 @@ import (
 type Producer struct {
 	routingTable    map[string]Route
 	routingFmt      []scanfRoute
-	producers       map[TypeName]kvdb.FullDBProducer
+	usedProducers   map[TypeName]kvdb.FullDBProducer
 	allProducers    map[TypeName]kvdb.FullDBProducer
 	tableRecordsKey []byte
 }
@@ -46,7 +46,7 @@ func NewProducer(producers map[TypeName]kvdb.FullDBProducer, routingTable map[st
 		})
 	}
 	return &Producer{
-		producers:       used,
+		usedProducers:   used,
 		allProducers:    producers,
 		routingTable:    exactRoutingTable,
 		routingFmt:      routingFmt,
@@ -124,7 +124,7 @@ func (p *Producer) handleRoute(db kvdb.Store, req string, route Route) error {
 func (p *Producer) OpenDB(req string) (kvdb.Store, error) {
 	route := p.RouteOf(req)
 
-	producer := p.producers[route.Type]
+	producer := p.usedProducers[route.Type]
 	if producer == nil {
 		return nil, fmt.Errorf("missing producer '%s'", route.Type)
 	}
@@ -151,7 +151,7 @@ func (p *Producer) OpenDB(req string) (kvdb.Store, error) {
 func (p *Producer) Names() []string {
 	// TODO return list of tables
 	res := make([]string, 0, 20)
-	for _, producer := range p.producers {
+	for _, producer := range p.usedProducers {
 		res = append(res, producer.Names()...)
 	}
 	return res
@@ -159,14 +159,14 @@ func (p *Producer) Names() []string {
 
 func (p *Producer) NotFlushedSizeEst() int {
 	res := 0
-	for _, producer := range p.producers {
+	for _, producer := range p.usedProducers {
 		res += producer.NotFlushedSizeEst()
 	}
 	return res
 }
 
 func (p *Producer) Flush(id []byte) error {
-	for _, producer := range p.producers {
+	for _, producer := range p.usedProducers {
 		err := producer.Flush(id)
 		if err != nil {
 			return err
@@ -176,7 +176,7 @@ func (p *Producer) Flush(id []byte) error {
 }
 
 func (p *Producer) Initialize(dbNames []string, flushID []byte) ([]byte, error) {
-	for _, producer := range p.producers {
+	for _, producer := range p.allProducers {
 		var err error
 		flushID, err = producer.Initialize(dbNames, flushID)
 		if err != nil {
@@ -187,7 +187,7 @@ func (p *Producer) Initialize(dbNames []string, flushID []byte) ([]byte, error) 
 }
 
 func (p *Producer) Close() error {
-	for _, producer := range p.producers {
+	for _, producer := range p.allProducers {
 		err := producer.Close()
 		if err != nil {
 			return err
