@@ -138,6 +138,11 @@ func (db *Database) AsyncFlush() error {
 	return err
 }
 
+// SyncFlush synchronously flushes the in-memory buffer to the disk.
+func (db *Database) SyncFlush() error {
+	return db.underlying.Flush()
+}
+
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
 	_, closer, err := db.underlying.Get(key)
@@ -253,6 +258,12 @@ func bytesPrefix(prefix []byte) pebble.IterOptions {
 
 // Stat returns a particular internal stat of the database.
 func (db *Database) Stat(property string) (string, error) {
+	if property == "async_flush" {
+		return "", db.AsyncFlush()
+	}
+	if property == "sync_flush" {
+		return "", db.SyncFlush()
+	}
 	// only "leveldb." prefix is accessible using debug.chaindbProperty
 	if property == "leveldb.iostats" {
 		total := db.underlying.Metrics().Total()
