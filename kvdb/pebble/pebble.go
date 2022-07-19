@@ -80,6 +80,12 @@ func (db *Database) Drop() {
 	}
 }
 
+// AsyncFlush asynchronously flushes the in-memory buffer to the disk.
+func (db *Database) AsyncFlush() error {
+	_, err := db.underlying.AsyncFlush()
+	return err
+}
+
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
 	_, closer, err := db.underlying.Get(key)
