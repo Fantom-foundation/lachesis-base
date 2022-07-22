@@ -248,6 +248,7 @@ func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]by
 		list   = func() string {
 			return strings.Join(descrs, ", ")
 		}
+		nonInit bool
 	)
 	for name, db := range dbs {
 		mark, err := db.Get(flushIDKey)
@@ -255,7 +256,8 @@ func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]by
 			return flushID, err
 		}
 		if mark == nil {
-			return flushID, fmt.Errorf("nin-initialized DB state: %s", name)
+			nonInit = true
+			continue
 		}
 		descrs = append(descrs, fmt.Sprintf("%s: %s", name, hexutils.BytesToHex(mark)))
 
@@ -268,6 +270,9 @@ func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]by
 		if !bytes.Equal(mark, flushID) {
 			return flushID, fmt.Errorf("not synced: %s != %s", hexutils.BytesToHex(flushID), list())
 		}
+	}
+	if flushID != nil && nonInit {
+		return flushID, fmt.Errorf("non-initialized DB state")
 	}
 	return flushID, nil
 }
