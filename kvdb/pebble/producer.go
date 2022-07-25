@@ -9,15 +9,15 @@ import (
 )
 
 type Producer struct {
-	datadir  string
-	getCache func(string) int
+	datadir         string
+	getCacheFdLimit func(string) (int, int)
 }
 
 // NewProducer of Pebble db.
-func NewProducer(datadir string, getCache func(string) int) kvdb.IterableDBProducer {
+func NewProducer(datadir string, getCacheFdLimit func(string) (int, int)) kvdb.IterableDBProducer {
 	return &Producer{
-		datadir:  datadir,
-		getCache: getCache,
+		datadir:         datadir,
+		getCacheFdLimit: getCacheFdLimit,
 	}
 }
 
@@ -52,7 +52,8 @@ func (p *Producer) OpenDB(name string) (kvdb.Store, error) {
 		_ = os.RemoveAll(path)
 	}
 
-	db, err := New(path, p.getCache(name), nil, onDrop)
+	cache, fdlimit := p.getCacheFdLimit(name)
+	db, err := New(path, cache, fdlimit, nil, onDrop)
 	if err != nil {
 		return nil, err
 	}

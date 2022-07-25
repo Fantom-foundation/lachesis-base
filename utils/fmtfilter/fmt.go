@@ -3,6 +3,7 @@ package fmtfilter
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -15,6 +16,7 @@ func parseScanfOps(template string) (string, error) {
 				ops += "%d"
 			} else if ch == 's' {
 				ops += "%s"
+			} else if ch == '%' {
 			} else if !unicode.IsLetter(ch) {
 				continue
 			} else {
@@ -38,13 +40,16 @@ func CompileFilter(scanfTemplate, printfTemplate string) (func(req string) (stri
 	if err != nil {
 		return nil, err
 	}
-	if ops != printfOps {
-		return nil, fmt.Errorf("template ops for scanf don't match scanf ops: '%s' !+ '%s'", ops, printfOps)
+	if !strings.HasPrefix(ops, printfOps) {
+		return nil, fmt.Errorf("template ops for scanf don't match scanf ops: '%s' != '%s'", ops, printfOps)
 	}
 
 	if ops == "" {
 		return func(req string) (string, error) {
-			return req, nil
+			if req == scanfTemplate {
+				return printfTemplate, nil
+			}
+			return "", errors.New("doesn't match template")
 		}, nil
 	} else if ops == "%d" {
 		return func(req string) (string, error) {

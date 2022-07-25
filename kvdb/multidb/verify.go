@@ -22,7 +22,7 @@ func (p *Producer) verifyRecords(oldDBRecords map[DBLocator][]TableRecord) error
 
 func (p *Producer) getRecords() (map[DBLocator][]TableRecord, error) {
 	dbRecords := make(map[DBLocator][]TableRecord)
-	for typ, producer := range p.producers {
+	for typ, producer := range p.allProducers {
 		for _, name := range producer.Names() {
 			db, err := producer.OpenDB(name)
 			if err != nil {

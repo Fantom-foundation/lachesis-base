@@ -28,11 +28,9 @@ type wrappers struct {
 type SyncedPool struct {
 	producer kvdb.DBProducer
 
-	wrappers       map[string]wrappers
-	queuedCloses   map[string]struct{}
-	queuedClosesMu sync.Mutex
-	queuedDrops    map[string]struct{}
-	queuedDropsMu  sync.Mutex
+	wrappers      map[string]wrappers
+	queuedDrops   map[string]struct{}
+	queuedDropsMu sync.Mutex
 
 	flushIDKey []byte
 
@@ -46,11 +44,10 @@ func NewSyncedPool(producer kvdb.DBProducer, flushIDKey []byte) *SyncedPool {
 	}
 
 	p := &SyncedPool{
-		producer:     producer,
-		wrappers:     make(map[string]wrappers),
-		queuedDrops:  make(map[string]struct{}),
-		queuedCloses: make(map[string]struct{}),
-		flushIDKey:   flushIDKey,
+		producer:    producer,
+		wrappers:    make(map[string]wrappers),
+		queuedDrops: make(map[string]struct{}),
+		flushIDKey:  flushIDKey,
 	}
 
 	return p
@@ -77,7 +74,6 @@ func (p *SyncedPool) callbacks(name string) (
 	}
 
 	onClose = func() error {
-		p.enqueueCloseDb(name)
 		return nil
 	}
 
@@ -88,37 +84,11 @@ func (p *SyncedPool) callbacks(name string) (
 	return
 }
 
-func (p *SyncedPool) enqueueCloseDb(name string) {
-	p.queuedDropsMu.Lock()
-	defer p.queuedDropsMu.Unlock()
-
-	p.queuedCloses[name] = struct{}{}
-}
-
-func (p *SyncedPool) unqueueCloseDB(name string) {
-	p.queuedDropsMu.Lock()
-	defer p.queuedDropsMu.Unlock()
-
-	delete(p.queuedCloses, name)
-}
-
 func (p *SyncedPool) enqueueDropDb(name string) {
 	p.queuedDropsMu.Lock()
 	defer p.queuedDropsMu.Unlock()
 
 	p.queuedDrops[name] = struct{}{}
-}
-
-func (p *SyncedPool) popQueuedCloses() map[string]struct{} {
-	p.queuedClosesMu.Lock()
-	defer p.queuedClosesMu.Unlock()
-
-	res := make(map[string]struct{}, len(p.queuedCloses))
-	for k, v := range p.queuedCloses {
-		res[k] = v
-	}
-	p.queuedCloses = make(map[string]struct{})
-	return res
 }
 
 func (p *SyncedPool) popQueuedDrops() []string {
@@ -134,7 +104,6 @@ func (p *SyncedPool) popQueuedDrops() []string {
 }
 
 func (p *SyncedPool) OpenDB(name string) (kvdb.Store, error) {
-	p.unqueueCloseDB(name) // closed and reopened before flushed -> not closed at all
 	p.Lock()
 	defer p.Unlock()
 
@@ -142,7 +111,6 @@ func (p *SyncedPool) OpenDB(name string) (kvdb.Store, error) {
 }
 
 func (p *SyncedPool) GetUnderlying(name string) (kvdb.Store, error) {
-	p.unqueueCloseDB(name) // closed and reopened before flushed -> not closed at all
 	p.Lock()
 	defer p.Unlock()
 
@@ -191,21 +159,17 @@ func (p *SyncedPool) Flush(id []byte) error {
 }
 
 func (p *SyncedPool) flush(id []byte) error {
-	queuedClosesMap := p.popQueuedCloses()
 	queuedDropsList := p.popQueuedDrops()
-	// drop (and close if queued) old DBs
+	// close and drop DBs
 	for _, name := range queuedDropsList {
 		w := p.wrappers[name]
 		delete(p.wrappers, name)
 		if w.Flushable == nil {
 			continue
 		}
-		if _, ok := queuedClosesMap[name]; ok {
-			err := w.Flushable.RealClose()
-			if err != nil {
-				return err
-			}
-			delete(queuedClosesMap, name)
+		err := w.Flushable.RealClose()
+		if err != nil {
+			return err
 		}
 		db := w.Flushable.underlying
 		if db == nil {
@@ -221,19 +185,7 @@ func (p *SyncedPool) flush(id []byte) error {
 			return err
 		}
 
-		prev, err := db.Get(p.flushIDKey)
-		if err != nil {
-			return err
-		}
-		if prev == nil {
-			prev = []byte("initial")
-		}
-
-		marker := bytes.NewBuffer(nil)
-		marker.Write([]byte{DirtyPrefix})
-		marker.Write(prev)
-		marker.Write(id)
-		err = db.Put(p.flushIDKey, marker.Bytes())
+		err = MarkFlushID(db, p.flushIDKey, DirtyPrefix, id)
 		if err != nil {
 			return err
 		}
@@ -253,20 +205,7 @@ func (p *SyncedPool) flush(id []byte) error {
 		if err != nil {
 			return err
 		}
-		err = db.Put(p.flushIDKey, append([]byte{CleanPrefix}, id...))
-		if err != nil {
-			return err
-		}
-	}
-
-	// close DBs which were both closed but not dropped
-	for name := range queuedClosesMap {
-		w := p.wrappers[name]
-		delete(p.wrappers, name)
-		if w.Flushable.LazyFlushable == nil {
-			continue
-		}
-		err := w.Flushable.RealClose()
+		err = MarkFlushID(db, p.flushIDKey, CleanPrefix, id)
 		if err != nil {
 			return err
 		}
@@ -292,21 +231,33 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 	p.Lock()
 	defer p.Unlock()
 
-	var (
-		descrs []string
-		list   = func() string {
-			return strings.Join(descrs, ",\n")
-		}
-	)
+	dbs := map[string]kvdb.Store{}
 	for name, w := range p.wrappers {
 		db, err := w.Flushable.InitUnderlyingDb()
 		if err != nil {
 			return flushID, err
 		}
+		dbs[name] = db
+	}
+	return CheckDBsSynced(dbs, p.flushIDKey, flushID)
+}
 
-		mark, err := db.Get(p.flushIDKey)
+func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]byte, error) {
+	var (
+		descrs []string
+		list   = func() string {
+			return strings.Join(descrs, ", ")
+		}
+		nonInit bool
+	)
+	for name, db := range dbs {
+		mark, err := db.Get(flushIDKey)
 		if err != nil {
 			return flushID, err
+		}
+		if mark == nil {
+			nonInit = true
+			continue
 		}
 		descrs = append(descrs, fmt.Sprintf("%s: %s", name, hexutils.BytesToHex(mark)))
 
@@ -317,21 +268,21 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 			flushID = mark
 		}
 		if !bytes.Equal(mark, flushID) {
-			return flushID, fmt.Errorf("not synced: %s", list())
+			return flushID, fmt.Errorf("not synced: %s != %s", hexutils.BytesToHex(flushID), list())
 		}
+	}
+	if flushID != nil && nonInit {
+		return flushID, fmt.Errorf("non-initialized DB state")
 	}
 	return flushID, nil
 }
 
 func (p *SyncedPool) Names() []string {
-	queuedClosesMap := p.popQueuedCloses()
 	p.Lock()
 	defer p.Unlock()
 	names := make([]string, 0, len(p.wrappers))
 	for name := range p.wrappers {
-		if _, closed := queuedClosesMap[name]; !closed {
-			names = append(names, name)
-		}
+		names = append(names, name)
 	}
 	return names
 }
@@ -345,4 +296,8 @@ func (p *SyncedPool) Close() error {
 	}
 	*p = SyncedPool{}
 	return nil
+}
+
+func MarkFlushID(db kvdb.Store, key []byte, prefix byte, flushID []byte) error {
+	return db.Put(key, append([]byte{prefix}, flushID...))
 }

@@ -22,6 +22,7 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 	}
 	round := newRoot.Slot.Frame - el.frameToDecide
 	if round == 0 {
+		// unreachable because of condition above
 		return nil, nil
 	}
 

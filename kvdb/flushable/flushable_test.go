@@ -395,8 +395,8 @@ func benchmarkFlushable(db *Flushable, goroutines, recs, flushPeriod int, readin
 	wg.Wait()
 }
 
-func cache16mb(string) int {
-	return 16 * opt.MiB
+func cache16mb(string) (int, int) {
+	return 16 * opt.MiB, 64
 }
 
 func dbProducer(name string) kvdb.DBProducer {
