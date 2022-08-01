@@ -1,7 +1,6 @@
 package flaggedproducer
 
 import (
-	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -25,10 +24,10 @@ func Wrap(backend kvdb.IterableDBProducer, flushIDKey []byte) *Producer {
 }
 
 func (f *Producer) OpenDB(name string) (kvdb.Store, error) {
-	// open existing DB
 	f.mu.Lock()
+	defer f.mu.Unlock()
+	// open existing DB
 	openedDB := f.dbs[name]
-	f.mu.Unlock()
 	if openedDB != nil {
 		return openedDB, nil
 	}
@@ -36,11 +35,6 @@ func (f *Producer) OpenDB(name string) (kvdb.Store, error) {
 	db, err := f.backend.OpenDB(name)
 	if err != nil {
 		return nil, err
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.dbs[name] != nil {
-		return nil, errors.New("already opened")
 	}
 	flagged := &flaggedStore{
 		Store: db,
