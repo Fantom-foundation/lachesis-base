@@ -1,6 +1,10 @@
 package table
 
 import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
@@ -68,7 +72,13 @@ func (t *Table) NewBatch() kvdb.Batch {
 }
 
 func (t *Table) Compact(start []byte, limit []byte) error {
-	return t.underlying.Compact(start, limit)
+	end := prefixed(limit, t.prefix)
+	if limit == nil {
+		endBn := new(big.Int).SetBytes(t.prefix)
+		endBn.Add(endBn, common.Big1)
+		end = endBn.Bytes()
+	}
+	return t.underlying.Compact(prefixed(start, t.prefix), end)
 }
 
 /*
