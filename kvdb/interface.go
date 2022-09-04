@@ -114,10 +114,14 @@ type DBProducer interface {
 	OpenDB(name string) (Store, error)
 }
 
-type IterableDBProducer interface {
-	DBProducer
+type Iterable interface {
 	// Names of existing databases.
 	Names() []string
+}
+
+type IterableDBProducer interface {
+	DBProducer
+	Iterable
 }
 
 type FlushableDBProducer interface {
@@ -134,5 +138,5 @@ type ScopedFlushableProducer interface {
 
 type FullDBProducer interface {
 	ScopedFlushableProducer
-	IterableDBProducer
+	Iterable
 }

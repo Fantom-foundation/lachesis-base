@@ -31,44 +31,104 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 		Y: 16 * opt.KiB,
 	},
 	{
-		X: 46 * opt.MiB,
+		X: 35 * opt.MiB,
 		Y: 100 * opt.KiB,
 	},
 	{
-		X: 60 * opt.MiB,
+		X: 44 * opt.MiB,
+		Y: 336 * opt.KiB,
+	},
+	{
+		X: 53 * opt.MiB,
+		Y: 538 * opt.KiB,
+	},
+	{
+		X: 72 * opt.MiB,
+		Y: 808 * opt.KiB,
+	},
+	{
+		X: 140 * opt.MiB,
+		Y: 809 * opt.KiB,
+	},
+	{
+		X: 151 * opt.MiB,
+		Y: 875 * opt.KiB,
+	},
+	{
+		X: 172 * opt.MiB,
 		Y: 1 * opt.MiB,
 	},
 	{
-		X: 190 * opt.MiB,
+		X: 177 * opt.MiB,
+		Y: 2955 * opt.KiB,
+	},
+	{
+		X: 250 * opt.MiB,
+		Y: 5370 * opt.KiB,
+	},
+	{
+		X: 347 * opt.MiB,
+		Y: 8187 * opt.KiB,
+	},
+	{
+		X: 401 * opt.MiB,
 		Y: 10 * opt.MiB,
 	},
 	{
-		X: 300 * opt.MiB,
+		X: 484 * opt.MiB,
+		Y: 13563 * opt.KiB,
+	},
+	{
+		X: 645 * opt.MiB,
 		Y: 18 * opt.MiB,
 	},
 	{
-		X: 450 * opt.MiB,
+		X: 765 * opt.MiB,
+		Y: 24128 * opt.KiB,
+	},
+	{
+		X: 1000 * opt.MiB,
+		Y: 31478 * opt.KiB,
+	},
+	{
+		X: 1258 * opt.MiB,
 		Y: 40 * opt.MiB,
 	},
 	{
-		X: 600 * opt.MiB,
+		X: 1337 * opt.MiB,
 		Y: 100 * opt.MiB,
 	},
 	{
-		X: 750 * opt.MiB,
+		X: 1685 * opt.MiB,
 		Y: 130 * opt.MiB,
 	},
 	{
-		X: 1200 * opt.MiB,
+		X: 2159 * opt.MiB,
+		Y: 168 * opt.MiB,
+	},
+	{
+		X: 2647 * opt.MiB,
+		Y: 230 * opt.MiB,
+	},
+	{
+		X: 3068 * opt.MiB,
 		Y: 300 * opt.MiB,
 	},
 	{
-		X: 3300 * opt.MiB,
+		X: 3863 * opt.MiB,
+		Y: 362 * opt.MiB,
+	},
+	{
+		X: 5142 * opt.MiB,
+		Y: 550 * opt.MiB,
+	},
+	{
+		X: 5671 * opt.MiB,
 		Y: 1000 * opt.MiB,
 	},
 	{
-		X: 6400000 * opt.MiB,
-		Y: 2000000 * opt.MiB,
+		X: 5671000 * opt.MiB,
+		Y: 1000000 * opt.MiB,
 	},
 })
 
@@ -76,12 +136,14 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 // metrics reporting should use for surfacing internal stats.
 func New(path string, cache int, handles int, close func() error, drop func()) (*Database, error) {
 	cache = int(adjustCache(uint64(cache)))
+	ref := pebble.NewCache(int64(cache * 2 / 3))
+	defer ref.Unref()
 	db, err := pebble.Open(path, &pebble.Options{
-		Cache:                    pebble.NewCache(int64(cache * 2 / 3)), // default 8 MB
-		MemTableSize:             cache / 3,                             // default 4 MB
-		MaxOpenFiles:             handles,                               // default 1000
-		WALBytesPerSync:          0,                                     // default 0 (matches RocksDB = no background syncing)
-		MaxConcurrentCompactions: 3,                                     // default 1, important for big imports performance
+		Cache:                    ref,       // default 8 MB
+		MemTableSize:             cache / 3, // default 4 MB
+		MaxOpenFiles:             handles,   // default 1000
+		WALBytesPerSync:          0,         // default 0 (matches RocksDB = no background syncing)
+		MaxConcurrentCompactions: 3,         // default 1, important for big imports performance
 	})
 
 	if err != nil {

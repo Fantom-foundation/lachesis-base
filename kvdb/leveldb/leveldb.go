@@ -51,7 +51,7 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 		Y: 100 * opt.KiB,
 	},
 	{
-		X: 15 * opt.MiB,
+		X: 25 * opt.MiB,
 		Y: 1 * opt.MiB,
 	},
 	{
@@ -59,34 +59,62 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 		Y: 10 * opt.MiB,
 	},
 	{
-		X: 69 * opt.MiB,
+		X: 62 * opt.MiB,
 		Y: 14 * opt.MiB,
 	},
 	{
-		X: 88 * opt.MiB,
+		X: 74 * opt.MiB,
 		Y: 18 * opt.MiB,
 	},
 	{
-		X: 190 * opt.MiB,
+		X: 99 * opt.MiB,
+		Y: 25 * opt.MiB,
+	},
+	{
+		X: 153 * opt.MiB,
 		Y: 40 * opt.MiB,
 	},
 	{
-		X: 350 * opt.MiB,
+		X: 317 * opt.MiB,
 		Y: 100 * opt.MiB,
 	},
 	{
-		X: 930 * opt.MiB,
+		X: 403 * opt.MiB,
+		Y: 129 * opt.MiB,
+	},
+	{
+		X: 585 * opt.MiB,
+		Y: 437 * opt.MiB,
+	},
+	{
+		X: 889 * opt.MiB,
 		Y: 300 * opt.MiB,
 	},
 	{
-		X: 3300 * opt.MiB,
+		X: 948 * opt.MiB,
+		Y: 437 * opt.MiB,
+	},
+	{
+		X: 1770 * opt.MiB,
+		Y: 703 * opt.MiB,
+	},
+	{
+		X: 2470 * opt.MiB,
 		Y: 1000 * opt.MiB,
 	},
 	{
-		X: 6400000 * opt.MiB,
-		Y: 2000000 * opt.MiB,
+		X: 2470000 * opt.MiB,
+		Y: 1000000 * opt.MiB,
 	},
 })
+
+func aligned256kb(v int) int {
+	base := 256 * opt.KiB
+	if v < base {
+		return v
+	}
+	return v / base * base
+}
 
 // New returns a wrapped LevelDB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
@@ -100,8 +128,8 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 	// Open the db and recover any potential corruptions
 	db, err := leveldb.OpenFile(path, &opt.Options{
 		OpenFilesCacheCapacity: handles,
-		BlockCacheCapacity:     cache / 2,
-		WriteBuffer:            cache / 4, // Two of these are used internally
+		BlockCacheCapacity:     aligned256kb(cache / 2),
+		WriteBuffer:            aligned256kb(cache / 4), // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
 	})
 	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
