@@ -4,6 +4,7 @@
 package leveldb
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -215,7 +216,16 @@ func (db *Database) GetSnapshot() (kvdb.Snapshot, error) {
 
 // Stat returns a particular internal stat of the database.
 func (db *Database) Stat(property string) (string, error) {
-	return db.underlying.GetProperty(property)
+	if property == "disk.size" {
+		dbStats := &leveldb.DBStats{}
+		if err := db.underlying.Stats(dbStats); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Size(B):%d", dbStats.LevelSizes.Sum()), nil
+	}
+	prop := fmt.Sprintf("leveldb.%s", property)
+	stats, err := db.underlying.GetProperty(prop)
+	return stats, err
 }
 
 // Compact flattens the underlying data store for the given key range. In essence,

@@ -264,15 +264,18 @@ func (db *Database) Stat(property string) (string, error) {
 	if property == "sync_flush" {
 		return "", db.SyncFlush()
 	}
-	// only "leveldb." prefix is accessible using debug.chaindbProperty
-	if property == "leveldb.iostats" {
-		total := db.underlying.Metrics().Total()
+	metrics := db.underlying.Metrics()
+	if property == "iostats" {
+		total := metrics.Total()
 		return fmt.Sprintf("Read(MB):%.5f Write(MB):%.5f",
 			float64(total.BytesRead)/1048576.0, // 1024*1024
 			float64(total.BytesFlushed+total.BytesCompacted)/1048576.0), nil
 	}
-	if property == "leveldb.metrics" {
-		return db.underlying.Metrics().String(), nil
+	if property == "disk.size" {
+		return fmt.Sprintf("Size(B):%d", metrics.Total().Size), nil
+	}
+	if property == "stats" {
+		return metrics.String(), nil
 	}
 	return "", fmt.Errorf("pebble stat property %s does not exists", property)
 }
