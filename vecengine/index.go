@@ -148,7 +148,12 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		after:  vi.callback.NewLowestAfter(idx.Validator(len(vi.bi.BranchIDCreatorIdxs))),
 	}
 
+	eventIndex := vi.bi.insertEvent(e)
+
 	meBranchID, err := vi.fillGlobalBranchID(e, meIdx)
+	if err != nil {
+		return myVecs, err
+	}
 
 	// pre-load parents into RAM for quick access
 	parentsVecs := make([]HighestBeforeI, len(e.Parents()))
@@ -163,12 +168,13 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 
 	// observed by himself
 	myVecs.after.InitWithEvent(meBranchID, e)
-	myVecs.before.InitWithEvent(meBranchID, e)
+	myVecs.before.InitWithEvent(meBranchID, e, eventIndex)
 
 	for _, pVec := range parentsVecs {
 		// calculate HighestBefore  Detect forks for a case when parent observes a fork
 		myVecs.before.CollectFrom(pVec, idx.Validator(len(vi.bi.BranchIDCreatorIdxs)))
 	}
+
 	// Detect forks, which were not observed by parents
 	if vi.AtLeastOneFork() {
 		for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
@@ -208,20 +214,33 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		}
 	}
 
-	// graph traversal starting from e, but excluding e
-	onWalk := func(walk hash.Event) (godeeper bool) {
-		wLowestAfterSeq := vi.callback.GetLowestAfter(walk)
-
-		// update LowestAfter vector of the old event, because newly-connected event observes it
-		if wLowestAfterSeq.Visit(meBranchID, e) {
-			vi.callback.SetLowestAfter(walk, wLowestAfterSeq)
-			return true
+	// for each branch, start at the highest ancestor of e on that branch and go
+	// down, from self-parent to self-parent, updating each one's lowest
+	// descendants, until encoutering a self-parent that already has a lower
+	// descendant on e's branch.
+	for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
+		for _, branchID := range vi.bi.BranchIDByCreators[n] {
+			if myVecs.before.IsEmpty(branchID) {
+				continue
+			}
+			// if b is the highest ancestor of e on this branch, then bi is its
+			// index in the Events cache, and bh is its hash
+			bi := myVecs.before.CacheID(branchID)
+			bh := vi.bi.Events[bi]
+			for {
+				wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
+				// update LowestAfter vector of the old event, because newly-connected event observes it
+				if !wLowestAfterSeq.IsInterfaceNil() && wLowestAfterSeq.Visit(meBranchID, e) {
+					vi.callback.SetLowestAfter(bh, wLowestAfterSeq)
+					le := vi.getEvent(bh)
+					if sp := le.SelfParent(); sp != nil {
+						bh = *sp
+						continue
+					}
+				}
+				break
+			}
 		}
-		return false
-	}
-	err = vi.DfsSubgraph(e, onWalk)
-	if err != nil {
-		vi.crit(err)
 	}
 
 	// store calculated vectors
