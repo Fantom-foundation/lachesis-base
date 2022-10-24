@@ -19,8 +19,12 @@ func (b *LowestAfterSeq) Visit(i idx.Validator, e dag.Event) bool {
 	return true
 }
 
-func (b *HighestBeforeSeq) InitWithEvent(i idx.Validator, e dag.Event) {
-	b.Set(i, BranchSeq{Seq: e.Seq(), MinSeq: e.Seq()})
+func (b *LowestAfterSeq) IsInterfaceNil() bool {
+	return (b == nil)
+}
+
+func (b *HighestBeforeSeq) InitWithEvent(i idx.Validator, e dag.Event, cacheID idx.Event) {
+	b.Set(i, BranchSeq{Seq: e.Seq(), MinSeq: e.Seq(), CacheID: cacheID})
 }
 
 func (b *HighestBeforeSeq) IsEmpty(i idx.Validator) bool {
@@ -40,6 +44,11 @@ func (b *HighestBeforeSeq) Seq(i idx.Validator) idx.Event {
 func (b *HighestBeforeSeq) MinSeq(i idx.Validator) idx.Event {
 	val := b.Get(i)
 	return val.MinSeq
+}
+
+func (b *HighestBeforeSeq) CacheID(i idx.Validator) idx.Event {
+	val := b.Get(i)
+	return val.CacheID
 }
 
 func (b *HighestBeforeSeq) SetForkDetected(i idx.Validator) {
@@ -72,6 +81,7 @@ func (self *HighestBeforeSeq) CollectFrom(_other vecengine.HighestBeforeI, num i
 			if mySeq.Seq < hisSeq.Seq {
 				// take hisSeq.Seq
 				mySeq.Seq = hisSeq.Seq
+				mySeq.CacheID = hisSeq.CacheID
 				self.Set(branchID, mySeq)
 			}
 		}

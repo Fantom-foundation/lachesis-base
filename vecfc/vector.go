@@ -14,13 +14,14 @@ import (
 type (
 	// LowestAfterSeq is a vector of lowest events (their Seq) which do observe the source event
 	LowestAfterSeq []byte
-	// HighestBeforeSeq is a vector of highest events (their Seq + IsForkDetected) which are observed by source event
+	// HighestBeforeSeq is a vector of highest events (their Seq + MinSeq + Index) which are observed by source event
 	HighestBeforeSeq []byte
 
-	// BranchSeq encodes Seq and MinSeq into 8 bytes
+	// BranchSeq encodes Seq, MinSeq, and Index into 12 bytes
 	BranchSeq struct {
-		Seq    idx.Event
-		MinSeq idx.Event
+		Seq     idx.Event
+		MinSeq  idx.Event
+		CacheID idx.Event // index of the event in the BranchesInfo.Events cache
 	}
 )
 
@@ -32,7 +33,7 @@ func NewLowestAfterSeq(size idx.Validator) *LowestAfterSeq {
 
 // NewHighestBeforeSeq creates new HighestBeforeSeq vector.
 func NewHighestBeforeSeq(size idx.Validator) *HighestBeforeSeq {
-	b := make(HighestBeforeSeq, size*8)
+	b := make(HighestBeforeSeq, size*12)
 	return &b
 }
 
@@ -61,7 +62,7 @@ func (b *LowestAfterSeq) Set(i idx.Validator, seq idx.Event) {
 
 // Size of the vector clock
 func (b HighestBeforeSeq) Size() int {
-	return len(b) / 8
+	return len(b) / 12
 }
 
 // Get i's position in the byte-encoded vector clock
@@ -69,12 +70,13 @@ func (b HighestBeforeSeq) Get(i idx.Validator) BranchSeq {
 	for int(i) >= b.Size() {
 		return BranchSeq{}
 	}
-	seq1 := binary.LittleEndian.Uint32(b[i*8 : i*8+4])
-	seq2 := binary.LittleEndian.Uint32(b[i*8+4 : i*8+8])
-
+	seq1 := binary.LittleEndian.Uint32(b[i*12 : i*12+4])
+	seq2 := binary.LittleEndian.Uint32(b[i*12+4 : i*12+8])
+	index := binary.LittleEndian.Uint32(b[i*12+8 : i*12+12])
 	return BranchSeq{
-		Seq:    idx.Event(seq1),
-		MinSeq: idx.Event(seq2),
+		Seq:     idx.Event(seq1),
+		MinSeq:  idx.Event(seq2),
+		CacheID: idx.Event(index),
 	}
 }
 
@@ -82,10 +84,11 @@ func (b HighestBeforeSeq) Get(i idx.Validator) BranchSeq {
 func (b *HighestBeforeSeq) Set(i idx.Validator, seq BranchSeq) {
 	for int(i) >= b.Size() {
 		// append zeros if exceeds size
-		*b = append(*b, []byte{0, 0, 0, 0, 0, 0, 0, 0}...)
+		*b = append(*b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}...)
 	}
-	binary.LittleEndian.PutUint32((*b)[i*8:i*8+4], uint32(seq.Seq))
-	binary.LittleEndian.PutUint32((*b)[i*8+4:i*8+8], uint32(seq.MinSeq))
+	binary.LittleEndian.PutUint32((*b)[i*12:i*12+4], uint32(seq.Seq))
+	binary.LittleEndian.PutUint32((*b)[i*12+4:i*12+8], uint32(seq.MinSeq))
+	binary.LittleEndian.PutUint32((*b)[i*12+8:i*12+12], uint32(seq.CacheID))
 }
 
 var (
