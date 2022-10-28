@@ -55,7 +55,11 @@ func (b *HighestBeforeSeq) SetForkDetected(i idx.Validator) {
 	b.Set(i, forkDetectedSeq)
 }
 
-func (self *HighestBeforeSeq) CollectFrom(_other vecengine.HighestBeforeI, num idx.Validator) {
+func (self *HighestBeforeSeq) CollectFrom(
+	_other vecengine.HighestBeforeI,
+	num idx.Validator,
+	diff map[idx.Validator]bool) {
+
 	other := _other.(*HighestBeforeSeq)
 	for branchID := idx.Validator(0); branchID < num; branchID++ {
 		hisSeq := other.Get(branchID)
@@ -83,6 +87,7 @@ func (self *HighestBeforeSeq) CollectFrom(_other vecengine.HighestBeforeI, num i
 				mySeq.Seq = hisSeq.Seq
 				mySeq.CacheID = hisSeq.CacheID
 				self.Set(branchID, mySeq)
+				diff[branchID] = true
 			}
 		}
 	}
