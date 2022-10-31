@@ -19,7 +19,7 @@ type HighestBeforeI interface {
 	MinSeq(i idx.Validator) idx.Event
 	CacheID(i idx.Validator) idx.Event
 	SetForkDetected(i idx.Validator)
-	CollectFrom(other HighestBeforeI, branches idx.Validator, differences map[idx.Validator]bool)
+	CollectFrom(other HighestBeforeI, branches idx.Validator, differences map[idx.Validator]idx.Event)
 	GatherFrom(to idx.Validator, other HighestBeforeI, from []idx.Validator)
 }
 
