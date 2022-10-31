@@ -58,7 +58,7 @@ func (b *HighestBeforeSeq) SetForkDetected(i idx.Validator) {
 func (self *HighestBeforeSeq) CollectFrom(
 	_other vecengine.HighestBeforeI,
 	num idx.Validator,
-	diff map[idx.Validator]bool) {
+	diff map[idx.Validator]idx.Event) {
 
 	other := _other.(*HighestBeforeSeq)
 	for branchID := idx.Validator(0); branchID < num; branchID++ {
@@ -67,12 +67,13 @@ func (self *HighestBeforeSeq) CollectFrom(
 			// hisSeq doesn't observe anything about this branchID
 			continue
 		}
-		mySeq := self.Get(branchID)
 
+		mySeq := self.Get(branchID)
 		if mySeq.IsForkDetected() {
 			// mySeq observes the maximum already
 			continue
 		}
+
 		if hisSeq.IsForkDetected() {
 			// set fork detected
 			self.SetForkDetected(branchID)
@@ -84,10 +85,14 @@ func (self *HighestBeforeSeq) CollectFrom(
 			}
 			if mySeq.Seq < hisSeq.Seq {
 				// take hisSeq.Seq
+				x := hisSeq.Seq - mySeq.Seq
+				curr, ok := diff[branchID]
+				if !ok || (ok && curr < x) {
+					diff[branchID] = x
+				}
 				mySeq.Seq = hisSeq.Seq
 				mySeq.CacheID = hisSeq.CacheID
 				self.Set(branchID, mySeq)
-				diff[branchID] = true
 			}
 		}
 	}

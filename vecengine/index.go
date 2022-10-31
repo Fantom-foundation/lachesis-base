@@ -170,7 +170,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	myVecs.after.InitWithEvent(meBranchID, e)
 	myVecs.before.InitWithEvent(meBranchID, e, eventIndex)
 
-	diffBranches := make(map[idx.Validator]bool) // track branches that need update
+	diffBranches := make(map[idx.Validator]idx.Event) // branchID -> # new events
 	for _, pVec := range parentsVecs {
 		// calculate HighestBefore  Detect forks for a case when parent observes a fork
 		myVecs.before.CollectFrom(pVec, idx.Validator(len(vi.bi.BranchIDCreatorIdxs)), diffBranches)
@@ -219,15 +219,15 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	// ancestor of e on that branch and go down, from self-parent to self-parent,
 	// updating each one's lowest descendants, until encoutering a self-parent
 	// that already has a lower descendant on e's branch.
-	for branchID := range diffBranches {
-		if myVecs.before.IsEmpty(branchID) {
+	for branchID, count := range diffBranches {
+		if myVecs.before.IsForkDetected(branchID) {
 			continue
 		}
 		// if b is the highest ancestor of e on this branch, then bi is its
 		// index in the Events cache, and bh is its hash
 		bi := myVecs.before.CacheID(branchID)
 		bh := vi.bi.Events[bi]
-		for {
+		for remaining := count; remaining > 0; remaining-- {
 			wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
 			// update LowestAfter vector of the old event, because newly-connected event observes it
 			if !wLowestAfterSeq.IsInterfaceNil() && wLowestAfterSeq.Visit(meBranchID, e) {
