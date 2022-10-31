@@ -169,10 +169,13 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	}
 
 	// diffBranches tracks the branches where new events are recorded
-	diffBranches := make(map[idx.Validator]idx.Event) // branchID -> number of new events
+	diffBranches := make([]idx.Event, len(vi.bi.BranchIDCreatorIdxs)) // branchID -> number of new events
 	for _, pVec := range parentsVecs {
 		// calculate HighestBefore  Detect forks for a case when parent observes a fork
-		myVecs.before.CollectFrom(pVec, idx.Validator(len(vi.bi.BranchIDCreatorIdxs)), diffBranches)
+		myVecs.before.CollectFrom(
+			pVec,
+			idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
+			diffBranches)
 	}
 
 	// Detect forks, which were not observed by parents
@@ -219,12 +222,12 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	// updating each one's lowest descendants, until all new events have been
 	// processed.
 	for branchID, newEvents := range diffBranches {
-		if myVecs.before.IsForkDetected(branchID) {
+		if newEvents == 0 || myVecs.before.IsForkDetected(idx.Validator(branchID)) {
 			continue
 		}
 		// if b is the highest ancestor of e on this branch, then bi is its
 		// index in the Events cache, and bh is its hash
-		bi := myVecs.before.CacheID(branchID)
+		bi := myVecs.before.CacheID(idx.Validator(branchID))
 		bh := vi.bi.Events[bi]
 		for remaining := newEvents; remaining > 0; remaining-- {
 			wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
