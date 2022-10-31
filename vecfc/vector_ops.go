@@ -55,7 +55,10 @@ func (b *HighestBeforeSeq) SetForkDetected(i idx.Validator) {
 	b.Set(i, forkDetectedSeq)
 }
 
-func (self *HighestBeforeSeq) CollectFrom(
+// CollectFrom collects the elements from _other that are higher than ours. When
+// _other has a higher seq than us for a given branch, we take that seq, and
+// record the number of new events in the diff map.
+func (b *HighestBeforeSeq) CollectFrom(
 	_other vecengine.HighestBeforeI,
 	num idx.Validator,
 	diff map[idx.Validator]idx.Event) {
@@ -68,7 +71,7 @@ func (self *HighestBeforeSeq) CollectFrom(
 			continue
 		}
 
-		mySeq := self.Get(branchID)
+		mySeq := b.Get(branchID)
 		if mySeq.IsForkDetected() {
 			// mySeq observes the maximum already
 			continue
@@ -76,29 +79,25 @@ func (self *HighestBeforeSeq) CollectFrom(
 
 		if hisSeq.IsForkDetected() {
 			// set fork detected
-			self.SetForkDetected(branchID)
+			b.SetForkDetected(branchID)
 		} else {
 			if mySeq.Seq == 0 || mySeq.MinSeq > hisSeq.MinSeq {
 				// take hisSeq.MinSeq
 				mySeq.MinSeq = hisSeq.MinSeq
-				self.Set(branchID, mySeq)
+				b.Set(branchID, mySeq)
 			}
 			if mySeq.Seq < hisSeq.Seq {
 				// take hisSeq.Seq
-				x := hisSeq.Seq - mySeq.Seq
-				curr, ok := diff[branchID]
-				if !ok || (ok && curr < x) {
-					diff[branchID] = x
-				}
+				diff[branchID] = hisSeq.Seq - mySeq.Seq
 				mySeq.Seq = hisSeq.Seq
 				mySeq.CacheID = hisSeq.CacheID
-				self.Set(branchID, mySeq)
+				b.Set(branchID, mySeq)
 			}
 		}
 	}
 }
 
-func (self *HighestBeforeSeq) GatherFrom(to idx.Validator, _other vecengine.HighestBeforeI, from []idx.Validator) {
+func (b *HighestBeforeSeq) GatherFrom(to idx.Validator, _other vecengine.HighestBeforeI, from []idx.Validator) {
 	other := _other.(*HighestBeforeSeq)
 	// read all branches to find highest event
 	highestBranchSeq := BranchSeq{}
@@ -112,5 +111,5 @@ func (self *HighestBeforeSeq) GatherFrom(to idx.Validator, _other vecengine.High
 			highestBranchSeq = branch
 		}
 	}
-	self.Set(to, highestBranchSeq)
+	b.Set(to, highestBranchSeq)
 }
