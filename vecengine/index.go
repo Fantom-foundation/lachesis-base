@@ -168,14 +168,21 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		}
 	}
 
-	// diffBranches tracks the branches where new events are recorded
-	diffBranches := make([]idx.Event, len(vi.bi.BranchIDCreatorIdxs)) // branchID -> number of new events
-	for _, pVec := range parentsVecs {
-		// calculate HighestBefore  Detect forks for a case when parent observes a fork
-		myVecs.before.CollectFrom(
-			pVec,
-			idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
-			diffBranches)
+	// newEvents tracks new events by branch ID (events that weren't known by e's
+	// self-parent)
+	newEvents := make([]idx.Event, len(vi.bi.BranchIDCreatorIdxs)) // branchID -> number of new events
+	for i, pVec := range parentsVecs {
+		if e.Seq() > 1 && e.IsSelfParent(e.Parents()[i]) {
+			myVecs.before.CollectFrom(
+				pVec,
+				idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
+				nil)
+		} else {
+			myVecs.before.CollectFrom(
+				pVec,
+				idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
+				newEvents)
+		}
 	}
 
 	// Detect forks, which were not observed by parents
@@ -221,7 +228,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	// ancestor of e on that branch and go down, from self-parent to self-parent,
 	// updating each one's lowest descendants, until all new events have been
 	// processed.
-	for branchID, newEvents := range diffBranches {
+	for branchID, newEvents := range newEvents {
 		if newEvents == 0 || myVecs.before.IsForkDetected(idx.Validator(branchID)) {
 			continue
 		}
@@ -232,7 +239,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		for remaining := newEvents; remaining > 0; remaining-- {
 			wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
 			// update LowestAfter vector of the old event, because newly-connected event observes it
-			if !wLowestAfterSeq.IsInterfaceNil() && wLowestAfterSeq.Visit(meBranchID, e) {
+			if wLowestAfterSeq.Visit(meBranchID, e) {
 				vi.callback.SetLowestAfter(bh, wLowestAfterSeq)
 				le := vi.getEvent(bh)
 				if sp := le.SelfParent(); sp != nil {

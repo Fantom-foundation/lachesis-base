@@ -19,10 +19,6 @@ func (b *LowestAfterSeq) Visit(i idx.Validator, e dag.Event) bool {
 	return true
 }
 
-func (b *LowestAfterSeq) IsInterfaceNil() bool {
-	return (b == nil)
-}
-
 func (b *HighestBeforeSeq) InitWithEvent(i idx.Validator, e dag.Event, cacheID idx.Event) {
 	b.Set(i, BranchSeq{Seq: e.Seq(), MinSeq: e.Seq(), CacheID: cacheID})
 }
@@ -88,7 +84,9 @@ func (b *HighestBeforeSeq) CollectFrom(
 			}
 			if mySeq.Seq < hisSeq.Seq {
 				// take hisSeq.Seq
-				diff[branchID] += hisSeq.Seq - mySeq.Seq
+				if diff != nil {
+					diff[branchID] += hisSeq.Seq - mySeq.Seq
+				}
 				mySeq.Seq = hisSeq.Seq
 				mySeq.CacheID = hisSeq.CacheID
 				b.Set(branchID, mySeq)

@@ -54,7 +54,7 @@ func newInitialBranchesInfo(validators *pos.Validators) *BranchesInfo {
 		branchIDByCreators[i][0] = idx.Validator(i)
 	}
 
-	events := make([]hash.Event, len(branchIDCreators)*100) // XXX 100?
+	events := make([]hash.Event, len(branchIDCreators)*100)
 
 	return &BranchesInfo{
 		BranchIDLastSeq:     branchIDLastSeq,
