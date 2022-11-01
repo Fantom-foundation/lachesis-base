@@ -8,7 +8,6 @@ import (
 type LowestAfterI interface {
 	InitWithEvent(i idx.Validator, e dag.Event)
 	Visit(i idx.Validator, e dag.Event) bool
-	IsInterfaceNil() bool
 }
 
 type HighestBeforeI interface {
