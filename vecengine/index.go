@@ -172,17 +172,14 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	// self-parent)
 	newEvents := make([]idx.Event, len(vi.bi.BranchIDCreatorIdxs)) // branchID -> number of new events
 	for i, pVec := range parentsVecs {
-		if e.Seq() > 1 && e.IsSelfParent(e.Parents()[i]) {
-			myVecs.before.CollectFrom(
-				pVec,
-				idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
-				nil)
-		} else {
-			myVecs.before.CollectFrom(
-				pVec,
-				idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
-				newEvents)
+		diff := newEvents
+		if i == 0 && e.SelfParent() != nil {
+			diff = nil
 		}
+		myVecs.before.CollectFrom(
+			pVec,
+			idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
+			diff)
 	}
 
 	// Detect forks, which were not observed by parents
