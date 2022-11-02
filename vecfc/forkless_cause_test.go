@@ -27,20 +27,11 @@ func BenchmarkIndex_ForklessCause(b *testing.B) {
 }
 
 func benchForklessCauseMain(b *testing.B, idx *int) {
-	benchForklessCauseProcess(b, `
-a0_1(3)  b0_1     c0_1     d0_1     e0_1     f0_1     g0_1     h0_1     i0_1     j0_1     k0_1     l0_1     m0_1     p0_1     q0_1
-║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║
-╠─────── b1_2     ║        ╠─────── e1_2     ║        ╠─────── h1_2     ║        ║        ║        ╠─────── m1_2     ║        ║
-║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║
-║        ╠─────── c1_3     ║        ╠─────── f1_3     ║        ║        ╠─────── j1_3     ╠─────── l1_3     ╠─────── p1_3     ║
-║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║
-║        ║        ╠─────── d1_4     ║        ╠─────── g1_4     ╠─────── i1_4     ╠─────── k1_4     ║        ║        ╠─────── q1_4
-║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║        ║
-`, idx)
+	benchForklessCauseProcess(b, idx)
 }
 
-func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
-	nodes, _, _ := tdag.ASCIIschemeToDAG(dagAscii)
+func benchForklessCauseProcess(b *testing.B, idx *int) {
+	nodes := tdag.GenNodes(70)
 	validators := pos.EqualWeightValidators(nodes, 1)
 
 	events := make(map[hash.Event]dag.Event)
@@ -51,7 +42,7 @@ func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
 	vi := NewIndex(tCrit, LiteConfig())
 	vi.Reset(validators, memorydb.New(), getEvent)
 
-	_, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
+	tdag.ForEachRandEvent(nodes, 10, 2, nil, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			events[e.ID()] = e
 			err := vi.Add(e)
@@ -64,8 +55,8 @@ func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
 
 	// check
 	b.StartTimer()
-	for _, ev := range named {
-		for _, by := range named {
+	for _, ev := range events {
+		for _, by := range events {
 			who := by.ID()
 			whom := ev.ID()
 			vi.ForklessCause(who, whom)
