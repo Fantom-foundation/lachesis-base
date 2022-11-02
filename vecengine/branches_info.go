@@ -13,19 +13,13 @@ type BranchesInfo struct {
 	BranchIDCreatorIdxs []idx.Validator   // branchID -> validator idx
 	BranchIDByCreators  [][]idx.Validator // validator idx -> list of branch IDs
 	Events              []hash.Event      // index -> hash
-	NextIndex           idx.Event         // next index in Events
 }
 
 // insertEvent inserts the event's hash in Events and returns the index where
 // it was inserted
 func (bi *BranchesInfo) insertEvent(e dag.Event) idx.Event {
-	if bi.NextIndex == idx.Event(len(bi.Events)) {
-		bi.Events = append(bi.Events, make([]hash.Event, 100)...)
-	}
-	index := bi.NextIndex
-	bi.Events[index] = e.ID()
-	bi.NextIndex++
-	return index
+	bi.Events = append(bi.Events, e.ID())
+	return idx.Event(len(bi.Events) - 1)
 }
 
 // InitBranchesInfo loads BranchesInfo from store
