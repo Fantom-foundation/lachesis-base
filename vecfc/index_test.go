@@ -15,7 +15,7 @@ func BenchmarkIndex_Add(b *testing.B) {
 
 	nodes := tdag.GenNodes(70)
 	ordered := make(dag.Events, 0)
-	tdag.ForEachRandEvent(nodes, 10, 2, nil, tdag.ForEachEvent{
+	tdag.ForEachRandEvent(nodes, 10, 10, nil, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
