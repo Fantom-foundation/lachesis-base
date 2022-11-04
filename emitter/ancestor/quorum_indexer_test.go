@@ -13,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/flashable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/utils"
 	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
@@ -112,7 +113,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	}
 
 	vecClock := vecfc.NewIndex(crit, vecfc.LiteConfig())
-	vecClock.Reset(validators, memorydb.New(), getEvent)
+	vecClock.Reset(validators, flashable.Wrap(memorydb.New(), flashable.TestSizeLimit), getEvent)
 
 	capFn := func(diff idx.Event, weight pos.Weight) Metric {
 		if diff > 2 {

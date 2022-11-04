@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/batched"
 )
 
 var (
@@ -144,6 +145,22 @@ func (w *Flushable) DropNotFlushed() {
 func (w *Flushable) dropNotFlushed() {
 	w.modified.Clear()
 	*w.sizeEstimation = 0
+}
+
+func (w *Flushable) DropAll() {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	w.dropNotFlushed()
+
+	// delete all items
+	wrappedDB := batched.Wrap(w)
+	it := wrappedDB.NewIterator(nil, nil)
+	for it.Next() {
+		wrappedDB.Delete(it.Key())
+	}
+	it.Release()
+	wrappedDB.Flush()
 }
 
 // Close leaves underlying database.

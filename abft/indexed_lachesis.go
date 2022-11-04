@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/flashable"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
 )
 
@@ -34,7 +35,7 @@ type DagIndexer interface {
 	Flush()
 	DropNotFlushed()
 
-	Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event)
+	Reset(validators *pos.Validators, db kvdb.FlushableKVStore, getEvent func(hash.Event) dag.Event)
 }
 
 // New creates IndexedLachesis instance.
@@ -92,7 +93,7 @@ func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks, firstE
 			if epoch != firstEpoch {
 				p.dagIndexer.Reset(
 					p.store.GetEpochState().Validators,
-					p.store.epochTable.VectorIndex,
+					flashable.Wrap(p.store.epochTable.VectorIndex, flashable.TestSizeLimit),
 					p.input.GetEvent)
 			}
 		},

@@ -9,8 +9,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/batched"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
@@ -55,10 +53,10 @@ func NewIndex(crit func(error), callbacks Callbacks) *Engine {
 }
 
 // Reset resets buffers.
-func (vi *Engine) Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event) {
+func (vi *Engine) Reset(validators *pos.Validators, db kvdb.FlushableKVStore, getEvent func(hash.Event) dag.Event) {
 	// use wrapper to be able to drop failed events by dropping cache
 	vi.getEvent = getEvent
-	vi.vecDb = flushable.WrapWithDrop(db, func() {})
+	vi.vecDb = db
 	vi.validators = validators
 	vi.validatorIdxs = validators.Idxs()
 	vi.DropNotFlushed()
@@ -77,19 +75,9 @@ func (vi *Engine) Add(e dag.Event) error {
 	return err
 }
 
-func (vi *Engine) ReindexIfEmpty(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
-	if vi.getLastLookupKey() > idx.Event(0) {
-		return
-	}
-
+func (vi *Engine) Reindex(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
 	// delete all items in epochDB
-	wrappedDB := batched.Wrap(vi.vecDb)
-	it := wrappedDB.NewIterator(nil, nil)
-	for it.Next() {
-		wrappedDB.Delete(it.Key())
-	}
-	it.Release()
-	wrappedDB.Flush()
+	vi.vecDb.DropAll()
 
 	// re-index all epoch events
 	forEachEpochEventCallback(
