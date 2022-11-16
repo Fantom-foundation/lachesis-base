@@ -11,12 +11,12 @@ type LowestAfterI interface {
 }
 
 type HighestBeforeI interface {
-	InitWithEvent(i idx.Validator, e dag.Event, cacheID idx.Event)
+	InitWithEvent(i idx.Validator, e dag.Event, lookupKey idx.Event)
 	IsEmpty(i idx.Validator) bool
 	IsForkDetected(i idx.Validator) bool
 	Seq(i idx.Validator) idx.Event
 	MinSeq(i idx.Validator) idx.Event
-	CacheID(i idx.Validator) idx.Event
+	LookupKey(i idx.Validator) idx.Event
 	SetForkDetected(i idx.Validator)
 	CollectFrom(other HighestBeforeI, branches idx.Validator, differences []idx.Event)
 	GatherFrom(to idx.Validator, other HighestBeforeI, from []idx.Validator)
