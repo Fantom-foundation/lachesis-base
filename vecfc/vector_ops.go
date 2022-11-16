@@ -19,8 +19,8 @@ func (b *LowestAfterSeq) Visit(i idx.Validator, e dag.Event) bool {
 	return true
 }
 
-func (b *HighestBeforeSeq) InitWithEvent(i idx.Validator, e dag.Event, cacheID idx.Event) {
-	b.Set(i, BranchSeq{Seq: e.Seq(), MinSeq: e.Seq(), CacheID: cacheID})
+func (b *HighestBeforeSeq) InitWithEvent(i idx.Validator, e dag.Event, lookupKey idx.Event) {
+	b.Set(i, BranchSeq{Seq: e.Seq(), MinSeq: e.Seq(), LookupKey: lookupKey})
 }
 
 func (b *HighestBeforeSeq) IsEmpty(i idx.Validator) bool {
@@ -42,9 +42,9 @@ func (b *HighestBeforeSeq) MinSeq(i idx.Validator) idx.Event {
 	return val.MinSeq
 }
 
-func (b *HighestBeforeSeq) CacheID(i idx.Validator) idx.Event {
+func (b *HighestBeforeSeq) LookupKey(i idx.Validator) idx.Event {
 	val := b.Get(i)
-	return val.CacheID
+	return val.LookupKey
 }
 
 func (b *HighestBeforeSeq) SetForkDetected(i idx.Validator) {
@@ -88,7 +88,7 @@ func (b *HighestBeforeSeq) CollectFrom(
 					diff[branchID] += hisSeq.Seq - mySeq.Seq
 				}
 				mySeq.Seq = hisSeq.Seq
-				mySeq.CacheID = hisSeq.CacheID
+				mySeq.LookupKey = hisSeq.LookupKey
 				b.Set(branchID, mySeq)
 			}
 		}

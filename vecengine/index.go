@@ -37,6 +37,7 @@ type Engine struct {
 
 	vecDb kvdb.FlushableKVStore
 	table struct {
+		EventLookup  kvdb.Store `table:"e"`
 		EventBranch  kvdb.Store `table:"b"`
 		BranchesInfo kvdb.Store `table:"B"`
 	}
@@ -148,7 +149,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		after:  vi.callback.NewLowestAfter(idx.Validator(len(vi.bi.BranchIDCreatorIdxs))),
 	}
 
-	cacheID := vi.bi.insertEvent(e)
+	lookupKey := vi.addEventLookup(e.ID())
 
 	meBranchID, err := vi.fillGlobalBranchID(e, meIdx)
 	if err != nil {
@@ -157,7 +158,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 
 	// observed by himself
 	myVecs.after.InitWithEvent(meBranchID, e)
-	myVecs.before.InitWithEvent(meBranchID, e, cacheID)
+	myVecs.before.InitWithEvent(meBranchID, e, lookupKey)
 
 	// pre-load parents into RAM for quick access
 	parentsVecs := make([]HighestBeforeI, len(e.Parents()))
@@ -229,10 +230,10 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		if newEvents == 0 || myVecs.before.IsForkDetected(idx.Validator(branchID)) {
 			continue
 		}
-		// if b is the highest ancestor of e on this branch, then bi is its
-		// index in the Events cache, and bh is its hash
-		bi := myVecs.before.CacheID(idx.Validator(branchID))
-		bh := vi.bi.Events[bi]
+		// if b is the highest ancestor of e on this branch, then blid is its
+		// key in the EventLookup, and bh is its hash
+		blid := myVecs.before.LookupKey(idx.Validator(branchID))
+		bh := vi.lookupEvent(blid)
 		for remaining := newEvents; remaining > 0; remaining-- {
 			wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
 			// update LowestAfter vector of the old event, because newly-connected event observes it
