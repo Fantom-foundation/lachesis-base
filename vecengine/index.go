@@ -37,7 +37,7 @@ type Engine struct {
 
 	vecDb kvdb.FlushableKVStore
 	table struct {
-		EventLookup  kvdb.Store `table:"e"`
+		EventLookup  kvdb.Store `table:"l"`
 		EventBranch  kvdb.Store `table:"b"`
 		BranchesInfo kvdb.Store `table:"B"`
 	}

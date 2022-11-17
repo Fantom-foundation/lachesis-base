@@ -25,7 +25,7 @@ func (vi *Engine) lookupEvent(key idx.Event) hash.Event {
 }
 
 func (vi *Engine) setLastLookupKey(key idx.Event) {
-	k := []byte("l")
+	k := []byte("ll")
 	err := vi.table.EventLookup.Put(k, key.Bytes())
 	if err != nil {
 		vi.crit(err)
@@ -33,7 +33,7 @@ func (vi *Engine) setLastLookupKey(key idx.Event) {
 }
 
 func (vi *Engine) getLastLookupKey() idx.Event {
-	k := []byte("l")
+	k := []byte("ll")
 	w, err := vi.table.EventLookup.Get(k)
 	if err != nil {
 		vi.crit(err)
