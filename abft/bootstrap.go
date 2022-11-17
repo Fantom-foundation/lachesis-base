@@ -44,9 +44,11 @@ func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	if err != nil {
 		return err
 	}
+
 	if p.callback.EpochDBLoaded != nil {
 		p.callback.EpochDBLoaded(p.store.GetEpoch())
 	}
+
 	p.election = election.New(p.store.GetValidators(), p.store.GetLastDecidedFrame()+1, p.dagIndex.ForklessCause, p.store.GetFrameRoots)
 
 	// events reprocessing
