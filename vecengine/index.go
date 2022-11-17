@@ -63,6 +63,7 @@ func (vi *Engine) Reset(validators *pos.Validators, db kvdb.Store, getEvent func
 	vi.DropNotFlushed()
 
 	table.MigrateTables(&vi.table, vi.vecDb)
+
 	if vi.callback.OnDbReset != nil {
 		vi.callback.OnDbReset(vi.vecDb)
 	}

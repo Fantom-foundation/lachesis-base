@@ -60,13 +60,20 @@ func TestRestart_2_8_10(t *testing.T) {
 }
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
-	testRestartAndReset(t, weights, false, cheatersCount, false)
-	testRestartAndReset(t, weights, false, cheatersCount, true)
-	testRestartAndReset(t, weights, true, 0, false)
-	testRestartAndReset(t, weights, true, 0, true)
+	testRestartAndReset(t, weights, false, cheatersCount, false, true)
+	testRestartAndReset(t, weights, false, cheatersCount, false, false)
+
+	testRestartAndReset(t, weights, false, cheatersCount, true, true)
+	testRestartAndReset(t, weights, false, cheatersCount, true, false)
+
+	testRestartAndReset(t, weights, true, 0, false, true)
+	testRestartAndReset(t, weights, true, 0, false, false)
+
+	testRestartAndReset(t, weights, true, 0, true, true)
+	testRestartAndReset(t, weights, true, 0, true, false)
 }
 
-func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool) {
+func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool, copyDB bool) {
 	assertar := assert.New(t)
 
 	const (
@@ -167,11 +174,13 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 			}
 			restartEpochDB := memorydb.New()
 			{
-				it := prev.store.epochDB.NewIterator(nil, nil)
-				for it.Next() {
-					assertar.NoError(restartEpochDB.Put(it.Key(), it.Value()))
+				if copyDB {
+					it := prev.store.epochDB.NewIterator(nil, nil)
+					for it.Next() {
+						assertar.NoError(restartEpochDB.Put(it.Key(), it.Value()))
+					}
+					it.Release()
 				}
-				it.Release()
 			}
 			restartEpoch := prev.store.GetEpoch()
 			store.getEpochDB = func(epoch idx.Epoch) kvdb.Store {

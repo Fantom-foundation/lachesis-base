@@ -87,6 +87,7 @@ func (p *Orderer) handleElection(selfParentFrame idx.Frame, root dag.Event) erro
 		if sealed {
 			break
 		}
+
 		sealed, err = p.bootstrapElection()
 		if err != nil {
 			return err
