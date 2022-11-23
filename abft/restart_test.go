@@ -61,16 +61,16 @@ func TestRestart_2_8_10(t *testing.T) {
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	testRestartAndReset(t, weights, false, cheatersCount, false, true)
-	testRestartAndReset(t, weights, false, cheatersCount, false, false)
+	// testRestartAndReset(t, weights, false, cheatersCount, false, false)
 
 	testRestartAndReset(t, weights, false, cheatersCount, true, true)
-	testRestartAndReset(t, weights, false, cheatersCount, true, false)
+	// testRestartAndReset(t, weights, false, cheatersCount, true, false)
 
 	testRestartAndReset(t, weights, true, 0, false, true)
-	testRestartAndReset(t, weights, true, 0, false, false)
+	// testRestartAndReset(t, weights, true, 0, false, false)
 
 	testRestartAndReset(t, weights, true, 0, true, true)
-	testRestartAndReset(t, weights, true, 0, true, false)
+	// testRestartAndReset(t, weights, true, 0, true, false)
 }
 
 func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool, copyDB bool) {

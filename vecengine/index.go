@@ -76,6 +76,27 @@ func (vi *Engine) Add(e dag.Event) error {
 	return err
 }
 
+func (vi *Engine) Reindex(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
+	// delete all items in epochDB
+	it := vi.vecDb.NewIterator(nil, nil)
+	defer it.Release()
+	batch := vi.vecDb.NewBatch()
+	for it.Next() {
+		batch.Delete(it.Key())
+	}
+	batch.Write()
+
+	// re-index all epoch events
+	forEachEpochEventCallback(
+		func(e dag.Event) bool {
+			if err := vi.Add(e); err != nil {
+				return false
+			}
+			return true
+		},
+	)
+}
+
 // Flush writes vector clocks to persistent store.
 func (vi *Engine) Flush() {
 	if vi.bi != nil {
