@@ -35,6 +35,7 @@ type DagIndexer interface {
 	DropNotFlushed()
 
 	Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event)
+	Reindex(callback func(onEvent func(event dag.Event) bool))
 }
 
 // New creates IndexedLachesis instance.
@@ -89,45 +90,19 @@ func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error 
 			if base.EpochDBLoaded != nil {
 				base.EpochDBLoaded(epoch)
 			}
-			p.reindex()
+			p.dagIndexer.Reset(
+				p.store.GetEpochState().Validators,
+				p.store.epochTable.VectorIndex,
+				p.input.GetEvent)
+		},
+		Reindex: func() {
+			if base.Reindex != nil {
+				base.Reindex()
+			}
+			p.Reindex(p.dagIndexer)
 		},
 	}
 	return p.Lachesis.BootstrapWithOrderer(callback, ordererCallbacks)
-}
-
-// reindex deletes everything in the epoch-db, reset's the underlying vector-engine,
-// and re-indexes all the epoch events.
-func (p *IndexedLachesis) reindex() {
-	// delete all items in epochDB
-	it := p.store.epochDB.NewIterator(nil, nil)
-	defer it.Release()
-	batch := p.store.epochDB.NewBatch()
-	for it.Next() {
-		batch.Delete(it.Key())
-	}
-	batch.Write()
-
-	// reset EpochState and LastDecidedState
-	p.store.applyGenesis(p.store.GetEpoch(), p.store.GetEpochState().Validators)
-
-	// reset the underlying vector engine
-	p.dagIndexer.Reset(p.store.GetEpochState().Validators, p.store.epochTable.VectorIndex, p.input.GetEvent)
-
-	// re-index all epoch events
-	p.input.ForEachEpochEvent(
-		p.store.GetEpoch(),
-		func(e dag.Event) bool {
-			if err := p.dagIndexer.Add(e); err != nil {
-				return false
-			}
-			// check frame & isRoot
-			selfParentFrame, frameIdx := p.calcFrameIdx(e, false)
-			if selfParentFrame != frameIdx {
-				p.store.AddRoot(selfParentFrame, e)
-			}
-			return true
-		},
-	)
 }
 
 type uniqueID struct {
