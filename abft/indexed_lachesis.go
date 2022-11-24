@@ -82,7 +82,7 @@ func (p *IndexedLachesis) Process(e dag.Event) (err error) {
 	return nil
 }
 
-func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error {
+func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks, firstEpoch idx.Epoch) error {
 	base := p.Lachesis.OrdererCallbacks()
 	ordererCallbacks := OrdererCallbacks{
 		ApplyAtropos: base.ApplyAtropos,
@@ -90,16 +90,13 @@ func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks) error 
 			if base.EpochDBLoaded != nil {
 				base.EpochDBLoaded(epoch)
 			}
-			p.dagIndexer.Reset(
-				p.store.GetEpochState().Validators,
-				p.store.epochTable.VectorIndex,
-				p.input.GetEvent)
-		},
-		Reindex: func() {
-			if base.Reindex != nil {
-				base.Reindex()
+			// reset and reindex
+			if epoch != firstEpoch {
+				p.dagIndexer.Reset(
+					p.store.GetEpochState().Validators,
+					p.store.epochTable.VectorIndex,
+					p.input.GetEvent)
 			}
-			p.Reindex(p.dagIndexer)
 		},
 	}
 	return p.Lachesis.BootstrapWithOrderer(callback, ordererCallbacks)

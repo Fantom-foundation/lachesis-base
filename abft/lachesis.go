@@ -98,19 +98,6 @@ func (p *Lachesis) BootstrapWithOrderer(callback lachesis.ConsensusCallbacks, or
 	return nil
 }
 
-func (p *Lachesis) Reindex(dagIndexer DagIndexer) {
-	dagIndexer.Reset(
-		p.store.GetEpochState().Validators,
-		p.store.epochTable.VectorIndex,
-		p.input.GetEvent,
-	)
-	dagIndexer.Reindex(
-		func(onEvent func(e dag.Event) bool) {
-			p.input.ForEachEpochEvent(p.store.GetEpochState().Epoch, onEvent)
-		},
-	)
-}
-
 func (p *Lachesis) OrdererCallbacks() OrdererCallbacks {
 	return OrdererCallbacks{
 		ApplyAtropos: p.applyAtropos,
