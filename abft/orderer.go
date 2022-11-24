@@ -11,7 +11,6 @@ import (
 type OrdererCallbacks struct {
 	ApplyAtropos  func(decidedFrame idx.Frame, atropos hash.Event) (sealEpoch *pos.Validators)
 	EpochDBLoaded func(idx.Epoch)
-	Reindex       func()
 }
 
 type OrdererDagIndex interface {
