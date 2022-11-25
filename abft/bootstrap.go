@@ -31,14 +31,6 @@ func (es EpochState) String() string {
 	return fmt.Sprintf("%d/%s", es.Epoch, es.Validators.String())
 }
 
-func (p *Orderer) IsLookupEnabled(epoch idx.Epoch) bool {
-	return p.store.isLookupEnabled(epoch)
-}
-
-func (p *Orderer) SetLookupEnabled(epoch idx.Epoch) {
-	p.store.setLookupEnabled(epoch)
-}
-
 // Bootstrap restores abft's state from store.
 func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	if p.election != nil {
