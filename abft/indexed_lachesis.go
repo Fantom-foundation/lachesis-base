@@ -35,7 +35,6 @@ type DagIndexer interface {
 	DropNotFlushed()
 
 	Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event)
-	Reindex(callback func(onEvent func(event dag.Event) bool))
 }
 
 // New creates IndexedLachesis instance.
@@ -90,7 +89,6 @@ func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks, firstE
 			if base.EpochDBLoaded != nil {
 				base.EpochDBLoaded(epoch)
 			}
-			// reset and reindex
 			if epoch != firstEpoch {
 				p.dagIndexer.Reset(
 					p.store.GetEpochState().Validators,
