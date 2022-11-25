@@ -77,6 +77,10 @@ func (vi *Engine) Add(e dag.Event) error {
 }
 
 func (vi *Engine) Reindex(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
+	if vi.getLastLookupKey() > idx.Event(0) {
+		return
+	}
+
 	// delete all items in epochDB
 	it := vi.vecDb.NewIterator(nil, nil)
 	defer it.Release()
