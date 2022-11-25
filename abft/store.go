@@ -22,7 +22,6 @@ type Store struct {
 	table  struct {
 		LastDecidedState kvdb.Store `table:"c"`
 		EpochState       kvdb.Store `table:"e"`
-		LookupEnabled    kvdb.Store `table:"led"`
 	}
 
 	cache struct {
