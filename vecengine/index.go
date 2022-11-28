@@ -89,7 +89,7 @@ func (vi *Engine) ReindexIfEmpty(forEachEpochEventCallback func(onEvent func(eve
 		wrappedDB.Delete(it.Key())
 	}
 	it.Release()
-	wrappedDB.Close()
+	wrappedDB.Flush()
 
 	// re-index all epoch events
 	forEachEpochEventCallback(
