@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/batched"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
@@ -76,19 +77,19 @@ func (vi *Engine) Add(e dag.Event) error {
 	return err
 }
 
-func (vi *Engine) Reindex(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
+func (vi *Engine) ReindexIfEmpty(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
 	if vi.getLastLookupKey() > idx.Event(0) {
 		return
 	}
 
 	// delete all items in epochDB
-	it := vi.vecDb.NewIterator(nil, nil)
-	defer it.Release()
-	batch := vi.vecDb.NewBatch()
+	wrappedDB := batched.Wrap(vi.vecDb)
+	it := wrappedDB.NewIterator(nil, nil)
 	for it.Next() {
-		batch.Delete(it.Key())
+		wrappedDB.Delete(it.Key())
 	}
-	batch.Write()
+	it.Release()
+	wrappedDB.Close()
 
 	// re-index all epoch events
 	forEachEpochEventCallback(
