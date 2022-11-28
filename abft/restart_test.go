@@ -199,7 +199,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 				store.GetEpochState().Validators,
 				store.epochTable.VectorIndex,
 				inputs[RESTORED].GetEvent)
-			dagIndexer.Reindex(func(onEvent func(e dag.Event) bool) {
+			dagIndexer.ReindexIfEmpty(func(onEvent func(e dag.Event) bool) {
 				inputs[RESTORED].ForEachEpochEvent(store.GetEpochState().Epoch, onEvent)
 			})
 
