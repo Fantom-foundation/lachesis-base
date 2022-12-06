@@ -84,27 +84,31 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 		Y: 129 * opt.MiB,
 	},
 	{
-		X: 585 * opt.MiB,
-		Y: 437 * opt.MiB,
+		X: 715 * opt.MiB,
+		Y: 216 * opt.MiB,
 	},
 	{
 		X: 889 * opt.MiB,
 		Y: 300 * opt.MiB,
 	},
 	{
-		X: 948 * opt.MiB,
+		X: 1100 * opt.MiB,
 		Y: 437 * opt.MiB,
 	},
 	{
-		X: 1770 * opt.MiB,
+		X: 1530 * opt.MiB,
+		Y: 534 * opt.MiB,
+	},
+	{
+		X: 1900 * opt.MiB,
 		Y: 703 * opt.MiB,
 	},
 	{
-		X: 2470 * opt.MiB,
+		X: 2800 * opt.MiB,
 		Y: 1000 * opt.MiB,
 	},
 	{
-		X: 2470000 * opt.MiB,
+		X: 2800000 * opt.MiB,
 		Y: 1000000 * opt.MiB,
 	},
 })
