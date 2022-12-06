@@ -72,14 +72,16 @@ func (t *Table) NewBatch() kvdb.Batch {
 }
 
 func incPrefix(prefix []byte) []byte {
-	trimmedPrefix := common.TrimLeftZeroes(prefix)
-	endBn := new(big.Int).SetBytes(trimmedPrefix)
+	if len(prefix) == 0 {
+		return nil
+	}
+	endBn := new(big.Int).SetBytes(prefix)
 	endBn.Add(endBn, common.Big1)
-	if len(endBn.Bytes()) > len(trimmedPrefix) {
+	if len(endBn.Bytes()) > len(prefix) {
 		// overflow
 		return nil
 	}
-	res := make([]byte, len(prefix)-len(trimmedPrefix), len(prefix))
+	res := make([]byte, len(prefix)-len(endBn.Bytes()), len(prefix))
 	return append(res, endBn.Bytes()...)
 }
 
