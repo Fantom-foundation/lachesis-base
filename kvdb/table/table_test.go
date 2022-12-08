@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/status-im/keycard-go/hexutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
@@ -122,6 +124,23 @@ func TestTable(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPrefixInc(t *testing.T) {
+	require.Nil(t, incPrefix(hexutils.HexToBytes("ff")))
+	require.Equal(t, hexutils.HexToBytes("ff"), incPrefix(hexutils.HexToBytes("fe")))
+	require.Equal(t, hexutils.HexToBytes("02"), incPrefix(hexutils.HexToBytes("01")))
+	require.Equal(t, hexutils.HexToBytes("01"), incPrefix(hexutils.HexToBytes("00")))
+
+	require.Equal(t, hexutils.HexToBytes("0100"), incPrefix(hexutils.HexToBytes("00ff")))
+	require.Equal(t, hexutils.HexToBytes("00ff"), incPrefix(hexutils.HexToBytes("00fe")))
+	require.Equal(t, hexutils.HexToBytes("0002"), incPrefix(hexutils.HexToBytes("0001")))
+	require.Equal(t, hexutils.HexToBytes("0001"), incPrefix(hexutils.HexToBytes("0000")))
+
+	require.Nil(t, incPrefix(hexutils.HexToBytes("ffff")))
+	require.Equal(t, hexutils.HexToBytes("ffff"), incPrefix(hexutils.HexToBytes("fffe")))
+	require.Equal(t, hexutils.HexToBytes("ff02"), incPrefix(hexutils.HexToBytes("ff01")))
+	require.Equal(t, hexutils.HexToBytes("ff01"), incPrefix(hexutils.HexToBytes("ff00")))
 }
 
 func join(aa ...map[string][]byte) map[string][]byte {
