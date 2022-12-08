@@ -254,7 +254,7 @@ func (db *Database) Stat(property string) (string, error) {
 		if err := db.underlying.Stats(dbStats); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Size(B):%d", dbStats.LevelSizes.Sum()), nil
+		return fmt.Sprintf("%d", dbStats.LevelSizes.Sum()), nil
 	}
 	prop := fmt.Sprintf("leveldb.%s", property)
 	stats, err := db.underlying.GetProperty(prop)
