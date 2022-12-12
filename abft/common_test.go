@@ -75,34 +75,37 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 		epochBlocks:     map[idx.Epoch]idx.Frame{},
 	}
 
-	err = extended.Bootstrap(lachesis.ConsensusCallbacks{
-		BeginBlock: func(block *lachesis.Block) lachesis.BlockCallbacks {
-			return lachesis.BlockCallbacks{
-				EndBlock: func() (sealEpoch *pos.Validators) {
-					// track blocks
-					key := BlockKey{
-						Epoch: extended.store.GetEpoch(),
-						Frame: extended.store.GetLastDecidedFrame() + 1,
-					}
-					extended.blocks[key] = &BlockResult{
-						Atropos:    block.Atropos,
-						Cheaters:   block.Cheaters,
-						Validators: extended.store.GetValidators(),
-					}
-					// check that prev block exists
-					if extended.lastBlock.Epoch != key.Epoch && key.Frame != 1 {
-						panic("first frame must be 1")
-					}
-					extended.epochBlocks[key.Epoch]++
-					extended.lastBlock = key
-					if extended.applyBlock != nil {
-						return extended.applyBlock(block)
-					}
-					return nil
-				},
-			}
+	err = extended.Bootstrap(
+		lachesis.ConsensusCallbacks{
+			BeginBlock: func(block *lachesis.Block) lachesis.BlockCallbacks {
+				return lachesis.BlockCallbacks{
+					EndBlock: func() (sealEpoch *pos.Validators) {
+						// track blocks
+						key := BlockKey{
+							Epoch: extended.store.GetEpoch(),
+							Frame: extended.store.GetLastDecidedFrame() + 1,
+						}
+						extended.blocks[key] = &BlockResult{
+							Atropos:    block.Atropos,
+							Cheaters:   block.Cheaters,
+							Validators: extended.store.GetValidators(),
+						}
+						// check that prev block exists
+						if extended.lastBlock.Epoch != key.Epoch && key.Frame != 1 {
+							panic("first frame must be 1")
+						}
+						extended.epochBlocks[key.Epoch]++
+						extended.lastBlock = key
+						if extended.applyBlock != nil {
+							return extended.applyBlock(block)
+						}
+						return nil
+					},
+				}
+			},
 		},
-	})
+		0,
+	)
 	if err != nil {
 		panic(err)
 	}

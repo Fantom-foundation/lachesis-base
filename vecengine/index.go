@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/batched"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
@@ -37,6 +38,7 @@ type Engine struct {
 
 	vecDb kvdb.FlushableKVStore
 	table struct {
+		EventLookup  kvdb.Store `table:"l"`
 		EventBranch  kvdb.Store `table:"b"`
 		BranchesInfo kvdb.Store `table:"B"`
 	}
@@ -62,6 +64,7 @@ func (vi *Engine) Reset(validators *pos.Validators, db kvdb.Store, getEvent func
 	vi.DropNotFlushed()
 
 	table.MigrateTables(&vi.table, vi.vecDb)
+
 	if vi.callback.OnDbReset != nil {
 		vi.callback.OnDbReset(vi.vecDb)
 	}
@@ -72,6 +75,31 @@ func (vi *Engine) Add(e dag.Event) error {
 	vi.InitBranchesInfo()
 	_, err := vi.fillEventVectors(e)
 	return err
+}
+
+func (vi *Engine) ReindexIfEmpty(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
+	if vi.getLastLookupKey() > idx.Event(0) {
+		return
+	}
+
+	// delete all items in epochDB
+	wrappedDB := batched.Wrap(vi.vecDb)
+	it := wrappedDB.NewIterator(nil, nil)
+	for it.Next() {
+		wrappedDB.Delete(it.Key())
+	}
+	it.Release()
+	wrappedDB.Flush()
+
+	// re-index all epoch events
+	forEachEpochEventCallback(
+		func(e dag.Event) bool {
+			if err := vi.Add(e); err != nil {
+				return false
+			}
+			return true
+		},
+	)
 }
 
 // Flush writes vector clocks to persistent store.
@@ -148,27 +176,40 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		after:  vi.callback.NewLowestAfter(idx.Validator(len(vi.bi.BranchIDCreatorIdxs))),
 	}
 
+	lookupKey := vi.addEventLookup(e.ID())
+
 	meBranchID, err := vi.fillGlobalBranchID(e, meIdx)
+	if err != nil {
+		return myVecs, err
+	}
+
+	// observed by himself
+	myVecs.after.InitWithEvent(meBranchID, e)
+	myVecs.before.InitWithEvent(meBranchID, e, lookupKey)
 
 	// pre-load parents into RAM for quick access
 	parentsVecs := make([]HighestBeforeI, len(e.Parents()))
-	parentsBranchIDs := make([]idx.Validator, len(e.Parents()))
 	for i, p := range e.Parents() {
-		parentsBranchIDs[i] = vi.GetEventBranchID(p)
 		parentsVecs[i] = vi.callback.GetHighestBefore(p)
 		if parentsVecs[i] == nil {
 			return myVecs, fmt.Errorf("processed out of order, parent not found (inconsistent DB), parent=%s", p.String())
 		}
 	}
 
-	// observed by himself
-	myVecs.after.InitWithEvent(meBranchID, e)
-	myVecs.before.InitWithEvent(meBranchID, e)
-
-	for _, pVec := range parentsVecs {
-		// calculate HighestBefore  Detect forks for a case when parent observes a fork
-		myVecs.before.CollectFrom(pVec, idx.Validator(len(vi.bi.BranchIDCreatorIdxs)))
+	// newEvents tracks new events by branch ID (events that weren't known by e's
+	// self-parent)
+	newEvents := make([]idx.Event, len(vi.bi.BranchIDCreatorIdxs)) // branchID -> number of new events
+	for i, pVec := range parentsVecs {
+		diff := newEvents
+		if i == 0 && e.SelfParent() != nil {
+			diff = nil
+		}
+		myVecs.before.CollectFrom(
+			pVec,
+			idx.Validator(len(vi.bi.BranchIDCreatorIdxs)),
+			diff)
 	}
+
 	// Detect forks, which were not observed by parents
 	if vi.AtLeastOneFork() {
 		for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
@@ -208,20 +249,31 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 		}
 	}
 
-	// graph traversal starting from e, but excluding e
-	onWalk := func(walk hash.Event) (godeeper bool) {
-		wLowestAfterSeq := vi.callback.GetLowestAfter(walk)
-
-		// update LowestAfter vector of the old event, because newly-connected event observes it
-		if wLowestAfterSeq.Visit(meBranchID, e) {
-			vi.callback.SetLowestAfter(walk, wLowestAfterSeq)
-			return true
+	// for each branch where new events were inserted, start at the highest
+	// ancestor of e on that branch and go down, from self-parent to self-parent,
+	// updating each one's lowest descendants, until all new events have been
+	// processed.
+	for branchID, newEvents := range newEvents {
+		if newEvents == 0 || myVecs.before.IsForkDetected(idx.Validator(branchID)) {
+			continue
 		}
-		return false
-	}
-	err = vi.DfsSubgraph(e, onWalk)
-	if err != nil {
-		vi.crit(err)
+		// if b is the highest ancestor of e on this branch, then blid is its
+		// key in the EventLookup, and bh is its hash
+		blid := myVecs.before.LookupKey(idx.Validator(branchID))
+		bh := vi.lookupEvent(blid)
+		for remaining := newEvents; remaining > 0; remaining-- {
+			wLowestAfterSeq := vi.callback.GetLowestAfter(bh)
+			// update LowestAfter vector of the old event, because newly-connected event observes it
+			if wLowestAfterSeq.Visit(meBranchID, e) {
+				vi.callback.SetLowestAfter(bh, wLowestAfterSeq)
+				le := vi.getEvent(bh)
+				if sp := le.SelfParent(); sp != nil {
+					bh = *sp
+					continue
+				}
+			}
+			break
+		}
 	}
 
 	// store calculated vectors

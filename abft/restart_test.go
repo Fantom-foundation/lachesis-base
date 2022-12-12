@@ -60,13 +60,20 @@ func TestRestart_2_8_10(t *testing.T) {
 }
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
-	testRestartAndReset(t, weights, false, cheatersCount, false)
-	testRestartAndReset(t, weights, false, cheatersCount, true)
-	testRestartAndReset(t, weights, true, 0, false)
-	testRestartAndReset(t, weights, true, 0, true)
+	testRestartAndReset(t, weights, false, cheatersCount, false, true)
+	testRestartAndReset(t, weights, false, cheatersCount, false, false)
+
+	testRestartAndReset(t, weights, false, cheatersCount, true, true)
+	testRestartAndReset(t, weights, false, cheatersCount, true, false)
+
+	testRestartAndReset(t, weights, true, 0, false, true)
+	testRestartAndReset(t, weights, true, 0, false, false)
+
+	testRestartAndReset(t, weights, true, 0, true, true)
+	testRestartAndReset(t, weights, true, 0, true, false)
 }
 
-func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool) {
+func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool, copyIndexTable bool) {
 	assertar := assert.New(t)
 
 	const (
@@ -169,6 +176,9 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 			{
 				it := prev.store.epochDB.NewIterator(nil, nil)
 				for it.Next() {
+					if !copyIndexTable && it.Key()[0] == byte('v') {
+						continue
+					}
 					assertar.NoError(restartEpochDB.Put(it.Key(), it.Value()))
 				}
 				it.Release()
@@ -181,8 +191,20 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 				return memorydb.New()
 			}
 
-			restored := NewIndexedLachesis(store, prev.input, &adapters.VectorToDagIndexer{vecfc.NewIndex(prev.crit, vecfc.LiteConfig())}, prev.crit, prev.config)
-			assertar.NoError(restored.Bootstrap(prev.callback))
+			dagIndexer := &adapters.VectorToDagIndexer{vecfc.NewIndex(prev.crit, vecfc.LiteConfig())}
+
+			// reset and reindex
+			store.openEpochDB(restartEpoch)
+			dagIndexer.Reset(
+				store.GetEpochState().Validators,
+				store.epochTable.VectorIndex,
+				inputs[RESTORED].GetEvent)
+			dagIndexer.ReindexIfEmpty(func(onEvent func(e dag.Event) bool) {
+				inputs[RESTORED].ForEachEpochEvent(store.GetEpochState().Epoch, onEvent)
+			})
+
+			restored := NewIndexedLachesis(store, inputs[RESTORED], dagIndexer, prev.crit, prev.config)
+			assertar.NoError(restored.Bootstrap(prev.callback, restartEpoch))
 
 			lchs[RESTORED].IndexedLachesis = restored
 		}

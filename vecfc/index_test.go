@@ -10,34 +10,17 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 )
 
-var (
-	testASCIIScheme = `
-a1.0   b1.0   c1.0   d1.0   e1.0
-║      ║      ║      ║      ║
-║      ╠──────╫───── d2.0   ║
-║      ║      ║      ║      ║
-║      b2.1 ──╫──────╣      e2.1
-║      ║      ║      ║      ║
-║      ╠──────╫───── d3.1   ║
-a2.1 ──╣      ║      ║      ║
-║      ║      ║      ║      ║
-║      b3.2 ──╣      ║      ║
-║      ║      ║      ║      ║
-║      ╠──────╫───── d4.2   ║
-║      ║      ║      ║      ║
-║      ╠───── c2.2   ║      e3.2
-║      ║      ║      ║      ║
-`
-)
-
 func BenchmarkIndex_Add(b *testing.B) {
 	b.StopTimer()
+
+	nodes := tdag.GenNodes(70)
 	ordered := make(dag.Events, 0)
-	nodes, _, _ := tdag.ASCIIschemeForEach(testASCIIScheme, tdag.ForEachEvent{
+	tdag.ForEachRandEvent(nodes, 10, 10, nil, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
 	})
+
 	validatorsBuilder := pos.NewBuilder()
 	for _, peer := range nodes {
 		validatorsBuilder.Set(peer, 1)

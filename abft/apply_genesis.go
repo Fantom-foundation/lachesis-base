@@ -40,5 +40,4 @@ func (s *Store) applyGenesis(epoch idx.Epoch, validators *pos.Validators) {
 
 	s.SetEpochState(es)
 	s.SetLastDecidedState(ds)
-
 }

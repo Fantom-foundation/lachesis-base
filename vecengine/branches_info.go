@@ -37,6 +37,7 @@ func newInitialBranchesInfo(validators *pos.Validators) *BranchesInfo {
 		branchIDByCreators[i] = make([]idx.Validator, 1, validators.Len()/2+1)
 		branchIDByCreators[i][0] = idx.Validator(i)
 	}
+
 	return &BranchesInfo{
 		BranchIDLastSeq:     branchIDLastSeq,
 		BranchIDCreatorIdxs: branchIDCreatorIdxs,
