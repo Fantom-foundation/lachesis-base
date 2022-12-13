@@ -57,7 +57,7 @@ func (w *backedMap) add(key string, val []byte) {
 	w.cache[key] = val
 	if len(w.cache) > lenBefore {
 		w.cacheIndex = append(w.cacheIndex, key)
-		w.cacheSizeEstimation += 2*len(key) + len(val)
+		w.cacheSizeEstimation += MapConst + 2*len(key) + len(val)
 	}
 }
 

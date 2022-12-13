@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/Fantom-foundation/lachesis-base/kvdb/devnulldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/stretchr/testify/assert"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -163,7 +166,45 @@ func TestFlashableUpdateValue(t *testing.T) {
 	assert.Equal(t, 2, len(flashable.underlying.cache))
 	assert.Equal(t, 2, len(flashable.underlying.cacheIndex))
 	assert.Equal(t, 172, flashable.underlying.cacheSizeEstimation)
+}
 
+func TestSize(t *testing.T) {
+	for _, numItems := range []int{10, 100, 1000, 10000, 100000, 1000000, 10000000} {
+		t.Run(strconv.Itoa(numItems), func(t *testing.T) {
+			res := testing.Benchmark(func(b *testing.B) {
+				b.ReportAllocs()
+				flashable := Wrap(devnulldb.New(), 1_000_000_000)
+				loopOp(
+					func(key []byte, value []byte) {
+						err := flashable.Put(key, value)
+						if err != nil {
+							t.Error(err)
+						}
+						flashable.Flush()
+					},
+					numItems,
+				)
+				runtime.KeepAlive(flashable) // prevent GC
+			})
+			s := res.MemBytes / uint64(numItems)
+			fmt.Printf("items: %d, avg bytes/item: %v\n", numItems, s)
+		})
+	}
+}
+
+func BenchmarkPutAndFlush(b *testing.B) {
+	b.ReportAllocs()
+	flashable := Wrap(devnulldb.New(), 1_000_000_000)
+	loopOp(
+		func(key []byte, value []byte) {
+			err := flashable.Put(key, value)
+			if err != nil {
+				b.Error(err)
+			}
+			flashable.Flush()
+		},
+		1000000,
+	)
 }
 
 func loopOp(operation func(key []byte, val []byte), iterations int) {

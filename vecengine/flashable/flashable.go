@@ -13,6 +13,10 @@ var (
 	errInconsistent   = errors.New("flashable - inconsistent db")
 )
 
+// MapConst is an approximation of the number of extra bytes used by native go
+// maps when adding an item to a map.
+const MapConst = 100
+
 // Flashable is a fast, append only, Flushable intended for the vecengine.
 // It does not implement all of the Flushable interface, just what is needed by
 // the vecengine.
@@ -74,7 +78,7 @@ func (w *Flashable) Put(key []byte, value []byte) error {
 		return errors.New("flashable: key or value is nil")
 	}
 	w.modified[string(key)] = common.CopyBytes(value)
-	w.sizeEstimation += len(key) + len(value)
+	w.sizeEstimation += MapConst + len(key) + len(value)
 	return nil
 }
 
