@@ -106,7 +106,7 @@ type FlushableKVStore interface {
 	NotFlushedSizeEst() int
 	Flush() error
 	DropNotFlushed()
-	DropAll()
+	DeleteAll()
 }
 
 // DBProducer represents real db producer.

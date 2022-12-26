@@ -108,9 +108,9 @@ func (w *VecFlushable) DropNotFlushed() {
 	w.clearModified()
 }
 
-func (w *VecFlushable) DropAll() {
+func (w *VecFlushable) DeleteAll() {
 	w.DropNotFlushed()
-	w.underlying.dropAll()
+	w.underlying.deleteAll()
 }
 
 func (w *VecFlushable) Close() error {

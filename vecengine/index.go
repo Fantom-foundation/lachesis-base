@@ -77,7 +77,7 @@ func (vi *Engine) Add(e dag.Event) error {
 
 func (vi *Engine) Reindex(forEachEpochEventCallback func(onEvent func(event dag.Event) bool)) {
 	// delete all items in epochDB
-	vi.vecDb.DropAll()
+	vi.vecDb.DeleteAll()
 
 	// re-index all epoch events
 	forEachEpochEventCallback(

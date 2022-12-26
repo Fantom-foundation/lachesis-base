@@ -147,7 +147,7 @@ func (w *Flushable) dropNotFlushed() {
 	*w.sizeEstimation = 0
 }
 
-func (w *Flushable) DropAll() {
+func (w *Flushable) DeleteAll() {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 

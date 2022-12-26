@@ -112,7 +112,7 @@ func (w *backedMap) unloadIfNecessary() error {
 	return nil
 }
 
-func (w *backedMap) dropAll() {
+func (w *backedMap) deleteAll() {
 	w.cache = make(map[string][]byte)
 	w.cacheIndex = []string{}
 	w.cacheSizeEstimation = 0
