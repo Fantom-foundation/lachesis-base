@@ -1,4 +1,4 @@
-package flashable
+package vecflushable
 
 import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// TestSizeLimit is used as the limit in unit-test of packages that use flashable
+// TestSizeLimit is used as the limit in unit-test of packages that use vecflushable
 const TestSizeLimit = 100000
 
 type backedMap struct {

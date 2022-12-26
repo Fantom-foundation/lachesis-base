@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
-	"github.com/Fantom-foundation/lachesis-base/vecengine/flashable"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
@@ -24,24 +24,24 @@ func BenchmarkIndex_Add_MemoryDB(b *testing.B) {
 	benchmark_Index_Add(b, dbProducer)
 }
 
-func BenchmarkIndex_Add_Flashable_NoBackup(b *testing.B) {
+func BenchmarkIndex_Add_vecflushable_NoBackup(b *testing.B) {
 	// the total database produced by the test is roughly 2'000'000 bytes (checked
 	// against multiple runs) so we set the limit to double that to ensure that
 	// no offloading to levelDB occurs
 	dbProducer := func() kvdb.FlushableKVStore {
 		db, _ := tempLevelDB()
-		return flashable.Wrap(db, 4000000)
+		return vecflushable.Wrap(db, 4000000)
 	}
 	benchmark_Index_Add(b, dbProducer)
 }
 
-func BenchmarkIndex_Add_Flashable_Backup(b *testing.B) {
+func BenchmarkIndex_Add_vecflushable_Backup(b *testing.B) {
 	// the total database produced by the test is roughly 2'000'000 bytes (checked
 	// against multiple runs) so we set the limit to half of that to force the
 	// database to unload the cache into leveldb halfway through.
 	dbProducer := func() kvdb.FlushableKVStore {
 		db, _ := tempLevelDB()
-		return flashable.Wrap(db, 1000000)
+		return vecflushable.Wrap(db, 1000000)
 	}
 	benchmark_Index_Add(b, dbProducer)
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
-	"github.com/Fantom-foundation/lachesis-base/vecengine/flashable"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 )
 
 var _ lachesis.Consensus = (*IndexedLachesis)(nil)
@@ -93,7 +93,7 @@ func (p *IndexedLachesis) Bootstrap(callback lachesis.ConsensusCallbacks, firstE
 			if epoch != firstEpoch {
 				p.dagIndexer.Reset(
 					p.store.GetEpochState().Validators,
-					flashable.Wrap(p.store.epochTable.VectorIndex, flashable.TestSizeLimit),
+					vecflushable.Wrap(p.store.epochTable.VectorIndex, vecflushable.TestSizeLimit),
 					p.input.GetEvent)
 			}
 		},

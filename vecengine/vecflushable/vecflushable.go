@@ -1,4 +1,4 @@
-package flashable
+package vecflushable
 
 import (
 	"errors"
@@ -8,51 +8,49 @@ import (
 )
 
 var (
-	errClosed         = errors.New("flashable - database closed")
-	errNotImplemented = errors.New("flashable - not implemented")
-	errInconsistent   = errors.New("flashable - inconsistent db")
+	errClosed         = errors.New("vecflushable - database closed")
+	errNotImplemented = errors.New("vecflushable - not implemented")
+	errInconsistent   = errors.New("vecflushable - inconsistent db")
 )
 
 // MapConst is an approximation of the number of extra bytes used by native go
 // maps when adding an item to a map.
 const MapConst = 100
 
-// Flashable is a fast, append only, Flushable intended for the vecengine.
+// VecFlushable is a fast, append only, Flushable intended for the vecengine.
 // It does not implement all of the Flushable interface, just what is needed by
 // the vecengine.
-type Flashable struct {
+type VecFlushable struct {
 	modified       map[string][]byte
 	underlying     backedMap
 	sizeEstimation int
 	onDrop         func()
 }
 
-func Wrap(parent kvdb.Store, sizeLimit int) *Flashable {
+func Wrap(parent kvdb.Store, sizeLimit int) *VecFlushable {
 	if parent == nil {
 		panic("nil parent")
 	}
 	return WrapWithDrop(parent, sizeLimit, parent.Drop)
 }
 
-func WrapWithDrop(parent kvdb.Store, sizeLimit int, drop func()) *Flashable {
+func WrapWithDrop(parent kvdb.Store, sizeLimit int, drop func()) *VecFlushable {
 	if parent == nil {
 		panic("nil parent")
 	}
-	return &Flashable{
+	return &VecFlushable{
 		modified:   make(map[string][]byte),
 		underlying: *newBackedMap(parent, sizeLimit, sizeLimit/2),
 		onDrop:     drop,
 	}
 }
 
-func (w *Flashable) clearModified() {
-	for k := range w.modified {
-		delete(w.modified, k)
-	}
+func (w *VecFlushable) clearModified() {
+	w.modified = make(map[string][]byte)
 	w.sizeEstimation = 0
 }
 
-func (w *Flashable) Has(key []byte) (bool, error) {
+func (w *VecFlushable) Has(key []byte) (bool, error) {
 	if w.modified == nil {
 		return false, errClosed
 	}
@@ -63,7 +61,7 @@ func (w *Flashable) Has(key []byte) (bool, error) {
 	return w.underlying.has(key)
 }
 
-func (w *Flashable) Get(key []byte) ([]byte, error) {
+func (w *VecFlushable) Get(key []byte) ([]byte, error) {
 	if w.modified == nil {
 		return nil, errClosed
 	}
@@ -73,24 +71,24 @@ func (w *Flashable) Get(key []byte) ([]byte, error) {
 	return w.underlying.get(key)
 }
 
-func (w *Flashable) Put(key []byte, value []byte) error {
+func (w *VecFlushable) Put(key []byte, value []byte) error {
 	if value == nil || key == nil {
-		return errors.New("flashable: key or value is nil")
+		return errors.New("vecflushable: key or value is nil")
 	}
 	w.modified[string(key)] = common.CopyBytes(value)
 	w.sizeEstimation += MapConst + len(key) + len(value)
 	return nil
 }
 
-func (w *Flashable) NotFlushedPairs() int {
+func (w *VecFlushable) NotFlushedPairs() int {
 	return len(w.modified)
 }
 
-func (w *Flashable) NotFlushedSizeEst() int {
+func (w *VecFlushable) NotFlushedSizeEst() int {
 	return w.sizeEstimation
 }
 
-func (w *Flashable) Flush() error {
+func (w *VecFlushable) Flush() error {
 	if w.modified == nil {
 		return errClosed
 	}
@@ -106,16 +104,16 @@ func (w *Flashable) Flush() error {
 	return nil
 }
 
-func (w *Flashable) DropNotFlushed() {
+func (w *VecFlushable) DropNotFlushed() {
 	w.clearModified()
 }
 
-func (w *Flashable) DropAll() {
+func (w *VecFlushable) DropAll() {
 	w.DropNotFlushed()
 	w.underlying.dropAll()
 }
 
-func (w *Flashable) Close() error {
+func (w *VecFlushable) Close() error {
 	if w.modified == nil {
 		return errClosed
 	}
@@ -124,7 +122,7 @@ func (w *Flashable) Close() error {
 	return w.underlying.close()
 }
 
-func (w *Flashable) Drop() {
+func (w *VecFlushable) Drop() {
 	if w.modified != nil {
 		panic("close db first")
 	}
@@ -133,28 +131,28 @@ func (w *Flashable) Drop() {
 	}
 }
 
-/* Some methods are not implement and panic when called */
+/* Some methods are not implemented and panic when called */
 
-func (w *Flashable) Delete(key []byte) error {
+func (w *VecFlushable) Delete(key []byte) error {
 	panic(errNotImplemented)
 }
 
-func (w *Flashable) GetSnapshot() (kvdb.Snapshot, error) {
+func (w *VecFlushable) GetSnapshot() (kvdb.Snapshot, error) {
 	panic(errNotImplemented)
 }
 
-func (w *Flashable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
+func (w *VecFlushable) NewIterator(prefix []byte, start []byte) kvdb.Iterator {
 	panic(errNotImplemented)
 }
 
-func (w *Flashable) Stat(property string) (string, error) {
+func (w *VecFlushable) Stat(property string) (string, error) {
 	panic(errNotImplemented)
 }
 
-func (w *Flashable) Compact(start []byte, limit []byte) error {
+func (w *VecFlushable) Compact(start []byte, limit []byte) error {
 	panic(errNotImplemented)
 }
 
-func (w *Flashable) NewBatch() kvdb.Batch {
+func (w *VecFlushable) NewBatch() kvdb.Batch {
 	panic(errNotImplemented)
 }

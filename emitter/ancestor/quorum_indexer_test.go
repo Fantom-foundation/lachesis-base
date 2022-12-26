@@ -16,7 +16,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/utils"
 	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
-	"github.com/Fantom-foundation/lachesis-base/vecengine/flashable"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 
@@ -113,7 +113,7 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 	}
 
 	vecClock := vecfc.NewIndex(crit, vecfc.LiteConfig())
-	vecClock.Reset(validators, flashable.Wrap(memorydb.New(), flashable.TestSizeLimit), getEvent)
+	vecClock.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	capFn := func(diff idx.Event, weight pos.Weight) Metric {
 		if diff > 2 {

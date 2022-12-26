@@ -16,7 +16,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/Fantom-foundation/lachesis-base/lachesis"
 	"github.com/Fantom-foundation/lachesis-base/utils/adapters"
-	"github.com/Fantom-foundation/lachesis-base/vecengine/flashable"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 	"github.com/Fantom-foundation/lachesis-base/vecfc"
 )
 
@@ -198,7 +198,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 			store.openEpochDB(restartEpoch)
 			dagIndexer.Reset(
 				store.GetEpochState().Validators,
-				flashable.Wrap(store.epochTable.VectorIndex, flashable.TestSizeLimit),
+				vecflushable.Wrap(store.epochTable.VectorIndex, vecflushable.TestSizeLimit),
 				inputs[RESTORED].GetEvent)
 			dagIndexer.Reindex(func(onEvent func(e dag.Event) bool) {
 				inputs[RESTORED].ForEachEpochEvent(store.GetEpochState().Epoch, onEvent)
