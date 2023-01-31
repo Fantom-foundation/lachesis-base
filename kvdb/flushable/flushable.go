@@ -5,10 +5,10 @@ import (
 	"errors"
 	"sync"
 
-	rbt "github.com/emirpasic/gods/trees/redblacktree"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	rbt "github.com/Fantom-foundation/lachesis-base/kvdb/redblacktree"
 )
 
 var (
@@ -53,7 +53,7 @@ func WrapWithDrop(parent kvdb.Store, drop func()) *Flushable {
 	return &Flushable{
 		flushableReader: flushableReader{
 			underlying: parent,
-			modified:   rbt.NewWithStringComparator(),
+			modified:   rbt.New(),
 		},
 		onDrop:         drop,
 		underlying:     parent,
@@ -78,7 +78,7 @@ func (w *Flushable) Put(key []byte, value []byte) error {
 }
 
 func (w *Flushable) put(key []byte, value []byte) {
-	w.modified.Put(string(key), common.CopyBytes(value))
+	w.modified.Put(key, common.CopyBytes(value))
 	*w.sizeEstimation += len(key) + len(value) + 128
 }
 
@@ -91,7 +91,7 @@ func (w *flushableReader) Has(key []byte) (bool, error) {
 		return false, errClosed
 	}
 
-	val, ok := w.modified.Get(string(key))
+	val, ok := w.modified.Get(key)
 	if ok {
 		return val != nil, nil
 	}
@@ -108,11 +108,11 @@ func (w *flushableReader) Get(key []byte) ([]byte, error) {
 		return nil, errClosed
 	}
 
-	if entry, ok := w.modified.Get(string(key)); ok {
+	if entry, ok := w.modified.Get(key); ok {
 		if entry == nil {
 			return nil, nil
 		}
-		return common.CopyBytes(entry.([]byte)), nil
+		return common.CopyBytes(entry), nil
 	}
 
 	return w.underlying.Get(key)
@@ -128,7 +128,7 @@ func (w *Flushable) Delete(key []byte) error {
 }
 
 func (w *Flushable) delete(key []byte) {
-	w.modified.Put(string(key), nil)
+	w.modified.Put(key, nil)
 	*w.sizeEstimation += len(key) + 128 // it should be (len(key) - len(old value)), but we'd need to read old value
 }
 
@@ -203,9 +203,9 @@ func (w *Flushable) flush() error {
 		var err error
 
 		if it.Value() == nil {
-			err = batch.Delete([]byte(it.Key().(string)))
+			err = batch.Delete(it.Key())
 		} else {
-			err = batch.Put([]byte(it.Key().(string)), it.Value().([]byte))
+			err = batch.Put(it.Key(), it.Value())
 		}
 
 		if err != nil {
@@ -270,7 +270,7 @@ func nextNode(tree *rbt.Tree, node *rbt.Node) (next *rbt.Node, ok bool) {
 	if node.Parent != nil {
 		for node.Parent != nil {
 			node = node.Parent
-			if tree.Comparator(origin.Key, node.Key) <= 0 {
+			if rbt.BytesComparator(origin.Key, node.Key) <= 0 {
 				return node, node != nil
 			}
 		}
@@ -283,11 +283,11 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 	if node == nil {
 		return nil, nil
 	}
-	key = []byte(node.Key.(string))
+	key = node.Key
 	if node.Value == nil {
 		val = nil // deleted key
 	} else {
-		val = node.Value.([]byte) // inserted value
+		val = node.Value // inserted value
 	}
 	return key, val
 }
@@ -296,7 +296,7 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 func (it *flushableIterator) init() {
 	it.parentOk = it.parentIt.Next()
 	if len(it.start) != 0 {
-		it.treeNode, it.treeOk = it.tree.Ceiling(string(it.start)) // not strict >=
+		it.treeNode, it.treeOk = it.tree.Ceiling(it.start) // not strict >=
 	} else {
 		it.treeNode = it.tree.Left() // lowest key
 		it.treeOk = it.treeNode != nil
@@ -411,7 +411,7 @@ func (w *Flushable) GetSnapshot() (kvdb.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	modifiedCopy := rbt.NewWithStringComparator()
+	modifiedCopy := rbt.New()
 	for it := w.modified.Iterator(); it.Next(); {
 		modifiedCopy.Put(it.Key(), it.Value())
 	}
