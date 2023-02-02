@@ -1,4 +1,4 @@
-package simplewlru
+package circularbuff
 
 import (
 	"container/list"
@@ -8,11 +8,10 @@ import (
 // EvictCallback is used to get a callback when a cache entry is evicted
 type EvictCallback func(key interface{}, value interface{})
 
-// Cache implements a non-thread safe fixed size/weight LRU cache
+// Cache implements a non-thread safe fixed size circular cache
+// Once max size is reached, every subsequent writing would overwrite oldest element
 type Cache struct {
 	maxSize   int
-	weight    uint
-	maxWeight uint
 	evictList *list.List
 	items     map[interface{}]*list.Element
 	onEvict   EvictCallback
@@ -20,24 +19,22 @@ type Cache struct {
 
 // entry is used to hold a value in the evictList
 type entry struct {
-	key    interface{}
-	value  interface{}
-	weight uint
+	key   interface{}
+	value interface{}
 }
 
-// New creates a weighted LRU of the given size.
-func New(maxWeight uint, maxSize int) (*Cache, error) {
-	return NewWithEvict(maxWeight, maxSize, nil)
+// New creates a circular cache of the given size.
+func New(maxSize int) (*Cache, error) {
+	return NewWithEvict(maxSize, nil)
 }
 
-// NewWithEvict constructs an LRU of the given weight and size
-func NewWithEvict(maxWeight uint, maxSize int, onEvict EvictCallback) (*Cache, error) {
+// NewWithEvict constructscircular cache of the given size with callback
+func NewWithEvict(maxSize int, onEvict EvictCallback) (*Cache, error) {
 	if maxSize < 0 {
 		return nil, errors.New("must provide a non-negative size")
 	}
 	c := &Cache{
 		maxSize:   maxSize,
-		maxWeight: maxWeight,
 		evictList: list.New(),
 		items:     make(map[interface{}]*list.Element),
 		onEvict:   onEvict,
@@ -49,7 +46,6 @@ func NewWithEvict(maxWeight uint, maxSize int, onEvict EvictCallback) (*Cache, e
 func (c *Cache) Purge() {
 	for k, v := range c.items {
 		e := v.Value.(*entry)
-		c.weight -= e.weight
 		if c.onEvict != nil {
 			c.onEvict(k, e.value)
 		}
@@ -58,26 +54,27 @@ func (c *Cache) Purge() {
 	c.evictList.Init()
 }
 
-// Add adds a value to the cache. Returns the number of evictions occurred.
-func (c *Cache) Add(key, value interface{}, weight uint) (evicted int) {
+// Add adds a value to the cache. Returns true if an eviction occurred.
+func (c *Cache) Add(key, value interface{}) (evicted bool) {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
 		c.evictList.MoveToFront(ent)
 		existing := ent.Value.(*entry)
-		c.weight -= existing.weight
-		c.weight += weight
 		existing.value = value
-		existing.weight = weight
-		return c.normalize()
+		return false
 	}
 
 	// Add new item
-	ent := &entry{key, value, weight}
+	ent := &entry{key, value}
+	if c.Len() >= c.maxSize {
+		c.removeOldest()
+		entry := c.evictList.PushBack(ent)
+		c.items[key] = entry
+		return true
+	}
 	entry := c.evictList.PushFront(ent)
 	c.items[key] = entry
-	c.weight += weight
-
-	return c.normalize()
+	return false
 }
 
 // Get looks up a key's value from the cache.
@@ -119,27 +116,6 @@ func (c *Cache) Remove(key interface{}) (present bool) {
 	return false
 }
 
-// RemoveOldest removes the oldest item from the cache.
-func (c *Cache) RemoveOldest() (key interface{}, value interface{}, ok bool) {
-	ent := c.evictList.Back()
-	if ent != nil {
-		c.removeElement(ent)
-		kv := ent.Value.(*entry)
-		return kv.key, kv.value, true
-	}
-	return nil, nil, false
-}
-
-// GetOldest returns the oldest entry
-func (c *Cache) GetOldest() (key interface{}, value interface{}, ok bool) {
-	ent := c.evictList.Back()
-	if ent != nil {
-		kv := ent.Value.(*entry)
-		return kv.key, kv.value, true
-	}
-	return nil, nil, false
-}
-
 // Keys returns a slice of the keys in the cache, from oldest to newest.
 func (c *Cache) Keys() []interface{} {
 	keys := make([]interface{}, len(c.items))
@@ -156,31 +132,6 @@ func (c *Cache) Len() int {
 	return c.evictList.Len()
 }
 
-// Weight returns the total weight of items in the cache.
-func (c *Cache) Weight() uint {
-	return c.weight
-}
-
-// Total returns the total weight and number of items in the cache.
-func (c *Cache) Total() (weight uint, num int) {
-	return c.Weight(), c.Len()
-}
-
-// Resize changes the cache size.
-func (c *Cache) Resize(maxWeight uint, maxSize int) (evicted int) {
-	c.maxWeight = maxWeight
-	c.maxSize = maxSize
-	return c.normalize()
-}
-
-func (c *Cache) normalize() (evicted int) {
-	for c.weight > c.maxWeight || c.Len() > c.maxSize {
-		c.removeOldest()
-		evicted++
-	}
-	return evicted
-}
-
 // removeOldest removes the oldest item from the cache.
 func (c *Cache) removeOldest() {
 	ent := c.evictList.Back()
@@ -194,7 +145,6 @@ func (c *Cache) removeElement(e *list.Element) {
 	c.evictList.Remove(e)
 	kv := e.Value.(*entry)
 	delete(c.items, kv.key)
-	c.weight -= kv.weight
 	if c.onEvict != nil {
 		c.onEvict(kv.key, kv.value)
 	}
