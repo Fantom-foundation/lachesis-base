@@ -145,7 +145,7 @@ a1_1══╬═════╣     ║
 			&testExpected{
 				DecidedFrame:   0,
 				DecidedAtropos: "a0_0",
-				DecisiveRoots:  map[string]bool{"c2_2": true},
+				DecisiveRoots:  map[string]bool{"c2_2": true, "b2_2": true},
 			},
 			weights{
 				"nodeA": 4,
@@ -170,17 +170,6 @@ a2_2  ╣     ║     ║
 ║╚═══─╫╩════c2_2══╣
 ║     ║     ║     ║
 ║╚═══─╫╩═══─╫─════+d2_2
-║     ║     ║     ║
-a3_3══╬═════╬═════╣
-║     ║     ║     ║
-║╚════b3_3══╬═════╣
-║     ║     ║     ║
-║╚═══─╫╩════c3_3══╣
-║     ║     ║     ║
-║╚═══─╫╩═══─╫╩════d3_3
-║     ║     ║     ║
-a4_4══╣     ║     ║
-║     ║     ║     ║
 `)
 	})
 
