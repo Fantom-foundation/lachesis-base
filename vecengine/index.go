@@ -186,6 +186,8 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 				}
 			}
 		}
+
+	nextCreator:
 		for n := idx.Validator(0); n < vi.validators.Len(); n++ {
 			if myVecs.before.IsForkDetected(n) {
 				continue
@@ -203,11 +205,10 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 					}
 					if myVecs.before.MinSeq(a) <= myVecs.before.Seq(b) && myVecs.before.MinSeq(b) <= myVecs.before.Seq(a) {
 						vi.setForkDetected(myVecs.before, n)
-						goto nextCreator
+						continue nextCreator
 					}
 				}
 			}
-		nextCreator:
 		}
 	}
 
