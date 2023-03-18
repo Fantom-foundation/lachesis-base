@@ -13,7 +13,7 @@ func MigrateTables(s interface{}, db kvdb.Store) {
 	value := reflect.ValueOf(s).Elem()
 
 	var keys uniqKeys
-	defer keys.Check()
+	defer keys.Check() // nolint:errcheck
 
 	for i := 0; i < value.NumField(); i++ {
 		if prefix := value.Type().Field(i).Tag.Get("table"); prefix != "" && prefix != "-" {

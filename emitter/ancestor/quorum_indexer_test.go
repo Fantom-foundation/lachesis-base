@@ -81,6 +81,7 @@ a2.3 ──╣      ║      ║      ║
 // - "." - separator;
 // - stage - makes ;
 func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[string]string) {
+	t.Helper()
 	assertar := assert.New(t)
 
 	// decode is a event name parser
@@ -130,8 +131,8 @@ func testSpecialNamedParents(t *testing.T, asciiScheme string, exp map[int]map[s
 		return capFn(update-median, validators.GetWeightByIdx(validatorIdx))
 	}
 	quorumIndexers := make([]*QuorumIndexer, validators.Len())
-	for i, _ := range validators.IDs() {
-		quorumIndexers[i] = NewQuorumIndexer(validators, &adapters.VectorToDagIndexer{vecClock}, diffMetricFn)
+	for i := range validators.IDs() {
+		quorumIndexers[i] = NewQuorumIndexer(validators, &adapters.VectorToDagIndexer{Index: vecClock}, diffMetricFn)
 	}
 	// build vector index
 	for _, e := range ordered {

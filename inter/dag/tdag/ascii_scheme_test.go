@@ -381,6 +381,7 @@ func TestDAGtoASCIIFork(t *testing.T) {
 }
 
 func testDAGtoASCIIschemeOptimisation(t *testing.T, origScheme string, refs map[string][]string) {
+	t.Helper()
 	// step 1: ASCII --> DAG
 	_, events, named := ASCIIschemeToDAG(origScheme)
 	checkParents(t, named, refs)
@@ -400,6 +401,7 @@ func testDAGtoASCIIschemeOptimisation(t *testing.T, origScheme string, refs map[
 }
 
 func checkParents(t *testing.T, named map[string]dag.Event, expected map[string][]string) {
+	t.Helper()
 	assertar := assert.New(t)
 
 	for n, e1 := range named {

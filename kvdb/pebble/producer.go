@@ -23,13 +23,12 @@ func NewProducer(datadir string, getCacheFdLimit func(string) (int, int)) kvdb.I
 
 // Names of existing databases.
 func (p *Producer) Names() []string {
-	var names []string
-
 	files, err := ioutil.ReadDir(p.datadir)
 	if err != nil {
 		panic(err)
 	}
 
+	names := make([]string, 0, len(files))
 	for _, f := range files {
 		if !f.IsDir() {
 			continue

@@ -249,6 +249,7 @@ func TestLachesisRandomRoots(t *testing.T) {
 // - "." - separator;
 // - tail - makes name unique;
 func testSpecialNamedRoots(t *testing.T, scheme string) {
+	t.Helper()
 	//logger.SetTestMode(t)
 	assertar := assert.New(t)
 

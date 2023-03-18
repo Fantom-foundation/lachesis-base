@@ -21,10 +21,11 @@ func TestEventsBuffer(t *testing.T) {
 }
 
 func testEventsBuffer(t *testing.T, try int64) {
+	t.Helper()
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
-	r := rand.New(rand.NewSource(try))
+	r := rand.New(rand.NewSource(try)) // nolint:gosec
 	_ = tdag.ForEachRandEvent(nodes, 10, 3, r, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
@@ -41,7 +42,7 @@ func testEventsBuffer(t *testing.T, try int64) {
 	processed := make(map[hash.Event]dag.Event)
 	limit := dag.Metric{
 		Num:  idx.Event(len(ordered)),
-		Size: uint64(ordered.Metric().Size),
+		Size: ordered.Metric().Size,
 	}
 	buffer := New(limit, Callback{
 
@@ -107,11 +108,12 @@ func TestEventsBufferReleasing(t *testing.T) {
 }
 
 func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
+	t.Helper()
 	nodes := tdag.GenNodes(5)
-	eventsPerNode := 1 + rand.Intn(maxEvents)/5
+	eventsPerNode := 1 + rand.Intn(maxEvents)/5 // nolint:gosec
 
 	var ordered dag.Events
-	_ = tdag.ForEachRandEvent(nodes, eventsPerNode, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{
+	_ = tdag.ForEachRandEvent(nodes, eventsPerNode, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{ // nolint:gosec
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
@@ -127,8 +129,8 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 	processed := make(map[hash.Event]dag.Event)
 	var mutex sync.Mutex
 	limit := dag.Metric{
-		Num:  idx.Event(rand.Intn(maxEvents)),
-		Size: uint64(rand.Intn(maxEvents * 100)),
+		Num:  idx.Event(rand.Intn(maxEvents)),    // nolint:gosec
+		Size: uint64(rand.Intn(maxEvents * 100)), // nolint:gosec
 	}
 	buffer := New(limit, Callback{
 		Process: func(e dag.Event) error {
@@ -144,10 +146,10 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 					return nil
 				}
 			}
-			if rand.Intn(10) == 0 {
+			if rand.Intn(10) == 0 { // nolint:gosec
 				return errors.New("testing error")
 			}
-			if rand.Intn(10) == 0 {
+			if rand.Intn(10) == 0 { // nolint:gosec
 				time.Sleep(time.Microsecond * 100)
 			}
 			processed[e.ID()] = e
@@ -175,10 +177,10 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 		Check: func(e dag.Event, parents dag.Events) error {
 			mutex.Lock()
 			defer mutex.Unlock()
-			if rand.Intn(10) == 0 {
+			if rand.Intn(10) == 0 { // nolint:gosec
 				return errors.New("testing error")
 			}
-			if rand.Intn(10) == 0 {
+			if rand.Intn(10) == 0 { // nolint:gosec
 				time.Sleep(time.Microsecond * 100)
 			}
 			return nil
@@ -186,7 +188,7 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 	})
 
 	// duplicate some events
-	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...)
+	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...) // nolint:gosec
 	// shuffle events
 	wg := sync.WaitGroup{}
 	for _, rnd := range rand.Perm(len(ordered)) {
@@ -195,7 +197,7 @@ func testEventsBufferReleasing(t *testing.T, maxEvents int, try int64) {
 		go func() {
 			defer wg.Done()
 			buffer.PushEvent(e, "")
-			if rand.Intn(10) == 0 {
+			if rand.Intn(10) == 0 { // nolint:gosec
 				buffer.Clear()
 			}
 		}()

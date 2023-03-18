@@ -19,10 +19,6 @@ import (
 )
 
 const (
-	// minCache is the minimum amount of memory in bytes to allocate to leveldb
-	// read and write caching, split half and half.
-	minCache = opt.KiB
-
 	// minHandles is the minimum number of files handles to allocate to the open
 	// database files.
 	minHandles = 16
@@ -123,7 +119,7 @@ func aligned256kb(v int) int {
 
 // New returns a wrapped LevelDB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
-func New(path string, cache int, handles int, close func() error, drop func()) (*Database, error) {
+func New(path string, cache int, handles int, onClose func() error, drop func()) (*Database, error) {
 	// Ensure we have some minimal caching and file guarantees
 	if handles < minHandles {
 		handles = minHandles
@@ -137,7 +133,7 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 		WriteBuffer:            aligned256kb(cache / 4), // Two of these are used internally
 		Filter:                 filter.NewBloomFilter(10),
 	})
-	if _, corrupted := err.(*errors.ErrCorrupted); corrupted {
+	if _, corrupted := err.(*errors.ErrCorrupted); corrupted { // nolint:errorlint
 		db, err = leveldb.RecoverFile(path, nil)
 	}
 	if err != nil {
@@ -149,7 +145,7 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 		underlying: db,
 	}
 
-	ldb.onClose = close
+	ldb.onClose = onClose
 	ldb.onDrop = drop
 
 	return ldb, nil
@@ -193,7 +189,7 @@ func (db *Database) Drop() {
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
 	dat, err := db.underlying.Has(key, nil)
-	if err != nil && err == leveldb.ErrNotFound {
+	if err != nil && err == leveldb.ErrNotFound { // nolint:errorlint
 		return false, nil
 	}
 	return dat, err
@@ -202,7 +198,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 // Get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
 	dat, err := db.underlying.Get(key, nil)
-	if err != nil && err == leveldb.ErrNotFound {
+	if err != nil && err == leveldb.ErrNotFound { // nolint:errorlint
 		return nil, nil
 	}
 	return dat, err
@@ -365,7 +361,7 @@ func (s *Snapshot) String() string {
 // Get retrieves the given key if it's present in the key-value store.
 func (s *Snapshot) Get(key []byte) (value []byte, err error) {
 	dat, err := s.snap.Get(key, nil)
-	if err != nil && err == leveldb.ErrNotFound {
+	if err != nil && err == leveldb.ErrNotFound { // nolint:errorlint
 		return nil, nil
 	}
 	return dat, err
@@ -374,7 +370,7 @@ func (s *Snapshot) Get(key []byte) (value []byte, err error) {
 // Has retrieves if a key is present in the key-value store.
 func (s *Snapshot) Has(key []byte) (ret bool, err error) {
 	dat, err := s.snap.Has(key, nil)
-	if err != nil && err == leveldb.ErrNotFound {
+	if err != nil && err == leveldb.ErrNotFound { // nolint:errorlint
 		return false, nil
 	}
 	return dat, err

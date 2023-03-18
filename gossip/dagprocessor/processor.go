@@ -57,7 +57,7 @@ func New(eventsSemaphore *datasemaphore.DataSemaphore, cfg Config, callback Call
 	}
 	released := callback.Event.Released
 	callback.Event.Released = func(e dag.Event, peer string, err error) {
-		f.eventsSemaphore.Release(dag.Metric{1, uint64(e.Size())})
+		f.eventsSemaphore.Release(dag.Metric{Num: 1, Size: uint64(e.Size())})
 		if released != nil {
 			released(e, peer, err)
 		}

@@ -42,7 +42,7 @@ func TestCompileFilter(t *testing.T) {
 
 	fn, err = CompileFilter("qw%d%2s123%%", "--%d__%s~~%%")
 	require.NoError(t, err)
-	res, err = fn("qw456AB123")
+	_, err = fn("qw456AB123")
 	require.Error(t, err)
 	res, err = fn("qw456AB123%")
 	require.NoError(t, err)

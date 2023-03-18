@@ -3,14 +3,14 @@ package fallible
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 )
 
 func TestFallible(t *testing.T) {
-	assertar := assert.New(t)
+	require := require.New(t)
 
 	var (
 		key = []byte("test-key")
@@ -23,19 +23,21 @@ func TestFallible(t *testing.T) {
 	w := Wrap(mem)
 	db = w
 
-	_, err = db.Get(key)
-	assertar.NoError(err)
+	var v []byte
+	v, err = db.Get(key)
+	require.Nil(v)
+	require.NoError(err)
 
-	assertar.Panics(func() {
-		db.Put(key, val)
+	require.Panics(func() {
+		_ = db.Put(key, val)
 	})
 
 	w.SetWriteCount(1)
 
 	err = db.Put(key, val)
-	assertar.NoError(err)
+	require.NoError(err)
 
-	assertar.Panics(func() {
-		err = db.Put(key, val)
+	require.Panics(func() {
+		_ = db.Put(key, val)
 	})
 }

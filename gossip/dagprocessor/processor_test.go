@@ -36,7 +36,7 @@ func shuffleEventsIntoChunks(inEvents dag.Events) []dag.Events {
 	var lastChunkSize dag.Metric
 	for _, rnd := range rand.Perm(len(inEvents)) {
 		e := inEvents[rnd]
-		if rand.Intn(10) == 0 || lastChunkSize.Num+1 >= maxGroupSize.Num || lastChunkSize.Size+uint64(e.Size()) >= maxGroupSize.Size {
+		if rand.Intn(10) == 0 || lastChunkSize.Num+1 >= maxGroupSize.Num || lastChunkSize.Size+uint64(e.Size()) >= maxGroupSize.Size { // nolint:gosec
 			chunks = append(chunks, lastChunk)
 			lastChunk = dag.Events{}
 		}
@@ -49,6 +49,7 @@ func shuffleEventsIntoChunks(inEvents dag.Events) []dag.Events {
 }
 
 func testProcessor(t *testing.T) {
+	t.Helper()
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
@@ -65,7 +66,7 @@ func testProcessor(t *testing.T) {
 
 	limit := dag.Metric{
 		Num:  idx.Event(len(ordered)),
-		Size: uint64(ordered.Metric().Size),
+		Size: ordered.Metric().Size,
 	}
 	semaphore := datasemaphore.New(limit, func(received dag.Metric, processing dag.Metric, releasing dag.Metric) {
 		t.Fatal("events semaphore inconsistency")
@@ -143,7 +144,7 @@ func testProcessor(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for _, chunk := range chunks {
 		wg.Add(1)
-		err := processor.Enqueue("", chunk, rand.Intn(2) == 0, func(events hash.Events) {}, func() {
+		err := processor.Enqueue("", chunk, rand.Intn(2) == 0, func(events hash.Events) {}, func() { // nolint:gosec
 			wg.Done()
 		})
 		if err != nil {
@@ -171,10 +172,11 @@ func TestProcessorReleasing(t *testing.T) {
 }
 
 func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
+	t.Helper()
 	nodes := tdag.GenNodes(5)
 
 	var ordered dag.Events
-	_ = tdag.ForEachRandEvent(nodes, 10, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{
+	_ = tdag.ForEachRandEvent(nodes, 10, 3, rand.New(rand.NewSource(try)), tdag.ForEachEvent{ // nolint:gosec
 		Process: func(e dag.Event, name string) {
 			ordered = append(ordered, e)
 		},
@@ -186,8 +188,8 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	})
 
 	limit := dag.Metric{
-		Num:  idx.Event(rand.Intn(maxEvents)),
-		Size: uint64(rand.Intn(maxEvents * 100)),
+		Num:  idx.Event(rand.Intn(maxEvents)),    // nolint:gosec
+		Size: uint64(rand.Intn(maxEvents * 100)), // nolint:gosec
 	}
 	limitPlus1group := dag.Metric{
 		Num:  limit.Num + maxGroupSize.Num,
@@ -219,10 +221,10 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 						return nil
 					}
 				}
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					return errors.New("testing error")
 				}
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					time.Sleep(time.Microsecond * 100)
 				}
 				if highestLamport < e.Lamport() {
@@ -251,20 +253,20 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 			},
 
 			CheckParents: func(e dag.Event, parents dag.Events) error {
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					return errors.New("testing error")
 				}
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					time.Sleep(time.Microsecond * 100)
 				}
 				return nil
 			},
 			CheckParentless: func(e dag.Event, checked func(err error)) {
 				var err error
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					err = errors.New("testing error")
 				}
-				if rand.Intn(10) == 0 {
+				if rand.Intn(10) == 0 { // nolint:gosec
 					time.Sleep(time.Microsecond * 100)
 				}
 				checked(err)
@@ -275,7 +277,7 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 		},
 	})
 	// duplicate some events
-	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...)
+	ordered = append(ordered, ordered[:rand.Intn(len(ordered))]...) // nolint:gosec
 	// shuffle events
 	chunks := shuffleEventsIntoChunks(ordered)
 
@@ -284,13 +286,13 @@ func testProcessorReleasing(t *testing.T, maxEvents int, try int64) {
 	wg := sync.WaitGroup{}
 	for _, chunk := range chunks {
 		wg.Add(1)
-		err := processor.Enqueue("", chunk, rand.Intn(2) == 0, func(events hash.Events) {}, func() {
+		err := processor.Enqueue("", chunk, rand.Intn(2) == 0, func(events hash.Events) {}, func() { // nolint:gosec
 			wg.Done()
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if rand.Intn(10) == 0 {
+		if rand.Intn(10) == 0 { // nolint:gosec
 			processor.Clear()
 		}
 	}

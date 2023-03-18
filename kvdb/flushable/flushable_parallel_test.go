@@ -113,7 +113,7 @@ func TestFlushableParallel(t *testing.T) {
 		for g := 0; g < 2; g++ {
 			go func() {
 				defer work.Done()
-				r := rand.New(rand.NewSource(0))
+				r := rand.New(rand.NewSource(0)) // nolint:gosec
 				for !stopped() {
 					// try to spoil data in tableImmutable by updating other tables
 					_ = tableMutable1.Put(bigendian.Uint64ToBytes(r.Uint64()%testPairsNum), bigendian.Uint64ToBytes(r.Uint64()))

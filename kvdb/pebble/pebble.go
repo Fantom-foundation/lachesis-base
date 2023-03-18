@@ -134,7 +134,7 @@ var adjustCache = piecefunc.NewFunc([]piecefunc.Dot{
 
 // New returns a wrapped LevelDB object. The namespace is the prefix that the
 // metrics reporting should use for surfacing internal stats.
-func New(path string, cache int, handles int, close func() error, drop func()) (*Database, error) {
+func New(path string, cache int, handles int, onClose func() error, onDrop func()) (*Database, error) {
 	cache = int(adjustCache(uint64(cache)))
 	ref := pebble.NewCache(int64(cache * 2 / 3))
 	defer ref.Unref()
@@ -155,8 +155,8 @@ func New(path string, cache int, handles int, close func() error, drop func()) (
 	pdb := Database{
 		filename:   path,
 		underlying: db,
-		onClose:    close,
-		onDrop:     drop,
+		onClose:    onClose,
+		onDrop:     onDrop,
 	}
 	return &pdb, nil
 }
@@ -210,7 +210,7 @@ func (db *Database) SyncFlush() error {
 // Has retrieves if a key is present in the key-value store.
 func (db *Database) Has(key []byte) (bool, error) {
 	_, closer, err := db.underlying.Get(key)
-	if err == pebble.ErrNotFound {
+	if err == pebble.ErrNotFound { // nolint:errorlint
 		return false, nil
 	}
 	if err != nil {
@@ -223,7 +223,7 @@ func (db *Database) Has(key []byte) (bool, error) {
 // Get retrieves the given key if it's present in the key-value store.
 func (db *Database) Get(key []byte) ([]byte, error) {
 	value, closer, err := db.underlying.Get(key)
-	if err == pebble.ErrNotFound {
+	if err == pebble.ErrNotFound { // nolint:errorlint
 		return nil, nil
 	}
 	if err != nil {
@@ -383,7 +383,7 @@ type snapshot struct {
 // Has retrieves if a key is present in the key-value store.
 func (s *snapshot) Has(key []byte) (bool, error) {
 	_, closer, err := s.snap.Get(key)
-	if err == pebble.ErrNotFound {
+	if err == pebble.ErrNotFound { // nolint:errorlint
 		return false, nil
 	}
 	if err != nil {
@@ -396,7 +396,7 @@ func (s *snapshot) Has(key []byte) (bool, error) {
 // Get retrieves the given key if it's present in the key-value store.
 func (s *snapshot) Get(key []byte) ([]byte, error) {
 	value, closer, err := s.snap.Get(key)
-	if err == pebble.ErrNotFound {
+	if err == pebble.ErrNotFound { // nolint:errorlint
 		return nil, nil
 	}
 	if err != nil {

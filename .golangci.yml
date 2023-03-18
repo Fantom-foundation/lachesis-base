@@ -1,0 +1,33 @@
+run:
+  deadline: 10m
+
+linters:
+  disable-all: true
+  enable:
+    - errorlint
+    - unconvert
+    - predeclared
+    - thelper
+    - gofmt
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - gosec
+    - prealloc
+
+linters-settings:
+  gocritic:
+    enabled-checks:
+      - ruleguard
+      - truncateCmp
+
+    enabled-tags:
+      - performance
+      - diagnostic
+
+  gofmt:
+    auto-fix: false
