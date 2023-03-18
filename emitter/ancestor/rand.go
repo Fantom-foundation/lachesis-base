@@ -18,7 +18,7 @@ type RandomStrategy struct {
 
 func NewRandomStrategy(r *rand.Rand) *RandomStrategy {
 	if r == nil {
-		r = rand.New(rand.NewSource(time.Now().UnixNano()))
+		r = rand.New(rand.NewSource(time.Now().UnixNano())) // nolint:gosec
 	}
 	return &RandomStrategy{
 		r: r,

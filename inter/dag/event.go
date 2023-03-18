@@ -70,14 +70,6 @@ func (me *MutableBaseEvent) Build(rID [24]byte) *BaseEvent {
 	return &e
 }
 
-// fmtFrame returns frame string representation.
-func fmtFrame(frame idx.Frame, isRoot bool) string {
-	if isRoot {
-		return fmt.Sprintf("%d:y", frame)
-	}
-	return fmt.Sprintf("%d:n", frame)
-}
-
 // String returns string representation.
 func (e *BaseEvent) String() string {
 	return fmt.Sprintf("{id=%s, p=%s, by=%d, frame=%d}", e.id.ShortID(3), e.parents.String(), e.creator, e.frame)

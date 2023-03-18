@@ -60,6 +60,7 @@ func TestRestart_2_8_10(t *testing.T) {
 }
 
 func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
+	t.Helper()
 	testRestartAndReset(t, weights, false, cheatersCount, false)
 	testRestartAndReset(t, weights, false, cheatersCount, true)
 	testRestartAndReset(t, weights, true, 0, false)
@@ -67,6 +68,7 @@ func testRestart(t *testing.T, weights []pos.Weight, cheatersCount int) {
 }
 
 func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, resets bool) {
+	t.Helper()
 	assertar := assert.New(t)
 
 	const (
@@ -111,7 +113,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 		parentCount = len(nodes)
 	}
 	epochStates := map[idx.Epoch]*EpochState{}
-	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
+	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount))) // nolint:gosec
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
@@ -181,7 +183,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 				return memorydb.New()
 			}
 
-			restored := NewIndexedLachesis(store, prev.input, &adapters.VectorToDagIndexer{vecfc.NewIndex(prev.crit, vecfc.LiteConfig())}, prev.crit, prev.config)
+			restored := NewIndexedLachesis(store, prev.input, &adapters.VectorToDagIndexer{Index: vecfc.NewIndex(prev.crit, vecfc.LiteConfig())}, prev.crit, prev.config)
 			assertar.NoError(restored.Bootstrap(prev.callback))
 
 			lchs[RESTORED].IndexedLachesis = restored

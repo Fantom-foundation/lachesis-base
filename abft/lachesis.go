@@ -22,9 +22,8 @@ type DagIndex interface {
 // Use this structure if need a general-purpose consensus. Instead, use lower-level abft.Orderer.
 type Lachesis struct {
 	*Orderer
-	dagIndex      DagIndex
-	uniqueDirtyID uniqueID
-	callback      lachesis.ConsensusCallbacks
+	dagIndex DagIndex
+	callback lachesis.ConsensusCallbacks
 }
 
 // NewLachesis creates Lachesis instance.

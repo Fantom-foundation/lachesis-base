@@ -41,15 +41,14 @@ func newFakeFS(namespace string) *fakeFS {
 }
 
 func uniqNamespace() string {
-	return hash.FakeHash(rand.Int63()).Hex()
+	return hash.FakeHash(rand.Int63()).Hex() // nolint:gosec
 }
 
 func (fs *fakeFS) ListFakeDBs() []string {
-	var ls []string
-
 	fs.RLock()
 	defer fs.RUnlock()
 
+	ls := make([]string, 0, len(fs.Files))
 	for f := range fs.Files {
 		ls = append(ls, f)
 	}

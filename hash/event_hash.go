@@ -162,7 +162,6 @@ func (hh EventsSet) Add(hash ...Event) {
 	for _, h := range hash {
 		hh[h] = struct{}{}
 	}
-	return
 }
 
 // Erase erase hash from the index.
@@ -170,7 +169,6 @@ func (hh EventsSet) Erase(hash ...Event) {
 	for _, h := range hash {
 		delete(hh, h)
 	}
-	return
 }
 
 // Contains returns true if hash is in.
@@ -192,12 +190,7 @@ func NewEvents(h ...Event) Events {
 
 // Copy copies events to a new structure.
 func (hh Events) Copy() Events {
-	ee := make(Events, len(hh))
-	for k, v := range hh {
-		ee[k] = v
-	}
-
-	return ee
+	return append(Events(nil), hh...)
 }
 
 // String returns human readable string representation.
@@ -302,8 +295,8 @@ func Of(data ...[]byte) (hash Hash) {
  */
 
 // FakePeer generates random fake peer id for testing purpose.
-func FakePeer(seed ...int64) idx.ValidatorID {
-	return idx.BytesToValidatorID(FakeHash(seed...).Bytes()[:4])
+func FakePeer() idx.ValidatorID {
+	return idx.BytesToValidatorID(FakeHash().Bytes()[:4])
 }
 
 // FakeEpoch gives fixed value of fake epoch for testing purpose.
@@ -313,7 +306,7 @@ func FakeEpoch() idx.Epoch {
 
 // FakeEvent generates random fake event hash with the same epoch for testing purpose.
 func FakeEvent() (h Event) {
-	_, err := rand.Read(h[:])
+	_, err := rand.Read(h[:]) // nolint:gosec
 	if err != nil {
 		panic(err)
 	}

@@ -36,8 +36,6 @@ type EventsBuffer struct {
 	callback    Callback
 	mu          sync.Mutex
 
-	deps map[hash.Event]map[hash.Event]bool
-
 	limit dag.Metric
 }
 

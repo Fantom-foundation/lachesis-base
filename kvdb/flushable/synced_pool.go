@@ -136,13 +136,13 @@ func (p *SyncedPool) getDB(name string) *closeDropWrapped {
 		return wrapper.Flushable
 	}
 
-	open, close, drop := p.callbacks(name)
+	open, onClose, drop := p.callbacks(name)
 	wrapper.Flushable = &closeDropWrapped{
 		LazyFlushable: NewLazy(open, drop),
-		close:         close,
+		close:         onClose,
 		drop:          drop,
 	}
-	wrapper.Flushable.close = close
+	wrapper.Flushable.close = onClose
 	p.wrappers[name] = wrapper
 
 	return wrapper.Flushable
@@ -244,7 +244,7 @@ func (p *SyncedPool) checkDBsSynced(flushID []byte) ([]byte, error) {
 
 func CheckDBsSynced(dbs map[string]kvdb.Store, flushIDKey, flushID []byte) ([]byte, error) {
 	var (
-		descrs []string
+		descrs = []string{}
 		list   = func() string {
 			return strings.Join(descrs, ", ")
 		}

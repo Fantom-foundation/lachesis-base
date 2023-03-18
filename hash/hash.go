@@ -103,7 +103,7 @@ func FakeHash(seed ...int64) (h common.Hash) {
 
 	if len(seed) > 0 {
 		src := rand.NewSource(seed[0])
-		rnd := rand.New(src)
+		rnd := rand.New(src) // nolint:gosec
 		randRead = rnd.Read
 	}
 
@@ -160,7 +160,6 @@ func (hh HashesSet) Add(hash ...Hash) {
 	for _, h := range hash {
 		hh[h] = struct{}{}
 	}
-	return
 }
 
 // Erase erase hash from the index.
@@ -168,7 +167,6 @@ func (hh HashesSet) Erase(hash ...Hash) {
 	for _, h := range hash {
 		delete(hh, h)
 	}
-	return
 }
 
 // Contains returns true if hash is in.
@@ -190,12 +188,7 @@ func NewHashes(h ...Hash) Hashes {
 
 // Copy copies hashes to a new structure.
 func (hh Hashes) Copy() Hashes {
-	ee := make(Hashes, len(hh))
-	for k, v := range hh {
-		ee[k] = v
-	}
-
-	return ee
+	return append(Hashes(nil), hh...)
 }
 
 // String returns human readable string representation.

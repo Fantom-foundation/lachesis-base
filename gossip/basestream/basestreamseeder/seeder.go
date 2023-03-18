@@ -138,7 +138,7 @@ func (s *BaseSeeder) UnregisterPeer(peer string) error {
 }
 
 func (s *BaseSeeder) waitPendingResponsesBelowLimit() {
-	for atomic.LoadInt64(&s.pendingResponsesSize) >= int64(s.cfg.MaxPendingResponsesSize) {
+	for atomic.LoadInt64(&s.pendingResponsesSize) >= s.cfg.MaxPendingResponsesSize {
 		if s.done {
 			// terminating, abort all operations
 			return

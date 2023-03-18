@@ -33,7 +33,7 @@ func defaultConfig() Config {
 
 func TestSeederResponsesOrder(t *testing.T) {
 	for try := 0; try < 25; try++ {
-		testSeederResponsesOrder(t, 1+rand.Intn(70), 1+rand.Intn(70))
+		testSeederResponsesOrder(t, 1+rand.Intn(70), 1+rand.Intn(70)) // nolint:gosec
 	}
 }
 
@@ -59,6 +59,7 @@ func (rr *ResponsesContainer) Append(peer string, sessionID uint32, response bas
 }
 
 func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
+	t.Helper()
 	config := defaultConfig()
 	config.MaxPendingResponsesSize = 5000
 
@@ -112,8 +113,8 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 	terminated := false
 	seeder.Start()
 	for i := 0; i < maxPeers; i++ {
-		peer := strconv.Itoa(rand.Intn(maxPeers))
-		if rand.Intn(5) == 0 {
+		peer := strconv.Itoa(rand.Intn(maxPeers)) // nolint:gosec
+		if rand.Intn(5) == 0 {                    // nolint:gosec
 			err := seeder.UnregisterPeer(peer)
 			if !terminated {
 				require.NoError(t, err)
@@ -124,10 +125,10 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 			if sessionID%2 == 0 {
 				reqType = 1
 			}
-			startIdx := rand.Intn(len(events))
+			startIdx := rand.Intn(len(events)) // nolint:gosec
 			endIdx := startIdx
 			if endIdx < len(events) {
-				endIdx += rand.Intn(len(events) - endIdx)
+				endIdx += rand.Intn(len(events) - endIdx) // nolint:gosec
 			}
 			err, peerErr := seeder.NotifyRequestReceived(Peer{
 				ID: peer,
@@ -140,7 +141,7 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 					if !response.Done {
 						require.NotEmpty(t, response.Payload.(testPayload).IDs)
 					}
-					time.Sleep(time.Duration(rand.Int63n(int64(time.Millisecond))))
+					time.Sleep(time.Duration(rand.Int63n(int64(time.Millisecond)))) // nolint:gosec
 					responses.Append(peer, response.SessionID, response)
 					return nil
 				},
@@ -152,16 +153,16 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 					Stop:  testLocator{events[endIdx].ID().Bytes()},
 				},
 				Type:           reqType,
-				MaxPayloadNum:  uint32(rand.Intn(10)),
-				MaxPayloadSize: uint64(rand.Intn(5000)),
-				MaxChunks:      uint32(rand.Intn(int(config.MaxResponseChunks + 1))),
+				MaxPayloadNum:  uint32(rand.Intn(10)),                                // nolint:gosec
+				MaxPayloadSize: uint64(rand.Intn(5000)),                              // nolint:gosec
+				MaxChunks:      uint32(rand.Intn(int(config.MaxResponseChunks + 1))), // nolint:gosec
 			})
 			require.NoError(t, peerErr)
 			if !terminated {
 				require.NoError(t, err)
 			}
 		}
-		if !terminated && rand.Intn(maxPeers*2) == 0 {
+		if !terminated && rand.Intn(maxPeers*2) == 0 { // nolint:gosec
 			terminated = true
 			seeder.Stop()
 		}
@@ -180,8 +181,8 @@ func testSeederResponsesOrder(t *testing.T, maxPeers int, maxEvents int) {
 			ids := r.Payload.(testPayload).IDs
 			if len(r.Payload.(testPayload).Events) != 0 {
 				for _, e := range r.Payload.(testPayload).Events {
-					ids = append(ids, e.(dag.Event).ID())
-					require.Equal(t, e.(dag.Event).ID().Lamport(), e.(dag.Event).Lamport())
+					ids = append(ids, e.ID())
+					require.Equal(t, e.ID().Lamport(), e.Lamport())
 				}
 			}
 			for _, id := range ids {

@@ -35,9 +35,6 @@ func NewWithEvict(maxWeight uint, maxSize int, onEvict EvictCallback) (*Cache, e
 	if maxSize < 0 {
 		return nil, errors.New("must provide a non-negative size")
 	}
-	if maxWeight < 0 {
-		return nil, errors.New("must provide a non-negative weight")
-	}
 	c := &Cache{
 		maxSize:   maxSize,
 		maxWeight: maxWeight,

@@ -47,7 +47,7 @@ func ForEachRandFork(
 ) {
 	if r == nil {
 		// fixed seed
-		r = rand.New(rand.NewSource(0))
+		r = rand.New(rand.NewSource(0)) // nolint:gosec
 	}
 	// init results
 	nodeCount := len(nodes)

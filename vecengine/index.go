@@ -149,6 +149,9 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	}
 
 	meBranchID, err := vi.fillGlobalBranchID(e, meIdx)
+	if err != nil {
+		return myVecs, err
+	}
 
 	// pre-load parents into RAM for quick access
 	parentsVecs := make([]HighestBeforeI, len(e.Parents()))
@@ -171,7 +174,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 	}
 	// Detect forks, which were not observed by parents
 	if vi.AtLeastOneFork() {
-		for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
+		for n := idx.Validator(0); n < vi.validators.Len(); n++ {
 			if len(vi.bi.BranchIDByCreators[n]) <= 1 {
 				continue
 			}
@@ -183,7 +186,7 @@ func (vi *Engine) fillEventVectors(e dag.Event) (allVecs, error) {
 				}
 			}
 		}
-		for n := idx.Validator(0); n < idx.Validator(vi.validators.Len()); n++ {
+		for n := idx.Validator(0); n < vi.validators.Len(); n++ {
 			if myVecs.before.IsForkDetected(n) {
 				continue
 			}

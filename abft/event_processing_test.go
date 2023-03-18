@@ -60,6 +60,7 @@ func TestLachesisRandom_2_8_10(t *testing.T) {
 }
 
 func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
+	t.Helper()
 	testLachesisRandomAndReset(t, weights, false, cheatersCount, false)
 	testLachesisRandomAndReset(t, weights, false, cheatersCount, true)
 	testLachesisRandomAndReset(t, weights, true, 0, false)
@@ -68,6 +69,7 @@ func testLachesisRandom(t *testing.T, weights []pos.Weight, cheatersCount int) {
 
 // TestLachesis 's possibility to get consensus in general on any event order.
 func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool, cheatersCount int, reset bool) {
+	t.Helper()
 	assertar := assert.New(t)
 
 	const lchCount = 3
@@ -108,7 +110,7 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeight
 		parentCount = len(nodes)
 	}
 	epochStates := map[idx.Epoch]*EpochState{}
-	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount)))
+	r := rand.New(rand.NewSource(int64(len(nodes) + cheatersCount))) // nolint:gosec
 	for epoch := idx.Epoch(1); epoch <= idx.Epoch(epochs); epoch++ {
 		tdag.ForEachRandFork(nodes, nodes[:cheatersCount], eventCount, parentCount, 10, r, tdag.ForEachEvent{
 			Process: func(e dag.Event, name string) {
@@ -174,6 +176,7 @@ func reorder(events dag.Events) dag.Events {
 }
 
 func compareResults(t *testing.T, lchs []*TestLachesis) {
+	t.Helper()
 	assertar := assert.New(t)
 
 	for i := 0; i < len(lchs)-1; i++ {

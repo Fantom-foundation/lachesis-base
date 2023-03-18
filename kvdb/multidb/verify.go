@@ -26,12 +26,12 @@ func (p *Producer) getRecords() (map[DBLocator][]TableRecord, error) {
 		for _, name := range producer.Names() {
 			db, err := producer.OpenDB(name)
 			if err != nil {
-				return nil, fmt.Errorf("failed to open DB %s: %v", name, err)
+				return nil, fmt.Errorf("failed to open DB %s: %w", name, err)
 			}
 			defer db.Close()
 			records, err := ReadTablesList(db, p.tableRecordsKey)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read tables for %s: %v", name, err)
+				return nil, fmt.Errorf("failed to read tables for %s: %w", name, err)
 			}
 			locator := DBLocator{
 				Type: typ,
