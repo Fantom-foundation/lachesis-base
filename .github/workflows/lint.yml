@@ -1,0 +1,23 @@
+name: Lint
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 'stable'
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v3
