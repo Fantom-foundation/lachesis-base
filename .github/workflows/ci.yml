@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout submodules
         run: |
+          ls
+          cd lachesis-base
           git submodule update --init --recursive --force
           git fetch --no-tags --prune --depth=1 origin +refs/heads/develop:refs/remotes/origin/develop
 
