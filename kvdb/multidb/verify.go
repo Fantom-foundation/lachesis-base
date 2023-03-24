@@ -1,6 +1,10 @@
 package multidb
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/log"
+)
 
 func (p *Producer) verifyRecords(oldDBRecords map[DBLocator][]TableRecord) error {
 	for oldLoc, records := range oldDBRecords {
@@ -28,16 +32,30 @@ func (p *Producer) getRecords() (map[DBLocator][]TableRecord, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to open DB %s: %w", name, err)
 			}
-			defer db.Close()
-			records, err := ReadTablesList(db, p.tableRecordsKey)
+
+			err = func() error {
+				defer func() {
+					innerErr := db.Close()
+					log.Error(fmt.Sprintf("can't close the DB: producerType %s, name %s, error %v", name, typ, innerErr))
+				}()
+
+				records, err := ReadTablesList(db, p.tableRecordsKey)
+				if err != nil {
+					return fmt.Errorf("failed to read tables for %s: %w", name, err)
+				}
+
+				locator := DBLocator{
+					Type: typ,
+					Name: name,
+				}
+				dbRecords[locator] = records
+
+				return nil
+			}()
+
 			if err != nil {
-				return nil, fmt.Errorf("failed to read tables for %s: %w", name, err)
+				return nil, err
 			}
-			locator := DBLocator{
-				Type: typ,
-				Name: name,
-			}
-			dbRecords[locator] = records
 		}
 	}
 	return dbRecords, nil

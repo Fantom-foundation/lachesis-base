@@ -55,3 +55,6 @@ lachesis_*
 .#*
 
 **/coverage.txt
+
+# used by the Makefile
+build/
