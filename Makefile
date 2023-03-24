@@ -4,7 +4,7 @@ test :
 
 .PHONY : test-race
 test-race :
-	go test -shuffle=on -race ./...
+	go test -shuffle=on -race -timeout=20m ./...
 
 .PHONY: coverage
 coverage:
