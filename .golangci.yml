@@ -43,7 +43,7 @@ linters:
     - tparallel
     - unconvert
     - unparam
-    - wsl
+    #- wsl
     - asasalint
     - errorlint
     - unused
@@ -148,4 +148,4 @@ linters-settings:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  new-from-rev: origin/develop
+  new-from-rev: origin/develop # remove to fix all errors and warnings

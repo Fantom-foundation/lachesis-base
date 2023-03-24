@@ -58,3 +58,7 @@ lachesis_*
 
 # used by the Makefile
 build/
+
+report.json
+cover.prof
+.stats.msi

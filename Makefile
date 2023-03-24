@@ -23,3 +23,12 @@ lint:
 lintci-deps:
 	rm -f ./build/bin/golangci-lint
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./build/bin v1.52.1
+
+.PHONY : install-deps
+install-deps:
+	go get github.com/JekaMas/go-mutesting/cmd/go-mutesting@v1.1.2
+
+.PHONY : mut
+mut:
+	MUTATION_TEST=on go-mutesting --blacklist=".github/mut_blacklist" --config=".github/mut_config.yml" ./... &> .stats.msi
+	@echo MSI: `jq '.stats.msi' report.json`

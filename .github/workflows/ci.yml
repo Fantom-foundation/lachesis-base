@@ -78,3 +78,22 @@ jobs:
         with:
           name: raw-report
           path: raw-report.json
+
+  mutating:
+    name: Mutation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.x
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: make install-deps
+
+      - name: Mutating testing
+        run: make mut

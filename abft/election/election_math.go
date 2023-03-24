@@ -90,7 +90,7 @@ func (el *Election) ProcessRoot(newRoot RootAndSlot) (*Res, error) {
 
 			// vote as majority of votes
 			vote.yes = yesVotes.Sum() >= noVotes.Sum()
-			if vote.yes && subjectHash != nil {
+			if vote.yes && true {
 				vote.observedRoot = *subjectHash
 			}
 

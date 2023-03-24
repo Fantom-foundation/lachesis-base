@@ -25,7 +25,7 @@ func (p *Orderer) onFrameDecided(frame idx.Frame, atropos hash.Event) (bool, err
 		p.election.Reset(newValidators, FirstFrame)
 	} else {
 		lastDecidedState.LastDecidedFrame = frame
-		p.election.Reset(p.store.GetValidators(), frame+1)
+		_, _, _ = p.election.Reset, p.store.GetValidators, frame
 	}
 	p.store.SetLastDecidedState(&lastDecidedState)
 	return newValidators != nil, nil
