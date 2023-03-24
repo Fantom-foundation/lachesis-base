@@ -16,10 +16,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      - run: pwd
       - name: Checkout submodules
         run: |
           ls
-          cd lachesis-base
+          cd ${{env.working-directory}}
           git submodule update --init --recursive --force
           git fetch --no-tags --prune --depth=1 origin +refs/heads/develop:refs/remotes/origin/develop
 
