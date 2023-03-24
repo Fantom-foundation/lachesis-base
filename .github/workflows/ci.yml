@@ -17,12 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: lachesis-base
-
-      - name: Checkout submodules
-        run: |
-          cd lachesis-base
+      - run: |
           git submodule update --init --recursive --force
           git fetch --no-tags --prune --depth=1 origin +refs/heads/develop:refs/remotes/origin/develop
 
