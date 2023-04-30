@@ -54,7 +54,7 @@ type BaseEvent struct {
 
 	lamport idx.Lamport
 
-	id hash.Event
+	rID [24]byte
 }
 
 type MutableBaseEvent struct {
@@ -64,9 +64,7 @@ type MutableBaseEvent struct {
 // Build build immutable event
 func (me *MutableBaseEvent) Build(rID [24]byte) *BaseEvent {
 	e := me.BaseEvent
-	copy(e.id[0:4], e.epoch.Bytes())
-	copy(e.id[4:8], e.lamport.Bytes())
-	copy(e.id[8:], rID[:])
+	e.rID = rID
 	return &e
 }
 
@@ -80,7 +78,7 @@ func fmtFrame(frame idx.Frame, isRoot bool) string {
 
 // String returns string representation.
 func (e *BaseEvent) String() string {
-	return fmt.Sprintf("{id=%s, p=%s, by=%d, frame=%d}", e.id.ShortID(3), e.parents.String(), e.creator, e.frame)
+	return fmt.Sprintf("{id=%s, p=%s, by=%d, frame=%d}", e.ID().ShortID(3), e.parents.String(), e.creator, e.frame)
 }
 
 // SelfParent returns event's self-parent, if any
@@ -111,7 +109,13 @@ func (e *BaseEvent) Parents() hash.Events { return e.parents }
 
 func (e *BaseEvent) Lamport() idx.Lamport { return e.lamport }
 
-func (e *BaseEvent) ID() hash.Event { return e.id }
+func (e *BaseEvent) ID() hash.Event {
+	var id hash.Event
+	copy(id[0:4], e.epoch.Bytes())
+	copy(id[4:8], e.lamport.Bytes())
+	copy(id[8:], e.rID[:])
+	return id
+}
 
 func (e *BaseEvent) Size() int { return 4 + 4 + 4 + 4 + len(e.parents)*32 + 4 + 32 }
 
@@ -128,7 +132,5 @@ func (e *MutableBaseEvent) SetParents(v hash.Events) { e.parents = v }
 func (e *MutableBaseEvent) SetLamport(v idx.Lamport) { e.lamport = v }
 
 func (e *MutableBaseEvent) SetID(rID [24]byte) {
-	copy(e.id[0:4], e.epoch.Bytes())
-	copy(e.id[4:8], e.lamport.Bytes())
-	copy(e.id[8:], rID[:])
+	e.rID = rID
 }
