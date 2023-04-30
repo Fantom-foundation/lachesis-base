@@ -2,11 +2,12 @@ package multidb
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/status-im/keycard-go/hexutils"
-	"testing"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ func TestNewProducer(t *testing.T) {
 		err = db.Close()
 		assert.Nil(t, err)
 
-		db, err = multiProducer.OpenDB("")
+		_, err = multiProducer.OpenDB("")
 		assert.Nil(t, err)
 
 		size := multiProducer.NotFlushedSizeEst()

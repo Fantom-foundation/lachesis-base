@@ -35,16 +35,19 @@ func TestCache(t *testing.T) {
 
 	assert.True(t, cache.Contains(2))
 	k, v, ok := cache.GetOldest()
+	assert.True(t, ok)
 	assert.Equal(t, 2, k)
 	assert.Equal(t, 3, v)
 
 	cache.Peek(2)
 	k, v, ok = cache.GetOldest()
+	assert.True(t, ok)
 	assert.Equal(t, 2, k)
 	assert.Equal(t, 3, v)
 
 	cache.Get(2)
 	k, v, ok = cache.RemoveOldest()
+	assert.True(t, ok)
 	assert.Equal(t, 3, k)
 	assert.Equal(t, 3, v)
 

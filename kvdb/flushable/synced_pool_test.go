@@ -50,7 +50,7 @@ func TestSyncedPoolUnderlying(t *testing.T) {
 		const size uint32 = 10
 		for i := size; i > 0; i-- {
 			key := bigendian.Uint32ToBytes(i + size*n)
-			w.Put(key, key)
+			require.NoError(w.Put(key, key))
 		}
 	}
 
