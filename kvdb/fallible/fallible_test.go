@@ -43,35 +43,34 @@ func TestFallible(t *testing.T) {
 	})
 
 	err = db.Delete(key)
-	assert.Nil(t, err)
+	require.Nil(err)
 
 	count := w.GetWriteCount()
-	assert.Equal(t, -1, count)
+	require.Equal(-1, count)
 
-	assertar.Panics(func() {
+	require.Panics(func() {
 		db.Close()
 	})
 
-	assertar.Panics(func() {
+	require.Panics(func() {
 		db.Drop()
 	})
 
 	w.SetWriteCount(2)
 	count = w.GetWriteCount()
-	assert.Equal(t, 2, count)
+	require.Equal(2, count)
 
 	err = db.Put(key, val)
-	assertar.NoError(err)
+	require.NoError(err)
 
 	err = db.Put(key2, val)
-	assertar.NoError(err)
+	require.NoError(err)
 
 	iterator := db.NewIterator([]byte("test"), nil)
 
 	iterator.Next()
-	assert.Equal(t, key, iterator.Key())
+	require.Equal(key, iterator.Key())
 
 	iterator.Next()
-	assert.Equal(t, key2, iterator.Key())
-
+	require.Equal(key2, iterator.Key())
 }
