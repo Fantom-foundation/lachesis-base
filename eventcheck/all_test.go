@@ -131,6 +131,26 @@ func TestParentsEventValidation(t *testing.T) {
 		{func() dag.Event {
 			e := &tdag.TestEvent{}
 			e.SetSeq(2)
+			e.SetLamport(2)
+			e.SetCreator(1)
+			selfParent := &tdag.TestEvent{}
+			selfParent.SetLamport(1)
+			selfParent.SetID([24]byte{2})
+			e.SetParents(hash.Events{selfParent.ID()})
+			return e
+		}(),
+			func() dag.Events {
+				e := &tdag.TestEvent{}
+				e.SetSeq(1)
+				e.SetLamport(1)
+				e.SetCreator(1)
+				e.SetID([24]byte{1})
+				return dag.Events{e}
+			}(),
+			parentscheck.ErrWrongSelfParent, false},
+		{func() dag.Event {
+			e := &tdag.TestEvent{}
+			e.SetSeq(2)
 			e.SetLamport(1)
 			e.SetParents(hash.Events{e.ID()})
 			return e
