@@ -1,0 +1,23 @@
+name: Lint
+on:
+  push:
+    branches:
+      - develop
+      - master
+  pull_request:
+    branches:
+      - develop
+      - master
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: git fetch --no-tags --prune --depth=1 origin +refs/heads/develop:refs/remotes/origin/develop
+
+      - name: Golang-ci install
+        run: make lintci-deps
+
+      - name: Lint
+        uses: make lint
