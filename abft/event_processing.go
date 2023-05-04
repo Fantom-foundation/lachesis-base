@@ -174,7 +174,7 @@ func (p *Orderer) calcFrameIdx(e dag.Event, checkOnly bool) (selfParentFrame, fr
 	// The reason of those checks is that "forkless caused" relation isn't transitive in a case if there's at least one
 	// cheater
 
-	maxFrameToCheck := selfParentFrame - 100
+	maxFrameToCheck := selfParentFrame + 100
 	if checkOnly {
 		maxFrameToCheck = e.Frame()
 	}
