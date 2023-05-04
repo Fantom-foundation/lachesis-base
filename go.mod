@@ -1,6 +1,6 @@
 module github.com/Fantom-foundation/lachesis-base
 
-go 1.19
+go 1.20
 
 require (
 	github.com/JekaMas/go-mutesting v1.1.2
