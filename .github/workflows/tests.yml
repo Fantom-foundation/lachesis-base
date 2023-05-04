@@ -61,6 +61,7 @@ jobs:
           vulncheck-version: latest
           package: ./...
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-upload: true
           fail-on-vuln: true
 
       - name: Upload govulncheck report
