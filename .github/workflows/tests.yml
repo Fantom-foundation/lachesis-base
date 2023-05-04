@@ -57,12 +57,6 @@ jobs:
           skip-upload: true
           fail-on-vuln: true
 
-      - name: Upload govulncheck report
-        uses: actions/upload-artifact@v3
-        with:
-          name: raw-report
-          path: raw-report.json
-
   mutating:
     name: Mutation tests
     runs-on: ubuntu-latest
