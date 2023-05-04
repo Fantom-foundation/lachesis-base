@@ -56,7 +56,7 @@ jobs:
         uses: Templum/govulncheck-action@v0.10.1
         continue-on-error: false
         with:
-          go-version: 1.20.x
+          go-version: 1.19.x
           vulncheck-version: latest
           package: ./...
           github-token: ${{ secrets.GITHUB_TOKEN }}
