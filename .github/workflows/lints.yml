@@ -27,4 +27,4 @@ jobs:
         run: make lintci-deps
 
       - name: Lint
-        uses: make lint
+        run: make lint
