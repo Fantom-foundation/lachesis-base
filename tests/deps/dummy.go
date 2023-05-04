@@ -1,5 +1,5 @@
 package deps
 
 import (
-	_ "github.com/JekaMas/go-mutesting"
+	_ "github.com/JekaMas/go-mutesting" //nolint
 )
