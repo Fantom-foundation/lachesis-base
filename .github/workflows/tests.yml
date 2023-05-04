@@ -37,6 +37,7 @@ jobs:
         run: make test-race
 
       - name: Reproducible build test
+        if: runner.os != 'Windows'
         run: |
           go build -o ./build/test1 ./tests/main.go
           shasum -a256 ./build/test1 | awk '{ print $1 }' > test1.sha256
