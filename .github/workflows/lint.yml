@@ -14,7 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --no-tags --prune --depth=0 origin +refs/heads/develop:refs/remotes/origin/develop
+      - run: |
+          git fetch --no-tags --prune --depth=1 origin +refs/heads/master:refs/remotes/origin/master
 
       - uses: actions/setup-go@v4
         with:
