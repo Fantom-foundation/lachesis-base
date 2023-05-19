@@ -12,6 +12,7 @@ import (
 )
 
 func TestRedBlackTreeGet(t *testing.T) {
+	t.Parallel()
 	tree := New()
 
 	if actualValue := tree.Size(); actualValue != 0 {
@@ -58,6 +59,7 @@ func TestRedBlackTreeGet(t *testing.T) {
 }
 
 func TestRedBlackTreePut(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{5}, []byte("e"))
 	tree.Put([]byte{6}, []byte("f"))
@@ -98,6 +100,7 @@ func TestRedBlackTreePut(t *testing.T) {
 }
 
 func TestRedBlackTreeCeilingAndFloor(t *testing.T) {
+	t.Parallel()
 	tree := New()
 
 	if node, found := tree.Floor([]byte{0}); node != nil || found {
@@ -131,6 +134,7 @@ func TestRedBlackTreeCeilingAndFloor(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorNextOnEmpty(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	it := tree.Iterator()
 	for it.Next() {
@@ -139,6 +143,7 @@ func TestRedBlackTreeIteratorNextOnEmpty(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorPrevOnEmpty(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	it := tree.Iterator()
 	for it.Prev() {
@@ -147,6 +152,7 @@ func TestRedBlackTreeIteratorPrevOnEmpty(t *testing.T) {
 }
 
 func TestRedBlackTreeIterator1Next(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{5}, []byte("e"))
 	tree.Put([]byte{6}, []byte("f"))
@@ -180,6 +186,7 @@ func TestRedBlackTreeIterator1Next(t *testing.T) {
 }
 
 func TestRedBlackTreeIterator1Prev(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{5}, []byte("e"))
 	tree.Put([]byte{6}, []byte("f"))
@@ -215,6 +222,7 @@ func TestRedBlackTreeIterator1Prev(t *testing.T) {
 }
 
 func TestRedBlackTreeIterator4Next(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{13}, []byte{5})
 	tree.Put([]byte{8}, []byte{3})
@@ -253,6 +261,7 @@ func TestRedBlackTreeIterator4Next(t *testing.T) {
 }
 
 func TestRedBlackTreeIterator4Prev(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{13}, []byte{5})
 	tree.Put([]byte{8}, []byte{3})
@@ -293,6 +302,7 @@ func TestRedBlackTreeIterator4Prev(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorBegin(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{3}, []byte("c"))
 	tree.Put([]byte{1}, []byte("a"))
@@ -325,6 +335,7 @@ func TestRedBlackTreeIteratorBegin(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorEnd(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	it := tree.Iterator()
 
@@ -352,6 +363,7 @@ func TestRedBlackTreeIteratorEnd(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorFirst(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{3}, []byte("c"))
 	tree.Put([]byte{1}, []byte("a"))
@@ -366,6 +378,7 @@ func TestRedBlackTreeIteratorFirst(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorLast(t *testing.T) {
+	t.Parallel()
 	tree := New()
 	tree.Put([]byte{3}, []byte("c"))
 	tree.Put([]byte{1}, []byte("a"))
@@ -380,6 +393,7 @@ func TestRedBlackTreeIteratorLast(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorNextTo(t *testing.T) {
+	t.Parallel()
 	// Sample seek function, i.e. string starting with "b"
 	seek := func(index []byte, value []byte) bool {
 		return strings.HasSuffix(string(value), "b")
@@ -432,6 +446,7 @@ func TestRedBlackTreeIteratorNextTo(t *testing.T) {
 }
 
 func TestRedBlackTreeIteratorPrevTo(t *testing.T) {
+	t.Parallel()
 	// Sample seek function, i.e. string starting with "b"
 	seek := func(index []byte, value []byte) bool {
 		return strings.HasSuffix(string(value), "b")
