@@ -7,68 +7,62 @@ import (
 )
 
 func TestCircularCache(t *testing.T) {
+	cache, err := New(-1)
+	require.Nil(t, cache)
+	require.Error(t, err)
+
 	size := 10
-	cache, err := New(size)
+	cache, err = New(size)
 	require.NoError(t, err)
 	// fill up cache
 	for i := 1; i <= size; i++ {
 		evicted := cache.Add(i, i)
 		require.False(t, evicted)
 	}
-	require.Equal(t, cache.Len(), size)
-	back, ok := cache.Peek(1)
-	require.True(t, ok)
-	two, ok := cache.Peek(2)
-	require.True(t, ok)
-	front, ok := cache.Peek(10)
-	require.True(t, ok)
-	_, ok = cache.Peek(11)
-	require.False(t, ok)
 
-	require.Equal(t, back, 1)
-	require.Equal(t, two, 2)
-	require.Equal(t, front, 10)
+	// adding same key on the same position but no evict becuase the evict is nil
+	require.True(t, cache.Contains(1))
+	val, _ := cache.Get(1)
+	require.Equal(t, 1, val)
+	evicted := cache.Add(1, 11)
+	require.False(t, evicted)
+	require.True(t, cache.Contains(1))
+	val, _ = cache.Get(1)
+	require.Equal(t, 11, val)
 
 	// add one more item when the cache is full
-	// 11 will replace the oldest item, a.k.a 1
-	evicted := cache.Add(11, 11)
-	require.True(t, evicted)
-	require.Equal(t, cache.Len(), size)
-
-	eleven, ok := cache.Peek(11)
-	require.True(t, ok)
-	require.Equal(t, eleven, 11)
-	_, ok = cache.Peek(1)
+	// 11 will replace the next position, a.k.a 2
+	require.True(t, cache.Contains(2))
+	val, ok := cache.Get(11)
+	require.Nil(t, val)
 	require.False(t, ok)
+	evicted = cache.Add(11, 11)
+	require.False(t, evicted)
+	require.False(t, cache.Contains(2))
 
-	// 12 will replace 11
-	evicted = cache.Add(12, 12)
-	require.True(t, evicted)
-	require.Equal(t, cache.Len(), size)
+	// Remove
+	require.True(t, cache.Contains(3))
+	require.True(t, cache.Remove(3))
+	require.False(t, cache.Remove(12))
+	require.False(t, cache.Contains(3))
 
-	twelve, ok := cache.Get(12) // 12 is moved to front
-	require.True(t, ok)
-	require.Equal(t, twelve, 12)
-	_, ok = cache.Peek(11)
-	require.False(t, ok)
-
-	// 13 will replace the oldest one, a.k.a 2
-	evicted = cache.Add(13, 13)
-	require.True(t, evicted)
-	require.Equal(t, cache.Len(), size)
-
-	_, ok = cache.Peek(2)
-	require.False(t, ok)
-
+	// Purge
+	require.True(t, cache.Contains(6))
 	cache.Purge()
-	require.Equal(t, cache.Len(), 0)
+	require.False(t, cache.Contains(6))
+
+	// Add/Get nil value
+	require.False(t, cache.Add(12, nil))
+	val, ok = cache.Get(12)
+	require.Nil(t, val)
+	require.False(t, ok)
 }
 
 func TestCircularCacheWithCallback(t *testing.T) {
 	size := 10
 	cache, err := NewWithEvict(size, func(key interface{}, value interface{}) {
-		require.Equal(t, key, 2)
-		require.Equal(t, value, 2)
+		require.Equal(t, key, 1)
+		require.Equal(t, value, 1)
 	})
 	require.NoError(t, err)
 	// fill up cache
@@ -77,13 +71,16 @@ func TestCircularCacheWithCallback(t *testing.T) {
 		require.False(t, evicted)
 	}
 
-	// re-add 1 to move it from back to front
+	// re-add 1, evict callback fundtion will be called
+	// and check that evicted item is 1/1
+	require.True(t, cache.Contains(1))
 	evicted := cache.Add(1, 1)
-	require.False(t, evicted)
-
-	// Add one more item, evict callback fundtion will be called
-	// and check that evicted item is 2/2, the oldest item
-	evicted = cache.Add(11, 11)
 	require.True(t, evicted)
-	require.Equal(t, cache.Len(), size)
+	require.True(t, cache.Contains(1))
+
+	// Add one more item into the next position, 2
+	require.True(t, cache.Contains(2))
+	evicted = cache.Add(11, 11)
+	require.False(t, evicted)
+	require.False(t, cache.Contains(2))
 }
