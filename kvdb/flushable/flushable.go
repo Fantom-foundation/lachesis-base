@@ -78,7 +78,7 @@ func (w *Flushable) Put(key []byte, value []byte) error {
 }
 
 func (w *Flushable) put(key []byte, value []byte) {
-	w.modified.Put(key, common.CopyBytes(value))
+	w.modified.Put(common.CopyBytes(key), common.CopyBytes(value))
 	*w.sizeEstimation += len(key) + len(value) + 128
 }
 
@@ -91,7 +91,7 @@ func (w *flushableReader) Has(key []byte) (bool, error) {
 		return false, errClosed
 	}
 
-	val, ok := w.modified.Get(key)
+	val, ok := w.modified.Get(common.CopyBytes(key))
 	if ok {
 		return val != nil, nil
 	}
@@ -108,7 +108,7 @@ func (w *flushableReader) Get(key []byte) ([]byte, error) {
 		return nil, errClosed
 	}
 
-	if entry, ok := w.modified.Get(key); ok {
+	if entry, ok := w.modified.Get(common.CopyBytes(key)); ok {
 		if entry == nil {
 			return nil, nil
 		}
@@ -128,7 +128,7 @@ func (w *Flushable) Delete(key []byte) error {
 }
 
 func (w *Flushable) delete(key []byte) {
-	w.modified.Put(key, nil)
+	w.modified.Put(common.CopyBytes(key), nil)
 	*w.sizeEstimation += len(key) + 128 // it should be (len(key) - len(old value)), but we'd need to read old value
 }
 
@@ -296,7 +296,7 @@ func castToPair(node *rbt.Node) (key, val []byte) {
 func (it *flushableIterator) init() {
 	it.parentOk = it.parentIt.Next()
 	if len(it.start) != 0 {
-		it.treeNode, it.treeOk = it.tree.Ceiling(it.start) // not strict >=
+		it.treeNode, it.treeOk = it.tree.Ceiling(common.CopyBytes(it.start)) // not strict >=
 	} else {
 		it.treeNode = it.tree.Left() // lowest key
 		it.treeOk = it.treeNode != nil
