@@ -7,6 +7,7 @@ import (
 )
 
 func TestCircularCache(t *testing.T) {
+	t.Parallel()
 	cache, err := New(-1)
 	require.Nil(t, cache)
 	require.Error(t, err)
@@ -20,7 +21,7 @@ func TestCircularCache(t *testing.T) {
 		require.False(t, evicted)
 	}
 
-	// adding same key on the same position but no evict becuase the evict is nil
+	// adding same key on the same position but no evict because the evict is nil
 	require.True(t, cache.Contains(1))
 	val, _ := cache.Get(1)
 	require.Equal(t, 1, val)
@@ -59,6 +60,7 @@ func TestCircularCache(t *testing.T) {
 }
 
 func TestCircularCacheWithCallback(t *testing.T) {
+	t.Parallel()
 	size := 10
 	cache, err := NewWithEvict(size, func(key interface{}, value interface{}) {
 		require.Equal(t, key, 1)

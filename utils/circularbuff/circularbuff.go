@@ -42,7 +42,7 @@ func NewWithEvict(maxSize int, onEvict EvictCallback) (*Cache, error) {
 
 // Purge is used to completely clear the cache.
 func (c *Cache) Purge() {
-	for k, _ := range c.items {
+	for k := range c.items {
 		delete(c.items, k)
 	}
 
@@ -56,7 +56,7 @@ func (c *Cache) Add(key, value interface{}) (evicted bool) {
 	// Check for existing item
 	evicted = false
 	if c.buf[c.next] == key {
-		v, _ := c.items[key]
+		v := c.items[key]
 		if c.onEvict != nil {
 			c.onEvict(key, v)
 			evicted = true
