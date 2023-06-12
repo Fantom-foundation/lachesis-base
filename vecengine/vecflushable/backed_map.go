@@ -11,21 +11,21 @@ import (
 const TestSizeLimit = 100000
 
 type backedMap struct {
-	cache               map[string][]byte
-	cacheIndex          []string
-	backup              kvdb.Store
-	sizeLimit           int
-	evictionThreshold   int
-	cacheSizeEstimation int
+	cache        map[string][]byte
+	cacheIndex   []string
+	backup       kvdb.Store
+	memSize      int
+	maxMemSize   int
+	evictionStep int
 }
 
-func newBackedMap(backup kvdb.Store, sizeLimit int, evictionThreshold int) *backedMap {
+func newBackedMap(backup kvdb.Store, maxMemSize int, evictionStep int) *backedMap {
 	return &backedMap{
-		cache:             make(map[string][]byte),
-		cacheIndex:        []string{},
-		backup:            backup,
-		sizeLimit:         sizeLimit,
-		evictionThreshold: evictionThreshold,
+		cache:        make(map[string][]byte),
+		cacheIndex:   []string{},
+		backup:       backup,
+		maxMemSize:   maxMemSize,
+		evictionStep: evictionStep,
 	}
 }
 
@@ -58,12 +58,12 @@ func (w *backedMap) add(key string, val []byte) {
 	w.cache[key] = val
 	if len(w.cache) > lenBefore {
 		w.cacheIndex = append(w.cacheIndex, key)
-		w.cacheSizeEstimation += mapMemEst(len(key), len(val))
+		w.memSize += mapMemEst(len(key), len(val))
 	}
 }
 
 func (w *backedMap) unloadIfNecessary() error {
-	if w.cacheSizeEstimation < w.sizeLimit {
+	if w.memSize < w.maxMemSize {
 		return nil
 	}
 
@@ -97,7 +97,7 @@ func (w *backedMap) unloadIfNecessary() error {
 		removedEstimation += mapMemEst(len(key), len(val))
 		cutoff++
 
-		if removedEstimation >= w.evictionThreshold {
+		if removedEstimation >= w.evictionStep {
 			break
 		}
 	}
@@ -108,7 +108,7 @@ func (w *backedMap) unloadIfNecessary() error {
 	}
 
 	w.cacheIndex = w.cacheIndex[cutoff:]
-	w.cacheSizeEstimation -= removedEstimation
+	w.memSize -= removedEstimation
 
 	return nil
 }
@@ -116,7 +116,7 @@ func (w *backedMap) unloadIfNecessary() error {
 func (w *backedMap) deleteAll() {
 	w.cache = make(map[string][]byte)
 	w.cacheIndex = []string{}
-	w.cacheSizeEstimation = 0
+	w.memSize = 0
 
 	wrappedDB := batched.Wrap(w.backup)
 	it := wrappedDB.NewIterator(nil, nil)
