@@ -3,8 +3,9 @@ package vecflushable
 import (
 	"errors"
 
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 )
 
 var (
@@ -13,9 +14,13 @@ var (
 	errInconsistent   = errors.New("vecflushable - inconsistent db")
 )
 
-// MapConst is an approximation of the number of extra bytes used by native go
+// mapConst is an approximation of the number of extra bytes used by native go
 // maps when adding an item to a map.
-const MapConst = 100
+const mapConst = 100
+
+func mapMemEst(keyS, valueS int) int {
+	return mapConst + keyS + valueS
+}
 
 // VecFlushable is a fast, append only, Flushable intended for the vecengine.
 // It does not implement all of the Flushable interface, just what is needed by
@@ -76,7 +81,7 @@ func (w *VecFlushable) Put(key []byte, value []byte) error {
 		return errors.New("vecflushable: key or value is nil")
 	}
 	w.modified[string(key)] = common.CopyBytes(value)
-	w.sizeEstimation += MapConst + len(key) + len(value)
+	w.sizeEstimation += mapMemEst(len(key), len(value))
 	return nil
 }
 
@@ -156,4 +161,3 @@ func (w *VecFlushable) Compact(start []byte, limit []byte) error {
 func (w *VecFlushable) NewBatch() kvdb.Batch {
 	panic(errNotImplemented)
 }
-

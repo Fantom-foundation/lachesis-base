@@ -58,7 +58,7 @@ func (w *backedMap) add(key string, val []byte) {
 	w.cache[key] = val
 	if len(w.cache) > lenBefore {
 		w.cacheIndex = append(w.cacheIndex, key)
-		w.cacheSizeEstimation += MapConst + 2*len(key) + len(val)
+		w.cacheSizeEstimation += mapMemEst(len(key), len(val))
 	}
 }
 
@@ -94,7 +94,7 @@ func (w *backedMap) unloadIfNecessary() error {
 		}
 
 		delete(w.cache, key)
-		removedEstimation += (2*len(key) + len(val))
+		removedEstimation += mapMemEst(len(key), len(val))
 		cutoff++
 
 		if removedEstimation >= w.evictionThreshold {
