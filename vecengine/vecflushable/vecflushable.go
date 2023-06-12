@@ -26,10 +26,10 @@ func mapMemEst(keyS, valueS int) int {
 // It does not implement all of the Flushable interface, just what is needed by
 // the vecengine.
 type VecFlushable struct {
-	modified       map[string][]byte
-	underlying     backedMap
-	sizeEstimation int
-	onDrop         func()
+	modified   map[string][]byte
+	underlying backedMap
+	memSize    int
+	onDrop     func()
 }
 
 func Wrap(parent kvdb.Store, sizeLimit int) *VecFlushable {
@@ -52,7 +52,7 @@ func WrapWithDrop(parent kvdb.Store, sizeLimit int, drop func()) *VecFlushable {
 
 func (w *VecFlushable) clearModified() {
 	w.modified = make(map[string][]byte)
-	w.sizeEstimation = 0
+	w.memSize = 0
 }
 
 func (w *VecFlushable) Has(key []byte) (bool, error) {
@@ -81,7 +81,7 @@ func (w *VecFlushable) Put(key []byte, value []byte) error {
 		return errors.New("vecflushable: key or value is nil")
 	}
 	w.modified[string(key)] = common.CopyBytes(value)
-	w.sizeEstimation += mapMemEst(len(key), len(value))
+	w.memSize += mapMemEst(len(key), len(value))
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (w *VecFlushable) NotFlushedPairs() int {
 }
 
 func (w *VecFlushable) NotFlushedSizeEst() int {
-	return w.sizeEstimation
+	return w.memSize
 }
 
 func (w *VecFlushable) Flush() error {
