@@ -45,7 +45,7 @@ func WrapWithDrop(parent kvdb.Store, sizeLimit int, drop func()) *VecFlushable {
 	}
 	return &VecFlushable{
 		modified:   make(map[string][]byte),
-		underlying: *newBackedMap(parent, sizeLimit, sizeLimit/2),
+		underlying: *newBackedMap(parent, sizeLimit),
 		onDrop:     drop,
 	}
 }
@@ -98,7 +98,7 @@ func (w *VecFlushable) Flush() error {
 		return errClosed
 	}
 
-	w.underlying.unloadIfNecessary()
+	w.underlying.mayUnload()
 
 	for key, val := range w.modified {
 		w.underlying.add(key, val)

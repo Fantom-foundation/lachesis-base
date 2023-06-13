@@ -16,16 +16,14 @@ type backedMap struct {
 	backup       kvdb.Store
 	memSize      int
 	maxMemSize   int
-	evictionStep int
 }
 
-func newBackedMap(backup kvdb.Store, maxMemSize int, evictionStep int) *backedMap {
+func newBackedMap(backup kvdb.Store, maxMemSize int) *backedMap {
 	return &backedMap{
 		cache:        make(map[string][]byte),
 		cacheIndex:   []string{},
 		backup:       backup,
 		maxMemSize:   maxMemSize,
-		evictionStep: evictionStep,
 	}
 }
 
@@ -62,7 +60,8 @@ func (w *backedMap) add(key string, val []byte) {
 	}
 }
 
-func (w *backedMap) unloadIfNecessary() error {
+// unloadIfNecessary evicts and flushes one batch of data
+func (w *backedMap) mayUnload() error {
 	if w.memSize < w.maxMemSize {
 		return nil
 	}
@@ -85,19 +84,11 @@ func (w *backedMap) unloadIfNecessary() error {
 			return err
 		}
 
-		if batch.ValueSize() > kvdb.IdealBatchSize {
-			err = batch.Write()
-			if err != nil {
-				return err
-			}
-			batch.Reset()
-		}
-
 		delete(w.cache, key)
 		removedEstimation += mapMemEst(len(key), len(val))
 		cutoff++
 
-		if removedEstimation >= w.evictionStep {
+		if batch.ValueSize() > kvdb.IdealBatchSize {
 			break
 		}
 	}
