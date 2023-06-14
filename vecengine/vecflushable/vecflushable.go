@@ -29,24 +29,15 @@ type VecFlushable struct {
 	modified   map[string][]byte
 	underlying backedMap
 	memSize    int
-	onDrop     func()
 }
 
 func Wrap(parent kvdb.Store, sizeLimit int) *VecFlushable {
 	if parent == nil {
 		panic("nil parent")
 	}
-	return WrapWithDrop(parent, sizeLimit, parent.Drop)
-}
-
-func WrapWithDrop(parent kvdb.Store, sizeLimit int, drop func()) *VecFlushable {
-	if parent == nil {
-		panic("nil parent")
-	}
 	return &VecFlushable{
 		modified:   make(map[string][]byte),
 		underlying: *newBackedMap(parent, sizeLimit),
-		onDrop:     drop,
 	}
 }
 
@@ -126,12 +117,7 @@ func (w *VecFlushable) Close() error {
 }
 
 func (w *VecFlushable) Drop() {
-	if w.modified != nil {
-		panic("close db first")
-	}
-	if w.onDrop != nil {
-		w.onDrop()
-	}
+	panic(errNotImplemented)
 }
 
 /* Some methods are not implemented and panic when called */
