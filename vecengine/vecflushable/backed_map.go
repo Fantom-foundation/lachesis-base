@@ -4,26 +4,23 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/batched"
 )
 
 // TestSizeLimit is used as the limit in unit-test of packages that use vecflushable
 const TestSizeLimit = 100000
 
 type backedMap struct {
-	cache        map[string][]byte
-	cacheIndex   []string
-	backup       kvdb.Store
-	memSize      int
-	maxMemSize   int
+	cache      map[string][]byte
+	backup     kvdb.Store
+	memSize    int
+	maxMemSize int
 }
 
 func newBackedMap(backup kvdb.Store, maxMemSize int) *backedMap {
 	return &backedMap{
-		cache:        make(map[string][]byte),
-		cacheIndex:   []string{},
-		backup:       backup,
-		maxMemSize:   maxMemSize,
+		cache:      make(map[string][]byte),
+		backup:     backup,
+		maxMemSize: maxMemSize,
 	}
 }
 
@@ -47,15 +44,14 @@ func (w *backedMap) get(key []byte) ([]byte, error) {
 
 func (w *backedMap) close() error {
 	w.cache = nil
-	w.cacheIndex = nil
 	return w.backup.Close()
 }
 
 func (w *backedMap) add(key string, val []byte) {
 	lenBefore := len(w.cache)
 	w.cache[key] = val
+	// TODO it works correctly only if new key/value have the same size (which is practically true currently)
 	if len(w.cache) > lenBefore {
-		w.cacheIndex = append(w.cacheIndex, key)
 		w.memSize += mapMemEst(len(key), len(val))
 	}
 }
@@ -71,15 +67,8 @@ func (w *backedMap) mayUnload() error {
 
 	cutoff := 0
 	removedEstimation := 0
-	for _, key := range w.cacheIndex {
-		var err error
-
-		val, ok := w.cache[key]
-		if !ok {
-			return errInconsistent
-		}
-
-		err = batch.Put([]byte(key), val)
+	for key, val := range w.cache {
+		err := batch.Put([]byte(key), val)
 		if err != nil {
 			return err
 		}
@@ -98,22 +87,7 @@ func (w *backedMap) mayUnload() error {
 		return err
 	}
 
-	w.cacheIndex = w.cacheIndex[cutoff:]
 	w.memSize -= removedEstimation
 
 	return nil
-}
-
-func (w *backedMap) deleteAll() {
-	w.cache = make(map[string][]byte)
-	w.cacheIndex = []string{}
-	w.memSize = 0
-
-	wrappedDB := batched.Wrap(w.backup)
-	it := wrappedDB.NewIterator(nil, nil)
-	for it.Next() {
-		wrappedDB.Delete(it.Key())
-	}
-	it.Release()
-	wrappedDB.Flush()
 }
