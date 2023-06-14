@@ -98,7 +98,10 @@ func (w *VecFlushable) Flush() error {
 		return errClosed
 	}
 
-	w.underlying.mayUnload()
+	err := w.underlying.mayUnload()
+	if err != nil {
+		return err
+	}
 
 	for key, val := range w.modified {
 		w.underlying.add(key, val)
@@ -111,11 +114,6 @@ func (w *VecFlushable) Flush() error {
 
 func (w *VecFlushable) DropNotFlushed() {
 	w.clearModified()
-}
-
-func (w *VecFlushable) DeleteAll() {
-	w.DropNotFlushed()
-	w.underlying.deleteAll()
 }
 
 func (w *VecFlushable) Close() error {
