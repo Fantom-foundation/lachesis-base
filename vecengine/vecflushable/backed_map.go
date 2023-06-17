@@ -56,17 +56,22 @@ func (w *backedMap) add(key string, val []byte) {
 	}
 }
 
-// unloadIfNecessary evicts and flushes one batch of data
+// mayUnload evicts and flushes one batch of data
 func (w *backedMap) mayUnload() error {
-	if w.memSize < w.maxMemSize {
-		return nil
+	for w.memSize > w.maxMemSize {
+		err := w.unload()
+		if err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+func (w *backedMap) unload() error {
 	batch := w.backup.NewBatch()
 	defer batch.Reset()
 
-	cutoff := 0
-	removedEstimation := 0
 	for key, val := range w.cache {
 		err := batch.Put([]byte(key), val)
 		if err != nil {
@@ -74,8 +79,12 @@ func (w *backedMap) mayUnload() error {
 		}
 
 		delete(w.cache, key)
-		removedEstimation += mapMemEst(len(key), len(val))
-		cutoff++
+		rmS := mapMemEst(len(key), len(val))
+		if rmS <= w.memSize {
+			w.memSize -= rmS
+		} else {
+			w.memSize = 0
+		}
 
 		if batch.ValueSize() > kvdb.IdealBatchSize {
 			break
@@ -86,8 +95,6 @@ func (w *backedMap) mayUnload() error {
 	if err != nil {
 		return err
 	}
-
-	w.memSize -= removedEstimation
 
 	return nil
 }

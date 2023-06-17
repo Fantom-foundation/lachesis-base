@@ -11,7 +11,6 @@ import (
 var (
 	errClosed         = errors.New("vecflushable - database closed")
 	errNotImplemented = errors.New("vecflushable - not implemented")
-	errInconsistent   = errors.New("vecflushable - inconsistent db")
 )
 
 // mapConst is an approximation of the number of extra bytes used by native go
