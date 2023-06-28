@@ -4,21 +4,23 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/hash"
 )
 
+type Metric uint64
+
 type MetricStrategy struct {
-	metricFn func(hash.Event) Metric
+	metricFn func(hash.Events) Metric
 }
 
-func NewMetricStrategy(metricFn func(hash.Event) Metric) *MetricStrategy {
+func NewMetricStrategy(metricFn func(hash.Events) Metric) *MetricStrategy {
 	return &MetricStrategy{metricFn}
 }
 
 // Choose chooses the hash from the specified options
-func (st *MetricStrategy) Choose(_ hash.Events, options hash.Events) int {
+func (st *MetricStrategy) Choose(existing hash.Events, options hash.Events) int {
 	var maxI int
 	var maxWeight Metric
 	// find option with a maximum weight
 	for i, opt := range options {
-		weight := st.metricFn(opt)
+		weight := st.metricFn(append(existing.Copy(), opt))
 		if maxWeight == 0 || weight > maxWeight {
 			maxI = i
 			maxWeight = weight

@@ -12,13 +12,13 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/utils/wmedian"
 )
 
-type DagIndex interface {
+type DagIndexQ interface {
 	dagidx.VectorClock
 }
 type DiffMetricFn func(median, current, update idx.Event, validatorIdx idx.Validator) Metric
 
 type QuorumIndexer struct {
-	dagi       DagIndex
+	dagi       DagIndexQ
 	validators *pos.Validators
 
 	globalMatrix     Matrix
@@ -30,7 +30,7 @@ type QuorumIndexer struct {
 	diffMetricFn DiffMetricFn
 }
 
-func NewQuorumIndexer(validators *pos.Validators, dagi DagIndex, diffMetricFn DiffMetricFn) *QuorumIndexer {
+func NewQuorumIndexer(validators *pos.Validators, dagi DagIndexQ, diffMetricFn DiffMetricFn) *QuorumIndexer {
 	return &QuorumIndexer{
 		globalMatrix:     NewMatrix(validators.Len(), validators.Len()),
 		globalMedianSeqs: make([]idx.Event, validators.Len()),
@@ -114,20 +114,28 @@ func (h *QuorumIndexer) recacheState() {
 		median := wmedian.Of(pairs, h.validators.Quorum())
 		h.globalMedianSeqs[validatorIdx] = median.(weightedSeq).seq
 	}
-	// invalidate search strategy cache
-	cache := NewMetricFnCache(h.GetMetricOf, 128)
-	h.searchStrategy = NewMetricStrategy(cache.GetMetricOf)
+	h.searchStrategy = NewMetricStrategy(h.GetMetricOf)
 	h.dirty = false
 }
 
-func (h *QuorumIndexer) GetMetricOf(id hash.Event) Metric {
+func (h *QuorumIndexer) GetMetricOf(parents hash.Events) Metric {
 	if h.dirty {
 		h.recacheState()
 	}
-	vecClock := h.dagi.GetMergedHighestBefore(id)
+	vecClock := make([]dagidx.HighestBeforeSeq, len(parents))
+	for i, parent := range parents {
+		vecClock[i] = h.dagi.GetMergedHighestBefore(parent)
+	}
 	var metric Metric
 	for validatorIdx := idx.Validator(0); validatorIdx < h.validators.Len(); validatorIdx++ {
-		update := seqOf(vecClock.Get(validatorIdx))
+
+		//find the Highest of all the parents
+		var update idx.Event
+		for i, _ := range parents {
+			if seqOf(vecClock[i].Get(validatorIdx)) > update {
+				update = seqOf(vecClock[i].Get(validatorIdx))
+			}
+		}
 		current := h.selfParentSeqs[validatorIdx]
 		median := h.globalMedianSeqs[validatorIdx]
 		metric += h.diffMetricFn(median, current, update, validatorIdx)

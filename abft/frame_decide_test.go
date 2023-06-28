@@ -59,7 +59,7 @@ func testConfirmBlocks(t *testing.T, weights []pos.Weight, cheatersCount int) {
 	assertar := assert.New(t)
 
 	nodes := tdag.GenNodes(len(weights))
-	lch, _, input := FakeLachesis(nodes, weights)
+	lch, _, input, _ := FakeLachesis(nodes, weights)
 
 	var (
 		frames []idx.Frame
