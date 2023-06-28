@@ -38,7 +38,7 @@ type TestLachesis struct {
 }
 
 // FakeLachesis creates empty abft with mem store and equal weights of nodes in genesis.
-func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore) {
+func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memorydb.Mod) (*TestLachesis, *Store, *EventStore, *adapters.VectorToDagIndexer) {
 	validators := make(pos.ValidatorsBuilder, len(nodes))
 	for i, v := range nodes {
 		if weights == nil {
@@ -67,7 +67,8 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 	input := NewEventStore()
 
 	config := LiteConfig()
-	lch := NewIndexedLachesis(store, input, &adapters.VectorToDagIndexer{Index: vecfc.NewIndex(crit, vecfc.LiteConfig())}, crit, config)
+	dagIndexer := &adapters.VectorToDagIndexer{Index: vecfc.NewIndex(crit, vecfc.LiteConfig())}
+	lch := NewIndexedLachesis(store, input, dagIndexer, crit, config)
 
 	extended := &TestLachesis{
 		IndexedLachesis: lch,
@@ -107,7 +108,7 @@ func FakeLachesis(nodes []idx.ValidatorID, weights []pos.Weight, mods ...memoryd
 		panic(err)
 	}
 
-	return extended, store, input
+	return extended, store, input, dagIndexer
 }
 
 func mutateValidators(validators *pos.Validators) *pos.Validators {

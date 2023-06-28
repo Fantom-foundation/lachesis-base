@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/lachesis-base/abft"
 	"github.com/Fantom-foundation/lachesis-base/emitter/ancestor"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/Fantom-foundation/lachesis-base/inter/dag"
@@ -53,7 +52,7 @@ type QITestEvent struct {
 
 var mutex sync.Mutex // a mutex used for variables shared across go rountines
 
-func TestQI(t *testing.T) {
+func Benchmark_Emission(b *testing.B) {
 	numNodes := 20
 	stakeDist := stakeCumDist()             // for stakes drawn from distribution
 	stakeRNG := rand.New(rand.NewSource(0)) // for stakes drawn from distribution
@@ -65,7 +64,7 @@ func TestQI(t *testing.T) {
 		weights[i] = pos.Weight(sampleDist(stakeRNG, stakeDist)) // for non-equal stake sample from Fantom main net validator stake distribution
 	}
 	sort.Slice(weights, func(i, j int) bool { return weights[i] > weights[j] }) // sort weights in order
-	QIParentCount := 3                                                          // maximum number of parents selected by quorum indexer
+	QIParentCount := 12                                                         // maximum number of parents selected by FC indexer
 	randParentCount := 0                                                        // maximum number of parents selected randomly
 	offlineNodes := false                                                       // set to true to make smallest non-quourm validators offline
 
@@ -88,33 +87,16 @@ func TestQI(t *testing.T) {
 	// var latency mainNetLatency
 	// maxLatency := latency.initialise()
 
-	simulationDuration := 100000 // length of simulated time in milliseconds
+	simulationDuration := 50000 // length of simulated time in milliseconds
 	thresholds := make([]float64, 0)
 	for thresh := 0.0; thresh <= 1000.0; thresh = thresh + 50.0 {
 		thresholds = append(thresholds, thresh)
 	}
-	slopes := make([]float64, 0)
-	for s := 0.0; s <= 0.1; s = s + 0.01 {
-		slopes = append(slopes, s)
-	}
-	results := make([][]Results, len(thresholds))
-	for i, _ := range results {
-		results[i] = make([]Results, len(slopes))
-	}
-	var sigmoid ancestor.Sigmoid
+	results := make([]Results, len(thresholds))
 	for ti, threshold := range thresholds {
-		for si, slope := range slopes {
-			// for centre := 0.0; centre <= 1.0; centre = centre + 0.1 {
-			// slope := 0.1
-			centre := 0.67
-			sigmoid.Centre = centre
-			sigmoid.Slope = slope
-
-			fmt.Println("Threshold: ", threshold, " Sigmoid Centre: ", centre, " Sigmoid Slope: ", slope)
-			//Now run the simulation
-			results[ti][si] = simulate(weights, QIParentCount, randParentCount, offlineNodes, &latency, maxLatency, simulationDuration, sigmoid, threshold)
-			// }
-		}
+		fmt.Println("Threshold: ", threshold)
+		//Now run the simulation
+		results[ti] = simulate(weights, QIParentCount, randParentCount, offlineNodes, &latency, maxLatency, simulationDuration)
 	}
 
 	// Print Results
@@ -130,84 +112,30 @@ func TestQI(t *testing.T) {
 	mw := io.MultiWriter(os.Stdout, file)
 
 	fmt.Fprint(mw, "maxFrame=np.array([")
-	for ti, tResult := range results {
-		fmt.Fprint(mw, "[")
-		for si, result := range tResult {
-			if si < len(tResult)-1 {
-				fmt.Fprint(mw, result.maxFrame, ",")
-			} else {
-				fmt.Fprint(mw, result.maxFrame)
-			}
-		}
-		if ti < len(results)-1 {
-			fmt.Fprintln(mw, "],")
-		} else {
-			fmt.Fprint(mw, "]")
-		}
+	for _, result := range results {
+		fmt.Fprint(mw, result.maxFrame)
 	}
 	fmt.Fprintln(mw, "])")
 	fmt.Fprintln(mw, "")
 
 	fmt.Fprint(mw, "numEvents=np.array([")
-	for ti, tResult := range results {
-		fmt.Fprint(mw, "[")
-		for si, result := range tResult {
-			if si < len(tResult)-1 {
-				fmt.Fprint(mw, result.numEvents, ",")
-			} else {
-				fmt.Fprint(mw, result.numEvents)
-			}
-		}
-		if ti < len(results)-1 {
-			fmt.Fprintln(mw, "],")
-		} else {
-			fmt.Fprint(mw, "]")
-		}
+	for _, result := range results {
+		fmt.Fprint(mw, result.numEvents)
 	}
 	fmt.Fprintln(mw, "])")
 	fmt.Fprintln(mw, "")
 
 	fmt.Fprint(mw, "thresholds=np.array([")
-	for ti, tResult := range results {
-		fmt.Fprint(mw, "[")
-		for si, _ := range tResult {
-			if si < len(tResult)-1 {
-				fmt.Fprint(mw, thresholds[ti], ",")
-			} else {
-				fmt.Fprint(mw, thresholds[ti])
-			}
-		}
-		if ti < len(results)-1 {
-			fmt.Fprintln(mw, "],")
-		} else {
-			fmt.Fprint(mw, "]")
-		}
+	for ti, _ := range results {
+		fmt.Fprint(mw, thresholds[ti])
 	}
 	fmt.Fprintln(mw, "])")
 	fmt.Fprintln(mw, "")
-
-	fmt.Fprint(mw, "slopes=np.array([")
-	for ti, tResult := range results {
-		fmt.Fprint(mw, "[")
-		for si, _ := range tResult {
-			if si < len(tResult)-1 {
-				fmt.Fprint(mw, slopes[si], ",")
-			} else {
-				fmt.Fprint(mw, slopes[si])
-			}
-		}
-		if ti < len(results)-1 {
-			fmt.Fprintln(mw, "],")
-		} else {
-			fmt.Fprint(mw, "]")
-		}
-	}
-	fmt.Fprintln(mw, "])")
 	fmt.Fprintln(mw, "")
 
 }
 
-func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offlineNodes bool, latency latency, maxLatency int, simulationDuration int, sigmoid ancestor.Sigmoid, threshold float64) Results {
+func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offlineNodes bool, latency latency, maxLatency int, simulationDuration int) Results {
 
 	numValidators := len(weights)
 
@@ -230,7 +158,7 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 		// time.Sleep(1 * time.Millisecond) //sleep a bit for seeding RNG
 		// randEvRNG[i] = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
-	randEvRate := 0.00 // sets the probability that an event will be created randomly
+	randEvRate := 0.0 // sets the probability that an event will be created randomly
 
 	// create a 3D slice with coordinates [time][node][node] that is used to store delayed transmission of events between nodes
 	//each time coordinate corresponds to 1 millisecond of delay between a pair of nodes
@@ -254,14 +182,15 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 
 	var input *EventStore
 	var lch *TestLachesis
+	var dagIndexer ancestor.DagIndex
 	inputs := make([]EventStore, numValidators)
 	lchs := make([]TestLachesis, numValidators)
-	quorumIndexers := make([]ancestor.QuorumIndexer, numValidators)
+	fcIndexers := make([]*ancestor.FCIndexer, numValidators)
 	for i := 0; i < numValidators; i++ {
-		lch, _, input = FakeLachesis(nodes, weights)
+		lch, _, input, dagIndexer = FakeLachesis(nodes, weights)
 		lchs[i] = *lch
 		inputs[i] = *input
-		quorumIndexers[i] = *ancestor.NewQuorumIndexer(validators, lch, sigmoid, threshold)
+		fcIndexers[i] = ancestor.NewFCIndexer(validators, dagIndexer, nodes[i])
 	}
 
 	// If requried set smallest non-quorum validators as offline for testing
@@ -343,7 +272,7 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 					process[i] = true
 					//check if all parents are in the DAG
 					for _, parent := range buffEvent.Parents() {
-						if lchs[receiveNode].DagIndexer.GetEvent(parent) == nil {
+						if lchs[receiveNode].input.GetEvent(parent) == nil {
 							// a parent is not yet in the DAG, so don't process this event yet
 							process[i] = false
 							break
@@ -351,7 +280,7 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 					}
 					if process[i] {
 						// buffered event has all parents in the DAG and can now be processed
-						processEvent(inputs[receiveNode], &lchs[receiveNode], buffEvent, &quorumIndexers[receiveNode], &headsAll[receiveNode], nodes[receiveNode], simTime)
+						processEvent(inputs[receiveNode], &lchs[receiveNode], buffEvent, fcIndexers[receiveNode], &headsAll[receiveNode], nodes[receiveNode], simTime)
 					}
 				}
 				//remove processed events from buffer
@@ -414,8 +343,8 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 							}
 						}
 
-						quorumIndexers[self].SelfParentEvent = selfParent[self].ID() // quorumIndexer needs to know the self's previous event
-						if !isLeaf[self] {                                           // only non leaf events have parents
+						//fcIndexers[self].SelfParentEvent = selfParent[self].ID() // fcIndexer needs to know the self's previous event
+						if !isLeaf[self] { // only non leaf events have parents
 							// iteratively select the best parent from the list of heads using quorum indexer parent selection
 							for j := 0; j < QIParentCount-1; j++ {
 								if len(heads) <= 0 {
@@ -423,7 +352,7 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 									break
 								}
 
-								best := quorumIndexers[self].Choose(parents.IDs(), heads.IDs()) //new quorumIndexer
+								best := fcIndexers[self].SearchStrategy().Choose(parents.IDs(), heads.IDs()) //new fcIndexer
 
 								parents = append(parents, heads[best])
 								// remove chosen parent from head options
@@ -468,7 +397,13 @@ func simulate(weights []pos.Weight, QIParentCount int, randParentCount int, offl
 							// self is online
 							passedTime := simTime - selfParent[self].creationTime
 							if passedTime > minEventCreationInterval[self] {
-								if createRandEvent || isLeaf[self] || quorumIndexers[self].DAGProgressEventTimingCondition(e.Parents(), online, passedTime) {
+								metric := fcIndexers[self].ValidatorsPastMe()
+								if metric < validators.Quorum() {
+									metric /= 20
+								}
+								passedTimeEff := int((uint64(passedTime) * uint64(metric)) / uint64(validators.TotalWeight()))
+								if createRandEvent || isLeaf[self] || passedTimeEff > 350 {
+									//println(uint64(metric) * 100 / uint64(validators.TotalWeight()))
 									//create an event if (i)a random event is created (ii) is a leaf event, or (iii) event timing condition is met
 									isLeaf[self] = false // only create one leaf event
 									//now start propagation of event to other nodes
@@ -562,19 +497,19 @@ func updateHeads(newEvent dag.Event, heads *dag.Events) {
 	*heads = append(*heads, newEvent) //add newEvent to heads
 }
 
-func processEvent(input EventStore, lchs *TestLachesis, e *QITestEvent, quorumIndexer *ancestor.QuorumIndexer, heads *dag.Events, self idx.ValidatorID, time int) (frame idx.Frame) {
+func processEvent(input EventStore, lchs *TestLachesis, e *QITestEvent, fcIndexer *ancestor.FCIndexer, heads *dag.Events, self idx.ValidatorID, time int) (frame idx.Frame) {
 	input.SetEvent(e)
 
-	lchs.DagIndexer.Add(e)
+	lchs.dagIndexer.Add(e)
 	lchs.Lachesis.Build(e)
 	lchs.Lachesis.Process(e)
 
-	lchs.DagIndexer.Flush()
-	// HighestBefore based quorum indexer needs to process the event
-	quorumIndexer.ProcessEvent(&e.BaseEvent, self == e.Creator(), e.creationTime)
+	lchs.dagIndexer.Flush()
+	// HighestBefore based fc indexer needs to process the event
+	fcIndexer.ProcessEvent(&e.BaseEvent)
 
 	updateHeads(e, heads)
-	return lchs.DagIndexer.GetEvent(e.ID()).Frame()
+	return e.Frame()
 }
 
 func (lat *gaussianLatency) latency(sender, receiver int, rng *rand.Rand) int {

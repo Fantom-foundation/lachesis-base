@@ -82,7 +82,7 @@ func testRestartAndReset(t *testing.T, weights []pos.Weight, mutateWeights bool,
 	lchs := make([]*TestLachesis, 0, COUNT)
 	inputs := make([]*EventStore, 0, COUNT)
 	for i := 0; i < COUNT; i++ {
-		lch, _, input := FakeLachesis(nodes, weights)
+		lch, _, input, _ := FakeLachesis(nodes, weights)
 		lchs = append(lchs, lch)
 		inputs = append(inputs, input)
 	}

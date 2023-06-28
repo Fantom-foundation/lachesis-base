@@ -78,7 +78,7 @@ func testLachesisRandomAndReset(t *testing.T, weights []pos.Weight, mutateWeight
 	lchs := make([]*TestLachesis, 0, lchCount)
 	inputs := make([]*EventStore, 0, lchCount)
 	for i := 0; i < lchCount; i++ {
-		lch, _, input := FakeLachesis(nodes, weights)
+		lch, _, input, _ := FakeLachesis(nodes, weights)
 		lchs = append(lchs, lch)
 		inputs = append(inputs, input)
 	}
