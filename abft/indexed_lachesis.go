@@ -38,7 +38,7 @@ type DagIndexer interface {
 	Reset(validators *pos.Validators, db kvdb.FlushableKVStore, getEvent func(hash.Event) dag.Event)
 }
 
-// New creates IndexedLachesis instance.
+// NewIndexedLachesis creates IndexedLachesis instance.
 func NewIndexedLachesis(store *Store, input EventSource, dagIndexer DagIndexer, crit func(error), config Config) *IndexedLachesis {
 	p := &IndexedLachesis{
 		Lachesis:      NewLachesis(store, input, dagIndexer, crit, config),
