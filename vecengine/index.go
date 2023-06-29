@@ -9,7 +9,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
-	"github.com/Fantom-foundation/lachesis-base/kvdb/flushable"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
 )
 
@@ -20,7 +19,6 @@ type Callbacks struct {
 	SetLowestAfter   func(hash.Event, LowestAfterI)
 	NewHighestBefore func(idx.Validator) HighestBeforeI
 	NewLowestAfter   func(idx.Validator) LowestAfterI
-	OnDbReset        func(db kvdb.Store)
 	OnDropNotFlushed func()
 }
 
@@ -53,18 +51,15 @@ func NewIndex(crit func(error), callbacks Callbacks) *Engine {
 }
 
 // Reset resets buffers.
-func (vi *Engine) Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event) {
+func (vi *Engine) Reset(validators *pos.Validators, db kvdb.FlushableKVStore, getEvent func(hash.Event) dag.Event) {
 	// use wrapper to be able to drop failed events by dropping cache
 	vi.getEvent = getEvent
-	vi.vecDb = flushable.WrapWithDrop(db, func() {})
+	vi.vecDb = db
 	vi.validators = validators
 	vi.validatorIdxs = validators.Idxs()
 	vi.DropNotFlushed()
 
 	table.MigrateTables(&vi.table, vi.vecDb)
-	if vi.callback.OnDbReset != nil {
-		vi.callback.OnDbReset(vi.vecDb)
-	}
 }
 
 // Add calculates vector clocks for the event and saves into DB.

@@ -15,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 )
 
 func tCrit(err error) { panic(err) }
@@ -51,7 +52,7 @@ func benchForklessCauseProcess(b *testing.B, dagAscii string, idx *int) {
 	}
 
 	vi := NewIndex(tCrit, LiteConfig())
-	vi.Reset(validators, memorydb.New(), getEvent)
+	vi.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	_, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
@@ -142,7 +143,7 @@ func testForklessCaused(t *testing.T, dagAscii string) {
 	}
 
 	vi := NewIndex(tCrit, LiteConfig())
-	vi.Reset(validators, memorydb.New(), getEvent)
+	vi.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	_, _, named := tdag.ASCIIschemeForEach(dagAscii, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {
@@ -460,7 +461,7 @@ func TestForklessCausedRandom(t *testing.T) {
 	}
 
 	vi := NewIndex(tCrit, LiteConfig())
-	vi.Reset(validators, memorydb.New(), getEvent)
+	vi.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	// push
 	for _, e := range ordered {
@@ -542,7 +543,7 @@ func TestRandomForksSanity(t *testing.T) {
 	}
 
 	vi := NewIndex(tCrit, LiteConfig())
-	vi.Reset(validators, memorydb.New(), getEvent)
+	vi.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	// Many forks from each node in large graph, so probability of not seeing a fork is negligible
 	events := tdag.ForEachRandFork(nodes, cheaters, 300, 4, 30, nil, tdag.ForEachEvent{
@@ -669,7 +670,7 @@ func TestRandomForks(t *testing.T) {
 			}
 
 			vi := NewIndex(tCrit, LiteConfig())
-			vi.Reset(validators, memorydb.New(), getEvent)
+			vi.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 			_ = tdag.ForEachRandFork(nodes, cheaters, test.eventsNum, test.parentsNum, test.forksNum, r, tdag.ForEachEvent{
 				Process: func(e dag.Event, name string) {

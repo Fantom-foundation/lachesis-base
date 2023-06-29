@@ -95,8 +95,10 @@ func (vi *Index) initCaches() {
 }
 
 // Reset resets buffers.
-func (vi *Index) Reset(validators *pos.Validators, db kvdb.Store, getEvent func(hash.Event) dag.Event) {
+func (vi *Index) Reset(validators *pos.Validators, db kvdb.FlushableKVStore, getEvent func(hash.Event) dag.Event) {
 	vi.Engine.Reset(validators, db, getEvent)
+	vi.vecDb = db
+	table.MigrateTables(&vi.table, vi.vecDb)
 	vi.getEvent = getEvent
 	vi.validators = validators
 	vi.validatorIdxs = validators.Idxs()
@@ -124,14 +126,8 @@ func (vi *Index) GetEngineCallbacks() vecengine.Callbacks {
 		NewLowestAfter: func(size idx.Validator) vecengine.LowestAfterI {
 			return NewLowestAfterSeq(size)
 		},
-		OnDbReset:        vi.onDbReset,
 		OnDropNotFlushed: vi.onDropNotFlushed,
 	}
-}
-
-func (vi *Index) onDbReset(db kvdb.Store) {
-	vi.vecDb = db
-	table.MigrateTables(&vi.table, vi.vecDb)
 }
 
 func (vi *Index) onDropNotFlushed() {

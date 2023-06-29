@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/inter/dag/tdag"
 	"github.com/Fantom-foundation/lachesis-base/inter/pos"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/memorydb"
+	"github.com/Fantom-foundation/lachesis-base/vecengine/vecflushable"
 )
 
 var (
@@ -52,11 +53,11 @@ func BenchmarkIndex_Add(b *testing.B) {
 	}
 
 	vecClock := NewIndex(func(err error) { panic(err) }, LiteConfig())
-	vecClock.Reset(validators, memorydb.New(), getEvent)
+	vecClock.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		vecClock.Reset(validators, memorydb.New(), getEvent)
+		vecClock.Reset(validators, vecflushable.Wrap(memorydb.New(), vecflushable.TestSizeLimit), getEvent)
 		b.StartTimer()
 		for _, e := range ordered {
 			err := vecClock.Add(e)
