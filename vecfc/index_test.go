@@ -71,13 +71,13 @@ func benchmark_Index_Add(b *testing.B, dbProducer func() kvdb.FlushableKVStore) 
 		events[e.ID()] = e
 	}
 
-	vecClock := NewIndex(func(err error) { panic(err) }, LiteConfig())
-
-	for i := 0; i < b.N; i++ {
+	i := 0
+	for {
 		b.StopTimer()
+		vecClock := NewIndex(func(err error) { panic(err) }, LiteConfig())
 		vecClock.Reset(validators, dbProducer(), getEvent)
 		b.StartTimer()
-		for i, e := range ordered {
+		for _, e := range ordered {
 			err := vecClock.Add(e)
 			if err != nil {
 				panic(err)
@@ -85,7 +85,7 @@ func benchmark_Index_Add(b *testing.B, dbProducer func() kvdb.FlushableKVStore) 
 			vecClock.Flush()
 			i++
 			if i >= b.N {
-				break
+				return
 			}
 		}
 	}

@@ -14,13 +14,15 @@ type backedMap struct {
 	backup     kvdb.Store
 	memSize    int
 	maxMemSize int
+	batchSize  int
 }
 
-func newBackedMap(backup kvdb.Store, maxMemSize int) *backedMap {
+func newBackedMap(backup kvdb.Store, maxMemSize, batchSize int) *backedMap {
 	return &backedMap{
 		cache:      make(map[string][]byte),
 		backup:     backup,
 		maxMemSize: maxMemSize,
+		batchSize:  batchSize,
 	}
 }
 
@@ -59,7 +61,7 @@ func (w *backedMap) add(key string, val []byte) {
 // mayUnload evicts and flushes one batch of data
 func (w *backedMap) mayUnload() error {
 	for w.memSize > w.maxMemSize {
-		err := w.unload(kvdb.IdealBatchSize)
+		err := w.unload(w.batchSize)
 		if err != nil {
 			return err
 		}

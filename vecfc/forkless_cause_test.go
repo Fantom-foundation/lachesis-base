@@ -43,6 +43,7 @@ func benchForklessCauseMain(b *testing.B, idx *int, inmem bool) {
 
 func benchForklessCauseProcess(b *testing.B, idx *int, inmem bool) {
 	b.Helper()
+	b.StopTimer()
 	nodes := tdag.GenNodes(10)
 	validators := pos.EqualWeightValidators(nodes, 1)
 
@@ -66,7 +67,7 @@ func benchForklessCauseProcess(b *testing.B, idx *int, inmem bool) {
 	}
 
 	vi := NewIndex(tCrit, LiteConfig())
-	vi.Reset(validators, vecflushable.Wrap(db, vecflushable.TestSizeLimit), getEvent)
+	vi.Reset(validators, vecflushable.Wrap(db, 10000000), getEvent)
 
 	tdag.ForEachRandEvent(nodes, 10, 2, nil, tdag.ForEachEvent{
 		Process: func(e dag.Event, name string) {

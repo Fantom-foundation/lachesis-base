@@ -20,11 +20,11 @@ import (
 // TestVecflushableNoBackup tests normal operation of vecflushable, before and after
 // flush, while the size remains under the limit.
 func TestVecflushableNoBackup(t *testing.T) {
-	// we set the limit at 1000 bytes and insert 240 bytes [10 * (8 + 8 + 8)] so
+	// we set the limit at 100000 bytes so
 	// the underlying cache should not be unloaded to leveldb
 
 	backupDB, _ := tempLevelDB()
-	vecflushable := Wrap(backupDB, 1000)
+	vecflushable := Wrap(backupDB, 100000)
 
 	putOp := func(key []byte, value []byte) {
 		err := vecflushable.Put(key, value)
@@ -46,24 +46,24 @@ func TestVecflushableNoBackup(t *testing.T) {
 	totalItems := 10
 	keySize := 8
 	valSize := 8
-	expectedNotFlushedSize := totalItems * (keySize + valSize)
+	expectedNotFlushedSize := totalItems * mapMemEst(keySize, valSize)
 
 	loopOp(putOp, totalItems)
 
 	assert.Equal(t, totalItems, vecflushable.NotFlushedPairs())
 	assert.Equal(t, expectedNotFlushedSize, vecflushable.NotFlushedSizeEst())
-	assert.Equal(t, 0, vecflushable.underlying.cacheSizeEstimation)
+	assert.Equal(t, 0, vecflushable.underlying.memSize)
 
 	loopOp(getOp, totalItems)
 
 	err := vecflushable.Flush()
 	assert.NoError(t, err)
 
-	expectedUnderlyingCacheSize := totalItems * (2*keySize + valSize)
+	expectedUnderlyingCacheSize := totalItems * mapMemEst(keySize, valSize)
 
 	assert.Equal(t, 0, vecflushable.NotFlushedPairs())
 	assert.Equal(t, 0, vecflushable.NotFlushedSizeEst())
-	assert.Equal(t, expectedUnderlyingCacheSize, vecflushable.underlying.cacheSizeEstimation)
+	assert.Equal(t, expectedUnderlyingCacheSize, vecflushable.underlying.memSize)
 
 	loopOp(getOp, totalItems)
 }
@@ -71,24 +71,24 @@ func TestVecflushableNoBackup(t *testing.T) {
 // TestVecflushableBackup tests that the native map is unloaded to persistent
 // storage when size exceeds the limit, respecting the eviction threshold.
 func TestVecflushableBackup(t *testing.T) {
-	// we set the limit at 144 bytes and insert 240 bytes [10 * (8 + 8 + 8)]
+	// we set the limit at 144 bytes and insert 1160 bytes [10 * (100 + 8 + 8)]
 	// the eviction threshold is 72 bytes
 	//
 	// unfolding:
 	//
-	// - the sizeLimit is first hit after inserting 6 items (6*24 = 144).
-	//		* the first 3 items (3*24=72) are unloaded from the map and copied to level db
-	//   => | cache = 3 | cacheSizeEstimation = 72 | levelDB = 3
+	// - the sizeLimit is first hit after inserting 6 items (6*116 = 696).
+	//		* the first 3 items (3*16=48) are unloaded from the map and copied to level db
+	//   => | cache = 3 | memSize = 348 | levelDB = 3
 	//
 	// - after inserting 3 more items, the cache limit is hit again.
 	// 		* the next 3 items are unloaded from the map and copied to level db
-	// 	 => | cache = 3 | cacheSizeEstimation = 72 | levelDB = 6
+	// 	 => | cache = 3 | memSize = 72 | levelDB = 6
 	//
 	// - after inserting the last item, the size of cache is still under the limit
-	//   => | cache = 4 | cacheSizeEstimation = 96 | levelDB = 6
+	//   => | cache = 4 | memSize = 96 | levelDB = 6
 
 	backupDB, _ := tempLevelDB()
-	vecflushable := Wrap(backupDB, 144)
+	vecflushable := wrap(backupDB, 696-1, 48)
 
 	putOp := func(key []byte, value []byte) {
 		if err := vecflushable.Put(key, value); err != nil {
@@ -101,15 +101,14 @@ func TestVecflushableBackup(t *testing.T) {
 
 	totalItems := 10
 	expectedUnderlyingCacheCount := 4
-	expectedUnderlyingCacheSize := expectedUnderlyingCacheCount * 24
+	expectedUnderlyingCacheSize := expectedUnderlyingCacheCount * 116
 
 	loopOp(putOp, totalItems)
 
 	assert.Equal(t, 0, vecflushable.NotFlushedPairs())
 	assert.Equal(t, 0, vecflushable.NotFlushedSizeEst())
 	assert.Equal(t, expectedUnderlyingCacheCount, len(vecflushable.underlying.cache))
-	assert.Equal(t, expectedUnderlyingCacheCount, len(vecflushable.underlying.cacheIndex))
-	assert.Equal(t, expectedUnderlyingCacheSize, vecflushable.underlying.cacheSizeEstimation)
+	assert.Equal(t, expectedUnderlyingCacheSize, vecflushable.underlying.memSize)
 
 	getOp := func(key []byte, val []byte) {
 		v, err := vecflushable.Get(key)
@@ -149,8 +148,7 @@ func TestVecflushableUpdateValue(t *testing.T) {
 	assert.Equal(t, 0, vecflushable.NotFlushedPairs())
 	assert.Equal(t, 0, vecflushable.NotFlushedSizeEst())
 	assert.Equal(t, 1, len(vecflushable.underlying.cache))
-	assert.Equal(t, 1, len(vecflushable.underlying.cacheIndex))
-	assert.Equal(t, 86, vecflushable.underlying.cacheSizeEstimation)
+	assert.Equal(t, 178, vecflushable.underlying.memSize)
 
 	key1 := bigendian.Uint64ToBytes(uint64(1))
 	for i := 0; i < 2; i++ {
@@ -165,11 +163,11 @@ func TestVecflushableUpdateValue(t *testing.T) {
 	assert.Equal(t, 0, vecflushable.NotFlushedPairs())
 	assert.Equal(t, 0, vecflushable.NotFlushedSizeEst())
 	assert.Equal(t, 2, len(vecflushable.underlying.cache))
-	assert.Equal(t, 2, len(vecflushable.underlying.cacheIndex))
-	assert.Equal(t, 172, vecflushable.underlying.cacheSizeEstimation)
+	assert.Equal(t, 356, vecflushable.underlying.memSize)
 }
 
-func TestSize(t *testing.T) {
+func TestSizeBenchmark(t *testing.T) {
+	return // remove to benchmark
 	for _, numItems := range []int{10, 100, 1000, 10000, 100000, 1000000, 10000000} {
 		t.Run(strconv.Itoa(numItems), func(t *testing.T) {
 			res := testing.Benchmark(func(b *testing.B) {
@@ -196,16 +194,16 @@ func TestSize(t *testing.T) {
 func BenchmarkPutAndFlush(b *testing.B) {
 	b.ReportAllocs()
 	vecflushable := Wrap(devnulldb.New(), 1_000_000_000)
-	loopOp(
-		func(key []byte, value []byte) {
-			err := vecflushable.Put(key, value)
-			if err != nil {
-				b.Error(err)
-			}
-			vecflushable.Flush()
-		},
-		1000000,
-	)
+	for op := 0; op < b.N; op++ {
+		step := op & 0xff
+		key := bigendian.Uint64ToBytes(uint64(step << 48))
+		val := bigendian.Uint64ToBytes(uint64(step))
+		err := vecflushable.Put(key, val)
+		if err != nil {
+			b.Error(err)
+		}
+		vecflushable.Flush()
+	}
 }
 
 func loopOp(operation func(key []byte, val []byte), iterations int) {
