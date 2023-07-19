@@ -30,14 +30,18 @@ type VecFlushable struct {
 	memSize    int
 }
 
-func Wrap(parent kvdb.Store, sizeLimit int) *VecFlushable {
+func wrap(parent kvdb.Store, sizeLimit, batchSize int) *VecFlushable {
 	if parent == nil {
 		panic("nil parent")
 	}
 	return &VecFlushable{
 		modified:   make(map[string][]byte),
-		underlying: *newBackedMap(parent, sizeLimit),
+		underlying: *newBackedMap(parent, sizeLimit, batchSize),
 	}
+}
+
+func Wrap(parent kvdb.Store, sizeLimit int) *VecFlushable {
+	return wrap(parent, sizeLimit, kvdb.IdealBatchSize)
 }
 
 func (w *VecFlushable) clearModified() {
@@ -88,13 +92,13 @@ func (w *VecFlushable) Flush() error {
 		return errClosed
 	}
 
+	for key, val := range w.modified {
+		w.underlying.add(key, val)
+	}
+
 	err := w.underlying.mayUnload()
 	if err != nil {
 		return err
-	}
-
-	for key, val := range w.modified {
-		w.underlying.add(key, val)
 	}
 
 	w.clearModified()
