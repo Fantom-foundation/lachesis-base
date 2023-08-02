@@ -55,6 +55,7 @@ func TestCircularCache(t *testing.T) {
 }
 
 func run(b *testing.B, cache *Cache) {
+	b.Helper()
 	for i := 0; i < b.N; i++ {
 		cache.Add(i, i)
 	}
@@ -69,6 +70,7 @@ func run(b *testing.B, cache *Cache) {
 }
 
 func benchmark(b *testing.B, size int) {
+	b.Helper()
 	cache, err := New(size)
 	require.NoError(b, err)
 	require.NotNil(b, cache)

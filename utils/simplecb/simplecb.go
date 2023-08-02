@@ -53,8 +53,7 @@ func (c *Cache) Add(key, value interface{}) {
 
 // Get looks up a key's value from the cache.
 func (c *Cache) Get(key interface{}) interface{} {
-	value, _ := c.items[key]
-	return value
+	return c.items[key]
 }
 
 // Contains checks if a key is in the cache, without updating the recent-ness

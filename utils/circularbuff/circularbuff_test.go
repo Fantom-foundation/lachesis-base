@@ -152,6 +152,7 @@ func TestCircularCachePurgeWithCallback(t *testing.T) {
 }
 
 func run(b *testing.B, cache *Cache) {
+	b.Helper()
 	for i := 0; i < b.N; i++ {
 		cache.Add(i, i)
 	}
@@ -164,6 +165,7 @@ func run(b *testing.B, cache *Cache) {
 }
 
 func benchmarkSizeWithCallback(b *testing.B, size int) {
+	b.Helper()
 	cache, err := NewWithEvict(size, func(key interface{}, value interface{}) {})
 	require.NoError(b, err)
 	require.NotNil(b, cache)
@@ -197,6 +199,7 @@ func BenchmarkSizeWithCallback1000000(b *testing.B) {
 }
 
 func benchmarkSize(b *testing.B, size int) {
+	b.Helper()
 	cache, err := New(size)
 	require.NoError(b, err)
 	require.NotNil(b, cache)
