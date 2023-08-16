@@ -97,6 +97,19 @@ func (p *Lachesis) BootstrapWithOrderer(callback lachesis.ConsensusCallbacks, or
 	return nil
 }
 
+func (p *Lachesis) StartFrom(callback lachesis.ConsensusCallbacks, epoch idx.Epoch, validators *pos.Validators) error {
+	return p.StartFromWithOrderer(callback, epoch, validators, p.OrdererCallbacks())
+}
+
+func (p *Lachesis) StartFromWithOrderer(callback lachesis.ConsensusCallbacks, epoch idx.Epoch, validators *pos.Validators, ordererCallbacks OrdererCallbacks) error {
+	err := p.Orderer.StartFrom(ordererCallbacks, epoch, validators)
+	if err != nil {
+		return err
+	}
+	p.callback = callback
+	return nil
+}
+
 func (p *Lachesis) OrdererCallbacks() OrdererCallbacks {
 	return OrdererCallbacks{
 		ApplyAtropos: p.applyAtropos,
