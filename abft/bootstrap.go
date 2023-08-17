@@ -54,6 +54,27 @@ func (p *Orderer) Bootstrap(callback OrdererCallbacks) error {
 	return err
 }
 
+// StartFrom initiates Orderer with specified parameters
+func (p *Orderer) StartFrom(callback OrdererCallbacks, epoch idx.Epoch, validators *pos.Validators) error {
+	if p.election != nil {
+		return errors.New("already bootstrapped")
+	}
+	// block handler must be set before p.handleElection
+	p.callback = callback
+
+	p.store.applyGenesis(epoch, validators)
+	// reset internal epoch DB
+	err := p.resetEpochStore(epoch)
+	if err != nil {
+		return err
+	}
+	if p.callback.EpochDBLoaded != nil {
+		p.callback.EpochDBLoaded(p.store.GetEpoch())
+	}
+	p.election = election.New(validators, FirstFrame, p.dagIndex.ForklessCause, p.store.GetFrameRoots)
+	return err
+}
+
 // Reset switches epoch state to a new empty epoch.
 func (p *Orderer) Reset(epoch idx.Epoch, validators *pos.Validators) error {
 	p.store.applyGenesis(epoch, validators)
@@ -61,6 +82,9 @@ func (p *Orderer) Reset(epoch idx.Epoch, validators *pos.Validators) error {
 	err := p.resetEpochStore(epoch)
 	if err != nil {
 		return err
+	}
+	if p.callback.EpochDBLoaded != nil {
+		p.callback.EpochDBLoaded(p.store.GetEpoch())
 	}
 	p.election.Reset(validators, FirstFrame)
 	return nil
