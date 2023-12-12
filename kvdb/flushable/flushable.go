@@ -176,11 +176,17 @@ func (w *Flushable) Drop() {
 
 // NotFlushedPairs returns num of not flushed keys, including deleted keys.
 func (w *Flushable) NotFlushedPairs() int {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
+
 	return w.modified.Size()
 }
 
 // NotFlushedSizeEst returns estimation of not flushed data, including deleted keys.
 func (w *Flushable) NotFlushedSizeEst() int {
+	w.lock.RLock()
+	defer w.lock.RUnlock()
+
 	return *w.sizeEstimation
 }
 
@@ -228,12 +234,20 @@ func (w *Flushable) flush() error {
 
 // Stat returns a particular internal stat of the database.
 func (w *Flushable) Stat(property string) (string, error) {
-	return w.underlying.Stat(property)
+	w.lock.RLock()
+	underlying := w.underlying
+	w.lock.RUnlock()
+
+	return underlying.Stat(property)
 }
 
 // Compact flattens the underlying data store for the given key range.
 func (w *Flushable) Compact(start []byte, limit []byte) error {
-	return w.underlying.Compact(start, limit)
+	w.lock.RLock()
+	underlying := w.underlying
+	w.lock.RUnlock()
+
+	return underlying.Compact(start, limit)
 }
 
 /*
