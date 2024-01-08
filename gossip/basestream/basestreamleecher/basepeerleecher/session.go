@@ -3,6 +3,7 @@ package basepeerleecher
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -37,9 +38,8 @@ type BasePeerLeecher struct {
 
 	notifyReceivedChunk chan *receivedChunk
 
-	quitMu sync.Mutex
-	quit   chan struct{}
-	done   bool
+	quit chan struct{}
+	done uint32
 
 	wg *sync.WaitGroup
 
@@ -78,16 +78,14 @@ func (d *BasePeerLeecher) Stop() {
 }
 
 func (d *BasePeerLeecher) Terminate() {
-	d.quitMu.Lock()
-	defer d.quitMu.Unlock()
-	if !d.done {
+	// set done, close the chan if it was not done yet
+	if atomic.SwapUint32(&d.done, 1) == 0 {
 		close(d.quit)
-		d.done = true
 	}
 }
 
 func (d *BasePeerLeecher) Stopped() bool {
-	return d.done
+	return atomic.LoadUint32(&d.done) != 0
 }
 
 // NotifyChunkReceived injects new pack infos from a peer
@@ -115,8 +113,7 @@ func (d *BasePeerLeecher) loop() {
 			return
 
 		case op := <-d.notifyReceivedChunk:
-			if d.done {
-				d.Terminate()
+			if d.Stopped() {
 				continue
 			}
 			if len(d.processingChunks) < d.cfg.ParallelChunksDownload*2 {
