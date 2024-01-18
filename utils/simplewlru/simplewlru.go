@@ -30,7 +30,7 @@ func New(maxWeight uint, maxSize int) (*Cache, error) {
 	return NewWithEvict(maxWeight, maxSize, nil)
 }
 
-// NewWeightedLRU constructs an LRU of the given weight and size
+// NewWithEvict constructs an LRU of the given weight and size
 func NewWithEvict(maxWeight uint, maxSize int, onEvict EvictCallback) (*Cache, error) {
 	if maxSize < 0 {
 		return nil, errors.New("must provide a non-negative size")
@@ -58,7 +58,7 @@ func (c *Cache) Purge() {
 	c.evictList.Init()
 }
 
-// Add adds a value to the cache.  Returns true if an eviction occurred.
+// Add adds a value to the cache. Returns the number of evictions occurred.
 func (c *Cache) Add(key, value interface{}, weight uint) (evicted int) {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
