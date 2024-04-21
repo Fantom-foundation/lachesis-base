@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/JekaMas/go-mutesting v1.1.2
 	github.com/cockroachdb/pebble v0.0.0-20221111210721-1bda21f14fc2
-	github.com/emirpasic/gods v1.12.0
 	github.com/ethereum/go-ethereum v1.9.22
 	github.com/golang/mock v1.6.0
 	github.com/hashicorp/golang-lru v0.5.4
